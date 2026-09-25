@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: entTIPO_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: enttipo
+      POSTGRES_PASSWORD: entipo_secret
+      POSTGRES_DB: entTIPO
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enttipo -d entTIPO"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  math-service:
+    build:
+      context: ./math-service
+      dockerfile: Dockerfile
+    container_name: entTIPO_math
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+    name: entTIPO_postgres_data

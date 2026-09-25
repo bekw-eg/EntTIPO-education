@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions      PracticeSession[]
+  attempts      UserAttempt[]
+  topicProgress UserTopicProgress[]
+  mistakes      Mistake[]
+  dailyGoals    DailyGoal[]
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  difficulty  Int      @default(1)
+  order       Int
+  createdAt   DateTime @default(now())
+
+  subtopics Subtopic[]
+  questions Question[]
+  progress  UserTopicProgress[]
+  mistakes  Mistake[]
+  lesson    Lesson?
+}
+
+model Subtopic {
+  id          String  @id @default(cuid())
+  topicId     String
+  name        String
+  description String?
+
+  topic     Topic      @relation(fields: [topicId], references: [id])
+  questions Question[]
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  topicId       String
+  subtopicId    String?
+  title         String
+  questionText  String
+  latex         String?
+  difficulty    Int      @default(1)
+  correctAnswer String
+  answerType    String   // expression | number | multiple_choice
+  explanation   String
+  createdAt     DateTime @default(now())
+
+  topic    Topic          @relation(fields: [topicId], references: [id])
+  subtopic Subtopic?      @relation(fields: [subtopicId], references: [id])
+  steps    QuestionStep[]
+  attempts UserAttempt[]
+  mistakes Mistake[]
+}
+
+model QuestionStep {
+  id             String  @id @default(cuid())
+  questionId     String
+  order          Int
+  type           String  // multiple_choice | multiple_select | numeric_input | expression_input
+  prompt         String
+  expectedAnswer String
+  hint           String?
+
+  question Question        @relation(fields: [questionId], references: [id])
+  options  QuestionOption[]
+  answers  UserStepAnswer[]
+}
+
+model QuestionOption {
+  id        String  @id @default(cuid())
+  stepId    String
+  text      String
+  isCorrect Boolean @default(false)
+  order     Int
+
+  step QuestionStep @relation(fields: [stepId], references: [id])
+}
+
+model PracticeSession {
+  id             String    @id @default(cuid())
+  userId         String
+  mode           String    // mixed | weak_topics | specific_topic | review_mistakes
+  totalCount     Int
+  completedCount Int       @default(0)
+  correctCount   Int       @default(0)
+  topicId        String?
+  status         String    @default("active") // active | completed
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
+
+  user     User          @relation(fields: [userId], references: [id])
+  attempts UserAttempt[]
+}
+
+model UserAttempt {
+  id            String   @id @default(cuid())
+  userId        String
+  questionId    String
+  sessionId     String
+  isCorrect     Boolean
+  isPartial     Boolean  @default(false)
+  score         Int      @default(0)
+  usedHint      Boolean  @default(false)
+  timeSpent     Int      @default(0)
+  attemptNumber Int      @default(1)
+  createdAt     DateTime @default(now())
+
+  user        User             @relation(fields: [userId], references: [id])
+  question    Question         @relation(fields: [questionId], references: [id])
+  session     PracticeSession  @relation(fields: [sessionId], references: [id])
+  stepAnswers UserStepAnswer[]
+  mistakes    Mistake[]
+}
+
+model UserStepAnswer {
+  id        String   @id @default(cuid())
+  attemptId String
+  stepId    String
+  answer    String
+  isCorrect Boolean
+  createdAt DateTime @default(now())
+
+  attempt UserAttempt  @relation(fields: [attemptId], references: [id])
+  step    QuestionStep @relation(fields: [stepId], references: [id])
+}
+
+model UserTopicProgress {
+  id              String    @id @default(cuid())
+  userId          String
+  topicId         String
+  masteryScore    Int       @default(0)
+  currentLevel    Int       @default(1)
+  totalAttempts   Int       @default(0)
+  correctAttempts Int       @default(0)
+  lastAttemptAt   DateTime?
+  updatedAt       DateTime  @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  topic Topic @relation(fields: [topicId], references: [id])
+
+  @@unique([userId, topicId])
+}
+
+model Mistake {
+  id          String    @id @default(cuid())
+  userId      String
+  questionId  String
+  attemptId   String
+  topicId     String
+  subtopicId  String?
+  errorType   String    // wrong_formula | calculation_error | sign_error | algebra_error | domain_error | concept_error | incorrect_method
+  description String?
+  isReviewed  Boolean   @default(false)
+  reviewedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  user     User        @relation(fields: [userId], references: [id])
+  question Question    @relation(fields: [questionId], references: [id])
+  attempt  UserAttempt @relation(fields: [attemptId], references: [id])
+  topic    Topic       @relation(fields: [topicId], references: [id])
+}
+
+model DailyGoal {
+  id             String   @id @default(cuid())
+  userId         String
+  date           DateTime @default(now())
+  targetCount    Int      @default(20)
+  completedCount Int      @default(0)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+}
+
+model Lesson {
+  id           String   @id @default(cuid())
+  topicId      String   @unique
+  title        String
+  whatIsIt     String
+  whenUsed     String
+  formula      String?
+  formulaLatex String?
+  example      String
+  commonErrors String
+  createdAt    DateTime @default(now())
+
+  topic Topic @relation(fields: [topicId], references: [id])
+}
