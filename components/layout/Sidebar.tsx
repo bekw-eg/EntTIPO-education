@@ -74,9 +74,7 @@ export function Sidebar() {
 
       <div className="p-4 border-t space-y-3">
         {/* Language selector in sidebar */}
-        <div className="space-y-1">
-          <LanguageSwitcher variant="buttons" className="w-full justify-between" />
-        </div>
+        <LanguageSwitcher variant="buttons" className="w-full" />
 
         {/* Theme toggle */}
         <Button

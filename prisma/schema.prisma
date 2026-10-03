@@ -103,6 +103,7 @@ model PracticeSession {
   status         String    @default("active") // active | completed
   startedAt      DateTime  @default(now())
   completedAt    DateTime?
+  hintedQuestionIds String[] @default([])
 
   user     User          @relation(fields: [userId], references: [id])
   attempts UserAttempt[]
@@ -119,6 +120,9 @@ model UserAttempt {
   usedHint      Boolean  @default(false)
   timeSpent     Int      @default(0)
   attemptNumber Int      @default(1)
+  submissionId  String?
+  submissionHash String?
+  submissionResult Json?
   createdAt     DateTime @default(now())
 
   user        User             @relation(fields: [userId], references: [id])
@@ -126,6 +130,10 @@ model UserAttempt {
   session     PracticeSession  @relation(fields: [sessionId], references: [id])
   stepAnswers UserStepAnswer[]
   mistakes    Mistake[]
+
+  @@unique([userId, submissionId])
+  @@index([userId, createdAt])
+  @@index([sessionId, questionId])
 }
 
 model UserStepAnswer {
@@ -158,22 +166,28 @@ model UserTopicProgress {
 }
 
 model Mistake {
-  id          String    @id @default(cuid())
-  userId      String
-  questionId  String
-  attemptId   String
-  topicId     String
-  subtopicId  String?
-  errorType   String    // wrong_formula | calculation_error | sign_error | algebra_error | domain_error | concept_error | incorrect_method
-  description String?
-  isReviewed  Boolean   @default(false)
-  reviewedAt  DateTime?
-  createdAt   DateTime  @default(now())
+  id            String    @id @default(cuid())
+  userId        String
+  questionId    String
+  attemptId     String?
+  topicId       String
+  subtopicId    String?
+  errorType     String    // wrong_formula | calculation_error | sign_error | algebra_error | domain_error | concept_error | incorrect_method
+  weakSkill     String?
+  userAnswer    String?
+  correctAnswer String?
+  explanation   String?
+  aiReason      String?
+  aiHint        String?
+  description   String?
+  isReviewed    Boolean   @default(false)
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
 
-  user     User        @relation(fields: [userId], references: [id])
-  question Question    @relation(fields: [questionId], references: [id])
-  attempt  UserAttempt @relation(fields: [attemptId], references: [id])
-  topic    Topic       @relation(fields: [topicId], references: [id])
+  user     User         @relation(fields: [userId], references: [id])
+  question Question     @relation(fields: [questionId], references: [id])
+  attempt  UserAttempt? @relation(fields: [attemptId], references: [id])
+  topic    Topic        @relation(fields: [topicId], references: [id])
 }
 
 model DailyGoal {

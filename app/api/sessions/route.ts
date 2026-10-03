@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUserId } from "@/lib/user";
+import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { createSessionSchema } from "@/lib/validators";
 import { selectQuestionsForSession } from "@/lib/adaptive";
+import { summarizeAttempts } from "@/lib/practiceStats";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserId(request);
+    if (!userId) return unauthorizedResponse();
     const body = await request.json();
 
     const validatedData = createSessionSchema.parse(body);
@@ -54,16 +56,20 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserId(request);
+    if (!userId) return unauthorizedResponse();
     const sessions = await prisma.practiceSession.findMany({
       where: { userId },
       orderBy: { startedAt: "desc" },
       take: 10,
+      include: { attempts: { select: { questionId: true, isCorrect: true } } },
     });
 
-    return NextResponse.json(sessions);
+    return NextResponse.json(sessions.map(({ attempts, ...session }) => ({
+      ...session, ...summarizeAttempts(attempts),
+    })));
   } catch (error) {
     console.error("Error in GET /api/sessions:", error);
     return NextResponse.json(

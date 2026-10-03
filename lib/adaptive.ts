@@ -1,11 +1,76 @@
 import { prisma } from "./prisma";
 import { SessionMode } from "@/types";
 
+export interface UserSkillProfile {
+  topWeakSkills: string[];
+  weakTopicIds: string[];
+  unreviewedQuestionIds: string[];
+  subtopicIdsWithMistakes: string[];
+}
+
 /**
- * Adaptive question selection algorithm.
+ * Extracts student's accumulated weak skills, error patterns, and unmastered areas
+ * from the Mistake table.
+ */
+export async function getUserSkillProfile(userId: string): Promise<UserSkillProfile> {
+  const mistakes = await prisma.mistake.findMany({
+    where: { userId },
+    select: {
+      questionId: true,
+      topicId: true,
+      subtopicId: true,
+      weakSkill: true,
+      errorType: true,
+      isReviewed: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 60,
+  });
+
+  const skillWeights = new Map<string, number>();
+  const topicWeights = new Map<string, number>();
+  const subtopicSet = new Set<string>();
+  const unreviewedQIds: string[] = [];
+
+  for (const m of mistakes) {
+    const penalty = m.isReviewed ? 1 : 3;
+
+    if (!m.isReviewed) {
+      unreviewedQIds.push(m.questionId);
+    }
+    if (m.subtopicId) {
+      subtopicSet.add(m.subtopicId);
+    }
+    topicWeights.set(m.topicId, (topicWeights.get(m.topicId) || 0) + penalty);
+
+    if (m.weakSkill) {
+      skillWeights.set(m.weakSkill, (skillWeights.get(m.weakSkill) || 0) + penalty);
+    }
+  }
+
+  const topWeakSkills = Array.from(skillWeights.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([skill]) => skill)
+    .slice(0, 5);
+
+  const weakTopicIds = Array.from(topicWeights.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([topicId]) => topicId)
+    .slice(0, 5);
+
+  return {
+    topWeakSkills,
+    weakTopicIds,
+    unreviewedQuestionIds: Array.from(new Set(unreviewedQIds)),
+    subtopicIdsWithMistakes: Array.from(subtopicSet),
+  };
+}
+
+/**
+ * Adaptive question selection algorithm with Weak-Skill targeting.
  *
  * Distribution for mixed mode:
- * - 40% weak topics (mastery < 40)
+ * - 40% targeted weak skills & weak topics (mastery < 40 or accumulated mistakes)
  * - 25% recently practiced (last 7 days)
  * - 20% random repetition
  * - 15% challenge (level above current)
@@ -35,16 +100,26 @@ export async function selectQuestionsForSession({
 }
 
 async function selectMixed(userId: string, count: number): Promise<string[]> {
-  const progress = await prisma.userTopicProgress.findMany({
-    where: { userId },
-    include: { topic: true },
-  });
+  const [progress, skillProfile] = await Promise.all([
+    prisma.userTopicProgress.findMany({
+      where: { userId },
+      include: { topic: true },
+    }),
+    getUserSkillProfile(userId),
+  ]);
 
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  // Categorize topics
-  const weakTopics = progress.filter((p) => p.masteryScore < 40);
+  // Categorize topics: masteryScore < 40 OR topics with high unreviewed mistakes
+  const lowMasteryTopicIds = progress
+    .filter((p) => p.masteryScore < 40)
+    .map((p) => p.topicId);
+
+  const combinedWeakTopicIds = Array.from(
+    new Set([...lowMasteryTopicIds, ...skillProfile.weakTopicIds])
+  );
+
   const recentTopics = progress.filter(
     (p) => p.lastAttemptAt && p.lastAttemptAt > sevenDaysAgo
   );
@@ -54,39 +129,46 @@ async function selectMixed(userId: string, count: number): Promise<string[]> {
   // Build weighted pool
   const pool: { questionId: string; weight: number }[] = [];
 
-  // 40% from weak topics
-  const weakCount = Math.ceil(count * 0.4);
-  if (weakTopics.length > 0) {
-    const weakIds = weakTopics.map((t) => t.topicId);
+  // 1. Weak-Skill & Micro-Skill targeted questions (Highest priority)
+  const weakSkillTargetCount = Math.ceil(count * 0.4);
+  const targetedQuestions = await getQuestionsForWeakSkills(
+    skillProfile,
+    userId,
+    weakSkillTargetCount * 2
+  );
+  targetedQuestions.forEach((qId) => pool.push({ questionId: qId, weight: 5.5 }));
+
+  // 2. Additional questions from weak topics
+  if (combinedWeakTopicIds.length > 0) {
     const weakQuestions = await getQuestionsFromTopics(
-      weakIds,
+      combinedWeakTopicIds,
       userId,
-      weakCount * 3
+      weakSkillTargetCount * 2
     );
-    weakQuestions.forEach((q) => pool.push({ questionId: q, weight: 4 }));
+    weakQuestions.forEach((qId) => pool.push({ questionId: qId, weight: 3.5 }));
   }
 
-  // 25% from recent topics
+  // 3. Recently practiced topics
   const recentCount = Math.ceil(count * 0.25);
   if (recentTopics.length > 0) {
     const recentIds = recentTopics.map((t) => t.topicId);
     const recentQuestions = await getQuestionsFromTopics(
       recentIds,
       userId,
-      recentCount * 3
+      recentCount * 2
     );
-    recentQuestions.forEach((q) => pool.push({ questionId: q, weight: 2.5 }));
+    recentQuestions.forEach((qId) => pool.push({ questionId: qId, weight: 2.0 }));
   }
 
-  // 20% random + 15% challenge from all topics
+  // 4. Random repetition + challenge from all topics
   const randomCount = Math.ceil(count * 0.35);
   const allIds = allTopics.map((t) => t.id);
   const randomQuestions = await getQuestionsFromTopics(
     allIds,
     userId,
-    randomCount * 3
+    randomCount * 2
   );
-  randomQuestions.forEach((q) => pool.push({ questionId: q, weight: 1 }));
+  randomQuestions.forEach((qId) => pool.push({ questionId: qId, weight: 1.0 }));
 
   // Weighted random selection without replacement
   const selected = weightedSampleWithoutReplacement(pool, count);
@@ -109,28 +191,63 @@ async function selectWeakTopics(
   userId: string,
   count: number
 ): Promise<string[]> {
-  const weakProgress = await prisma.userTopicProgress.findMany({
-    where: { userId, masteryScore: { lt: 50 } },
-    orderBy: { masteryScore: "asc" },
-    take: 5,
-  });
+  const [weakProgress, skillProfile] = await Promise.all([
+    prisma.userTopicProgress.findMany({
+      where: { userId, masteryScore: { lt: 50 } },
+      orderBy: { masteryScore: "asc" },
+      take: 5,
+    }),
+    getUserSkillProfile(userId),
+  ]);
+
+  const progressTopicIds = weakProgress.map((p) => p.topicId);
+  const candidateTopicIds = Array.from(
+    new Set([...progressTopicIds, ...skillProfile.weakTopicIds])
+  );
 
   const topicIds =
-    weakProgress.length > 0
-      ? weakProgress.map((p) => p.topicId)
+    candidateTopicIds.length > 0
+      ? candidateTopicIds.slice(0, 5)
       : (await prisma.topic.findMany({ select: { id: true }, take: 5 })).map(
           (t) => t.id
         );
 
-  const questions = await getQuestionsFromTopics(topicIds, userId, count * 3);
-  const selected = questions.slice(0, count);
+  // First, retrieve questions directly targeting weak skills
+  const targetedQuestions = await getQuestionsForWeakSkills(
+    skillProfile,
+    userId,
+    count
+  );
 
-  if (selected.length < count) {
-    const all = await prisma.question.findMany({ select: { id: true }, take: count });
-    return all.map((q) => q.id);
+  const selectedSet = new Set<string>(targetedQuestions);
+
+  // Fill remaining from general weak topics
+  if (selectedSet.size < count) {
+    const remainingCount = count - selectedSet.size;
+    const topicQuestions = await getQuestionsFromTopics(
+      topicIds,
+      userId,
+      remainingCount * 3
+    );
+    for (const qId of topicQuestions) {
+      if (!selectedSet.has(qId)) {
+        selectedSet.add(qId);
+        if (selectedSet.size >= count) break;
+      }
+    }
   }
 
-  return selected;
+  // Fallback if still under count
+  if (selectedSet.size < count) {
+    const all = await prisma.question.findMany({
+      where: { id: { notIn: Array.from(selectedSet) } },
+      select: { id: true },
+      take: count - selectedSet.size,
+    });
+    all.forEach((q) => selectedSet.add(q.id));
+  }
+
+  return Array.from(selectedSet).slice(0, count);
 }
 
 async function selectFromTopic(
@@ -138,11 +255,24 @@ async function selectFromTopic(
   topicId: string,
   count: number
 ): Promise<string[]> {
-  const progress = await prisma.userTopicProgress.findUnique({
-    where: { userId_topicId: { userId, topicId } },
-  });
+  const [progress, topicMistakes] = await Promise.all([
+    prisma.userTopicProgress.findUnique({
+      where: { userId_topicId: { userId, topicId } },
+    }),
+    prisma.mistake.findMany({
+      where: { userId, topicId },
+      select: { questionId: true, isReviewed: true, weakSkill: true },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+    }),
+  ]);
 
   const currentLevel = progress?.currentLevel ?? 1;
+
+  // Unreviewed mistake questions in this topic
+  const mistakeQIds = topicMistakes
+    .filter((m) => !m.isReviewed)
+    .map((m) => m.questionId);
 
   let questions = await prisma.question.findMany({
     where: {
@@ -152,19 +282,32 @@ async function selectFromTopic(
         lte: Math.min(5, currentLevel + 1),
       },
     },
-    select: { id: true },
+    select: { id: true, title: true },
     orderBy: { difficulty: "asc" },
   });
 
   if (questions.length === 0) {
     questions = await prisma.question.findMany({
       where: { topicId },
-      select: { id: true },
+      select: { id: true, title: true },
     });
   }
 
-  const ids = questions.map((q) => q.id);
-  return shuffle(ids).slice(0, count);
+  // Prioritize mistake questions and shuffle the rest
+  const prioritySet = new Set(mistakeQIds);
+  const prioritized: string[] = [];
+  const others: string[] = [];
+
+  for (const q of questions) {
+    if (prioritySet.has(q.id)) {
+      prioritized.push(q.id);
+    } else {
+      others.push(q.id);
+    }
+  }
+
+  const result = [...prioritized, ...shuffle(others)];
+  return result.slice(0, count);
 }
 
 async function selectMistakeQuestions(
@@ -190,6 +333,63 @@ async function selectMistakeQuestions(
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Queries questions targeting student's specific unmastered skills.
+ */
+async function getQuestionsForWeakSkills(
+  profile: UserSkillProfile,
+  userId: string,
+  limit: number
+): Promise<string[]> {
+  if (limit <= 0) return [];
+  const targetedQuestionIds = new Set<string>();
+
+  // 1. Unreviewed mistake questions (direct retry)
+  for (const qId of profile.unreviewedQuestionIds) {
+    targetedQuestionIds.add(qId);
+    if (targetedQuestionIds.size >= limit) break;
+  }
+
+  // 2. Questions sharing subtopics where the user made mistakes
+  if (targetedQuestionIds.size < limit && profile.subtopicIdsWithMistakes.length > 0) {
+    const subtopicQuestions = await prisma.question.findMany({
+      where: {
+        subtopicId: { in: profile.subtopicIdsWithMistakes },
+        id: { notIn: Array.from(targetedQuestionIds) },
+      },
+      select: { id: true },
+      take: limit - targetedQuestionIds.size,
+    });
+    subtopicQuestions.forEach((q) => targetedQuestionIds.add(q.id));
+  }
+
+  // 3. Search questions matching weak skill keywords in title or questionText
+  if (targetedQuestionIds.size < limit && profile.topWeakSkills.length > 0) {
+    const searchConditions: any[] = [];
+    for (const skill of profile.topWeakSkills) {
+      const parts = skill.split("_").filter((p) => p.length >= 3);
+      for (const p of parts) {
+        searchConditions.push({ title: { contains: p, mode: "insensitive" } });
+        searchConditions.push({ questionText: { contains: p, mode: "insensitive" } });
+      }
+    }
+
+    if (searchConditions.length > 0) {
+      const skillMatched = await prisma.question.findMany({
+        where: {
+          OR: searchConditions,
+          id: { notIn: Array.from(targetedQuestionIds) },
+        },
+        select: { id: true },
+        take: limit - targetedQuestionIds.size,
+      });
+      skillMatched.forEach((q) => targetedQuestionIds.add(q.id));
+    }
+  }
+
+  return Array.from(targetedQuestionIds);
+}
+
 async function getQuestionsFromTopics(
   topicIds: string[],
   userId: string,
@@ -197,7 +397,7 @@ async function getQuestionsFromTopics(
 ): Promise<string[]> {
   if (topicIds.length === 0) return [];
 
-  // Get recently attempted questions to avoid immediate repetition
+  // Avoid recently attempted questions in the last 24h
   const recentAttempts = await prisma.userAttempt.findMany({
     where: {
       userId,

@@ -54,6 +54,7 @@ export default function StatisticsPage() {
   const {
     overallAccuracy = 0,
     totalSolved = 0,
+    totalAttempts = 0,
     totalDays = 0,
     dailyAccuracy = [],
     topicProgress = [],
@@ -104,7 +105,7 @@ export default function StatisticsPage() {
                 </p>
                 <p className="text-2xl font-bold">{totalSolved}</p>
                 <p className="text-[11px] text-muted-foreground">
-                  {t.statistics.solutionAttempts}
+                  {totalAttempts} {t.statistics.solutionAttempts}
                 </p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">

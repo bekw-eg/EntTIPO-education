@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUserId } from "@/lib/user";
+import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,8 @@ export async function GET(
   context: { params: Promise<{ topicId: string }> }
 ) {
   try {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserId(request);
+    if (!userId) return unauthorizedResponse();
     const { topicId } = await context.params;
 
     const topic = await prisma.topic.findUnique({

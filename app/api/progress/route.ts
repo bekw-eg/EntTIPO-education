@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUserId } from '@/lib/user'
+import { getCurrentUserId, unauthorizedResponse } from '@/lib/user'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const userId = getCurrentUserId()
+    const userId = getCurrentUserId(request)
+    if (!userId) return unauthorizedResponse()
     const topics = await prisma.topic.findMany({
       include: {
         progress: {

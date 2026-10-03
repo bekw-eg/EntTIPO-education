@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,16 @@ export async function GET(
   context: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    await context.params;
+    const userId = getCurrentUserId(request);
+    if (!userId) return unauthorizedResponse();
+    const { sessionId } = await context.params;
+    const session = await prisma.practiceSession.findFirst({
+      where: { id: sessionId, userId },
+      select: { id: true, hintedQuestionIds: true },
+    });
+    if (!session) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
     const { searchParams } = new URL(request.url);
     const questionIds = searchParams.get("questionIds")?.split(",") ?? [];
     const index = parseInt(searchParams.get("index") ?? "0", 10);
@@ -39,7 +49,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(question);
+    return NextResponse.json({ ...question, usedHint: session.hintedQuestionIds.includes(question.id) });
   } catch (error) {
     console.error("Error in GET /api/sessions/[sessionId]/next-question:", error);
     return NextResponse.json(

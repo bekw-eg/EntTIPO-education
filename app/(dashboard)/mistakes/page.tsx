@@ -12,21 +12,49 @@ import {
   CheckCircle2,
   Filter,
   ArrowRight,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { errorTypeTranslations } from "@/lib/i18n/translations";
+import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
+import { AiAction } from "@/types";
 
 export default function MistakesPage() {
   const { t, getTopicName, getErrorLabel } = useLanguage();
 
   const [mistakes, setMistakes] = useState<any[]>([]);
+  const [weakSkills, setWeakSkills] = useState<any[]>([]);
   const [topics, setTopics] = useState<any[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string>("");
   const [selectedErrorType, setSelectedErrorType] = useState<string>("");
   const [reviewFilter, setReviewFilter] = useState<string>("unreviewed");
   const [isLoading, setIsLoading] = useState(true);
+
+  // AI Panel state
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
+  const [selectedTopicId, setSelectedTopicId] = useState<string | undefined>(undefined);
+  const [selectedAttemptId, setSelectedAttemptId] = useState<string | undefined>(undefined);
+  const [aiAction, setAiAction] = useState<AiAction>("analyze_error");
+
+  const handleReviewSkillWithAi = (skill: any) => {
+    setSelectedTopicId(skill.topicId);
+    setSelectedQuestion(null);
+    setSelectedAttemptId(undefined);
+    setAiAction("explain_topic");
+    setAiPanelOpen(true);
+  };
+
+  const handleReviewMistakeWithAi = (m: any) => {
+    setSelectedQuestion(m.question);
+    setSelectedTopicId(m.topicId);
+    setSelectedAttemptId(m.attemptId);
+    setAiAction("analyze_error");
+    setAiPanelOpen(true);
+  };
 
   const fetchTopics = async () => {
     try {
@@ -53,6 +81,9 @@ export default function MistakesPage() {
       if (res.ok) {
         const data = await res.json();
         setMistakes(data.mistakes || []);
+        if (data.weakSkills) {
+          setWeakSkills(data.weakSkills);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -109,6 +140,90 @@ export default function MistakesPage() {
       />
 
       <div className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto">
+        {/* Мои слабые навыки */}
+        {weakSkills.length > 0 && (
+          <Card className="border overflow-hidden shadow-xs">
+            <div className="p-4 sm:p-5 border-b bg-muted/20 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                <h3 className="font-bold text-sm sm:text-base">
+                  {t.ai.myWeakSkills}
+                </h3>
+              </div>
+              <Badge variant="outline" className="text-xs">
+                {weakSkills.length}
+              </Badge>
+            </div>
+
+            <div className="divide-y">
+              {weakSkills.slice(0, 5).map((skill, idx) => {
+                const errorLabel = getErrorLabel(skill.skillName);
+                const displayName =
+                  errorLabel !== skill.skillName ? errorLabel : skill.skillName;
+
+                return (
+                  <div
+                    key={skill.skillKey || idx}
+                    className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-muted/10 transition-colors"
+                  >
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-sm sm:text-base text-foreground">
+                          {displayName}
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          {getTopicName(skill.topicName)}
+                        </Badge>
+                        <span className="text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full">
+                          {skill.count} {t.ai.mistakesCount}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <span>
+                          {t.ai.lastMistake}:{" "}
+                          <strong className="text-foreground">
+                            {skill.lastQuestionTitle}
+                          </strong>
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Mastery:{" "}
+                          <strong className="text-primary">
+                            {skill.masteryScore}%
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleReviewSkillWithAi(skill)}
+                        className="text-xs h-8 border-primary/40 text-primary hover:bg-primary/10 font-semibold"
+                      >
+                        <Bot className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                        {t.ai.reviewWithAi}
+                      </Button>
+
+                      <Button asChild size="sm" className="text-xs h-8 font-semibold">
+                        <Link
+                          href={`/practice?mode=specific_topic&topicId=${skill.topicId}`}
+                        >
+                          {t.ai.repeat}
+                          <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
+
         {/* Filters */}
         <Card className="p-4 bg-card/60 backdrop-blur-sm">
           <div className="flex flex-wrap items-center gap-4">
@@ -299,7 +414,7 @@ export default function MistakesPage() {
                     )}
 
                     {/* Actions */}
-                    <div className="pt-2 flex items-center justify-between gap-2 border-t">
+                    <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -311,14 +426,27 @@ export default function MistakesPage() {
                           : t.mistakes.markAsReviewed}
                       </Button>
 
-                      <Button asChild size="sm" className="text-xs font-semibold">
-                        <Link
-                          href={`/practice?mode=specific_topic&topicId=${q?.topicId}`}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleReviewMistakeWithAi(m)}
+                          className="text-xs h-8 border-primary/40 text-primary hover:bg-primary/10 font-semibold"
                         >
-                          {t.mistakes.repeatSimilar}
-                          <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-                        </Link>
-                      </Button>
+                          <Bot className="w-3.5 h-3.5 mr-1 text-primary" />
+                          {t.ai.reviewWithAi}
+                        </Button>
+
+                        <Button asChild size="sm" className="text-xs h-8 font-semibold">
+                          <Link
+                            href={`/practice?mode=specific_topic&topicId=${q?.topicId}`}
+                          >
+                            {t.mistakes.repeatSimilar}
+                            <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                          </Link>
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -327,6 +455,16 @@ export default function MistakesPage() {
           </div>
         )}
       </div>
+
+      <AiTutorPanel
+        isOpen={aiPanelOpen}
+        onClose={() => setAiPanelOpen(false)}
+        question={selectedQuestion}
+        topicId={selectedTopicId}
+        attemptId={selectedAttemptId}
+        hasAttempted={true}
+        initialAction={aiAction}
+      />
     </div>
   );
 }

@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { getCurrentUserId } from "@/lib/user";
+import { requirePageUserId } from "@/lib/user";
 import { TopicsView } from "@/components/topics/TopicsView";
 
 export const dynamic = "force-dynamic";
 
 export default async function TopicsPage() {
-  const userId = getCurrentUserId();
+  const userId = await requirePageUserId();
 
   const topics = await prisma.topic.findMany({
     orderBy: { order: "asc" },

@@ -92,7 +92,7 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
           <StatsCard
             title={t.dashboard.totalSolved}
             value={data.totalSolved}
-            subtitle={t.dashboard.tasksInDb}
+            subtitle={`${data.totalAttempts} ${t.statistics.solutionAttempts}`}
             icon={<BarChart3 className="w-5 h-5" />}
             iconBg="bg-purple-500/10 text-purple-500"
           />

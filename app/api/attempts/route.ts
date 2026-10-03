@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUserId } from "@/lib/user";
+import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { submitAttemptSchema } from "@/lib/validators";
 import { validateNumber, validateExpression } from "@/services/sympy";
 import { calculateMasteryScore, calculateNextDifficulty } from "@/lib/mastery";
 import { ErrorType, StepResult } from "@/types";
+import { createHash } from "node:crypto";
+import { Prisma } from "@prisma/client";
+import { ZodError } from "zod";
+import { PracticeError, lockAccount } from "@/lib/practiceStorage";
+import { summarizeAttempts } from "@/lib/practiceStats";
 
 export const dynamic = "force-dynamic";
+
+function replaySubmission(attempt: { submissionHash: string | null; submissionResult: Prisma.JsonValue | null }, hash: string) {
+  if (attempt.submissionHash !== hash) throw new PracticeError("Submission ID has already been used for another answer", 409);
+  if (!attempt.submissionResult) throw new PracticeError("Submission result is not available", 409);
+  return attempt.submissionResult;
+}
 
 function determineErrorType(stepResults: StepResult[], question: any): ErrorType {
   const failedSteps = stepResults.filter((s) => !s.isCorrect);
@@ -18,30 +29,75 @@ function determineErrorType(stepResults: StepResult[], question: any): ErrorType
   return "calculation_error";
 }
 
+function inferWeakSkill(question: any, errorType: string): string {
+  if (question.subtopic?.name) {
+    return question.subtopic.name;
+  }
+  const title = (question.title || "").toLowerCase();
+  if (title.includes("степен") || title.includes("корн")) return "свойства_степеней";
+  if (title.includes("многочлен") || title.includes("двучлен")) return "формулы_сокращенного_умножения";
+  if (title.includes("комплексн")) return "комплексные_числа";
+  if (title.includes("производн")) return "вычисление_производной";
+  if (title.includes("касательн")) return "уравнение_касательной";
+  if (title.includes("интеграл")) return "вычисление_интегралов";
+  if (title.includes("первообразн")) return "первообразная_функция";
+  if (title.includes("логарифм")) return "свойства_логарифмов";
+  if (title.includes("тригонометр")) return "тригонометрические_функции";
+  if (title.includes("дифференциальн") || title.includes("ду")) return "дифференциальные_уравнения";
+  if (title.includes("стереометр") || title.includes("пирамид")) return "стереометрия_объемы";
+  return errorType || "базовая_алгебра";
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserId(request);
+    if (!userId) return unauthorizedResponse();
     const body = await request.json();
     const data = submitAttemptSchema.parse(body);
+    const submissionHash = createHash("sha256").update(JSON.stringify({
+      sessionId: data.sessionId,
+      questionId: data.questionId,
+      stepAnswers: [...data.stepAnswers].sort((a, b) => a.stepId.localeCompare(b.stepId)),
+      timeSpent: data.timeSpent,
+      usedHint: data.usedHint,
+    })).digest("hex");
+    const previousSubmission = await prisma.userAttempt.findUnique({
+      where: { userId_submissionId: { userId, submissionId: data.submissionId } },
+      select: { submissionHash: true, submissionResult: true },
+    });
+    if (previousSubmission) return NextResponse.json(replaySubmission(previousSubmission, submissionHash));
+
+    const session = await prisma.practiceSession.findFirst({
+      where: { id: data.sessionId, userId },
+      select: { id: true, status: true },
+    });
+    if (!session) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
 
     const question = await prisma.question.findUnique({
       where: { id: data.questionId },
-      include: { steps: { include: { options: true }, orderBy: { order: "asc" } } },
+      include: {
+        subtopic: true,
+        steps: { include: { options: true }, orderBy: { order: "asc" } },
+      },
     });
 
     if (!question) {
       return NextResponse.json({ error: "Question not found" }, { status: 404 });
     }
 
+    const answerMap = new Map(data.stepAnswers.map((answer) => [answer.stepId, answer.answer]));
+    if (answerMap.size !== question.steps.length || question.steps.some((step) => !answerMap.has(step.id))) {
+      throw new PracticeError("Provide exactly one answer for every step of this question", 400);
+    }
+
     const stepResults: StepResult[] = [];
     let correctSteps = 0;
 
-    for (const answerItem of data.stepAnswers) {
-      const step = question.steps.find((s) => s.id === answerItem.stepId);
-      if (!step) continue;
-
+    for (const step of question.steps) {
       let isCorrect = false;
-      const userAns = (answerItem.answer || "").trim();
+      const userAns = answerMap.get(step.id)!;
 
       if (step.type === "multiple_choice") {
         const correctOpt = step.options.find((o) => o.isCorrect);
@@ -80,10 +136,34 @@ export async function POST(request: NextRequest) {
     const errorType = isCorrect ? undefined : determineErrorType(stepResults, question);
 
     const result = await prisma.$transaction(async (tx) => {
-      // Previous attempts count for this question in this session
-      const prevCount = await tx.userAttempt.count({
-        where: { userId, questionId: question.id, sessionId: data.sessionId },
+      await lockAccount(tx, userId);
+      // A concurrent copy of this request may already have committed while grading ran.
+      const duplicate = await tx.userAttempt.findUnique({
+        where: { userId_submissionId: { userId, submissionId: data.submissionId } },
+        select: { submissionHash: true, submissionResult: true },
       });
+      if (duplicate) return replaySubmission(duplicate, submissionHash);
+      const ownedSession = await tx.practiceSession.findFirst({ where: { id: data.sessionId, userId } });
+      if (!ownedSession) throw new PracticeError("Session not found", 404);
+      if (ownedSession.status !== "active") throw new PracticeError("Session is already completed", 409);
+      if (ownedSession.topicId && ownedSession.topicId !== question.topicId) {
+        throw new PracticeError("Question does not match the session topic", 400);
+      }
+      const sessionAttempts = await tx.userAttempt.findMany({
+        where: { userId, sessionId: data.sessionId },
+        select: { questionId: true, isCorrect: true },
+      });
+      const prevCount = sessionAttempts.filter((attempt) => attempt.questionId === question.id).length;
+      if (prevCount === 0 && summarizeAttempts(sessionAttempts).completedCount >= ownedSession.totalCount) {
+        throw new PracticeError("All questions in this session have already been answered", 409);
+      }
+      const usedHint = data.usedHint || ownedSession.hintedQuestionIds.includes(question.id);
+      const latestAttempt = await tx.userAttempt.findFirst({
+        where: { userId }, orderBy: { createdAt: "desc" }, select: { createdAt: true },
+      });
+      // Database NOW() uses transaction start time, which can precede the lock wait.
+      // Give serialized attempts a stable chronological order, even within one millisecond.
+      const createdAt = new Date(Math.max(Date.now(), (latestAttempt?.createdAt.getTime() ?? 0) + 1));
 
       const attempt = await tx.userAttempt.create({
         data: {
@@ -94,7 +174,10 @@ export async function POST(request: NextRequest) {
           isPartial,
           score,
           timeSpent: data.timeSpent || 0,
-          usedHint: data.usedHint || false,
+          usedHint,
+          submissionId: data.submissionId,
+          submissionHash,
+          createdAt,
           attemptNumber: prevCount + 1,
           stepAnswers: {
             create: stepResults.map((sr) => ({
@@ -107,6 +190,13 @@ export async function POST(request: NextRequest) {
       });
 
       if (!isCorrect && errorType) {
+        const combinedUserAnswer = stepResults
+          .map((sr) => sr.userAnswer)
+          .filter(Boolean)
+          .join("; ");
+
+        const initialWeakSkill = inferWeakSkill(question, errorType);
+
         await tx.mistake.create({
           data: {
             userId,
@@ -115,6 +205,10 @@ export async function POST(request: NextRequest) {
             topicId: question.topicId,
             subtopicId: question.subtopicId,
             errorType,
+            weakSkill: initialWeakSkill,
+            userAnswer: combinedUserAnswer || undefined,
+            correctAnswer: question.correctAnswer || undefined,
+            explanation: question.explanation,
             description: question.explanation,
           },
         });
@@ -127,13 +221,15 @@ export async function POST(request: NextRequest) {
 
       const recentAttempts = await tx.userAttempt.findMany({
         where: { userId, question: { topicId: question.topicId } },
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: 10,
         include: { question: true },
       });
 
+      // Both algorithms expect oldest first; query the newest ten, then reverse them.
+      const chronologicalAttempts = [...recentAttempts].reverse();
       const newScore = calculateMasteryScore(
-        recentAttempts.map((a) => ({
+        chronologicalAttempts.map((a) => ({
           isCorrect: a.isCorrect,
           isPartial: a.isPartial,
           score: a.score,
@@ -146,7 +242,7 @@ export async function POST(request: NextRequest) {
 
       const newLevel = calculateNextDifficulty(
         currentProgress.currentLevel,
-        recentAttempts.map((a) => ({ isCorrect: a.isCorrect }))
+        chronologicalAttempts.map((a) => ({ isCorrect: a.isCorrect }))
       );
 
       await tx.userTopicProgress.upsert({
@@ -169,33 +265,39 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Update PracticeSession
-      if (data.sessionId) {
-        await tx.practiceSession.update({
-          where: { id: data.sessionId },
-          data: {
-            completedCount: { increment: 1 },
-            correctCount: isCorrect ? { increment: 1 } : undefined,
-          },
-        });
-      }
+      const sessionStats = {
+        ...summarizeAttempts([...sessionAttempts, { questionId: question.id, isCorrect }]),
+        totalCount: ownedSession.totalCount,
+        mode: ownedSession.mode,
+      };
+      await tx.practiceSession.update({
+        where: { id: data.sessionId, userId },
+        data: { completedCount: sessionStats.completedCount, correctCount: sessionStats.correctCount },
+      });
 
       // Update DailyGoal
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const todayQuestions = await tx.userAttempt.findMany({
+        where: { userId, createdAt: { gte: today, lt: tomorrow } },
+        select: { questionId: true },
+        distinct: ["questionId"],
+      });
 
       await tx.dailyGoal.upsert({
         where: { userId_date: { userId, date: today } },
-        update: { completedCount: { increment: 1 } },
+        update: { completedCount: todayQuestions.length },
         create: {
           userId,
           date: today,
           targetCount: 20,
-          completedCount: 1,
+          completedCount: todayQuestions.length,
         },
       });
 
-      return {
+      const savedResult = {
         attemptId: attempt.id,
         isCorrect,
         isPartial,
@@ -203,11 +305,22 @@ export async function POST(request: NextRequest) {
         stepResults,
         explanation: question.explanation,
         errorType,
+        usedHint,
+        attemptNumber: attempt.attemptNumber,
+        sessionStats,
       };
-    });
+      // Persist the response in the same transaction so a lost response can be replayed exactly.
+      const snapshot = JSON.parse(JSON.stringify(savedResult)) as Prisma.InputJsonValue;
+      await tx.userAttempt.update({ where: { id: attempt.id, userId }, data: { submissionResult: snapshot } });
+      return snapshot;
+    }, { maxWait: 10000, timeout: 10000 });
 
     return NextResponse.json(result);
   } catch (error) {
+    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof ZodError || error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid attempt payload" }, { status: 400 });
+    }
     console.error("Error in POST /api/attempts:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -215,12 +328,21 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserId(request);
+    if (!userId) return unauthorizedResponse();
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get("sessionId");
 
     if (!sessionId) {
       return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
+    }
+
+    const session = await prisma.practiceSession.findFirst({
+      where: { id: sessionId, userId },
+      select: { id: true },
+    });
+    if (!session) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
     const attempts = await prisma.userAttempt.findMany({

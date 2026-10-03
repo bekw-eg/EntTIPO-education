@@ -8,18 +8,22 @@ import {
   ArrowRight,
   RotateCcw,
   BookOpen,
+  Bot,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { AttemptResult, Question } from "@/types";
+import { AttemptResult, Question, AiAction } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 
 interface ResultAnalysisProps {
   result: AttemptResult;
   question: Question;
   onRetry: () => void;
   onNext: () => void;
+  onOpenAi?: (action?: AiAction) => void;
 }
 
 export default function ResultAnalysis({
@@ -27,11 +31,21 @@ export default function ResultAnalysis({
   question,
   onRetry,
   onNext,
+  onOpenAi,
 }: ResultAnalysisProps) {
   const { t, getErrorLabel } = useLanguage();
   const [showExplanation, setShowExplanation] = useState(false);
+  const [localAiOpen, setLocalAiOpen] = useState(false);
   const isFull = result.isCorrect;
   const isPartial = result.isPartial;
+
+  const handleOpenAi = (action?: AiAction) => {
+    if (onOpenAi) {
+      onOpenAi(action);
+    } else {
+      setLocalAiOpen(true);
+    }
+  };
 
   return (
     <Card className="shadow-md overflow-hidden border animate-slide-in">
@@ -65,13 +79,26 @@ export default function ResultAnalysis({
           {isFull ? t.result.allCorrectDesc : t.result.hasErrorsDesc}
         </p>
 
-        {result.errorType && (
-          <div className="mt-3 flex justify-center">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+          {result.errorType && (
             <Badge variant="destructive" className="text-xs">
               {t.result.errorTypeLabel}: {getErrorLabel(result.errorType)}
             </Badge>
-          </div>
-        )}
+          )}
+
+          {!isFull && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenAi("analyze_error")}
+              className="h-7 text-xs border-primary/40 bg-background/90 hover:bg-primary/10 text-primary font-semibold shadow-2xs"
+            >
+              <Bot className="w-3.5 h-3.5 mr-1" />
+              {t.ai.reviewWithAi}
+            </Button>
+          )}
+        </div>
       </div>
 
       <CardContent className="p-4 sm:p-6 space-y-6">
@@ -160,14 +187,26 @@ export default function ResultAnalysis({
         {/* Action buttons */}
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3">
           {!isFull && (
-            <Button
-              variant="outline"
-              onClick={onRetry}
-              className="w-full sm:w-auto"
-            >
-              <RotateCcw className="w-4 h-4 mr-2" />
-              {t.result.tryAgain}
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenAi("analyze_error")}
+                className="w-full sm:w-auto border-primary/40 text-primary hover:bg-primary/10 font-semibold"
+              >
+                <Bot className="w-4 h-4 mr-2" />
+                {t.ai.reviewWithAi}
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={onRetry}
+                className="w-full sm:w-auto"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                {t.result.tryAgain}
+              </Button>
+            </>
           )}
           <Button onClick={onNext} className="w-full sm:w-auto px-6 font-semibold">
             {t.result.nextTask}
@@ -175,6 +214,17 @@ export default function ResultAnalysis({
           </Button>
         </div>
       </CardContent>
+
+      {!onOpenAi && (
+        <AiTutorPanel
+          isOpen={localAiOpen}
+          onClose={() => setLocalAiOpen(false)}
+          question={question}
+          attemptId={result.attemptId}
+          hasAttempted={true}
+          initialAction="analyze_error"
+        />
+      )}
     </Card>
   );
 }

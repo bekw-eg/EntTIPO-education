@@ -7,7 +7,6 @@ export async function getDashboardData(userId: string): Promise<DashboardStats> 
     todayMidnight.setHours(0, 0, 0, 0);
 
     const [
-      totalSolved,
       todayAttempts,
       dailyGoal,
       overallAttempts,
@@ -15,12 +14,12 @@ export async function getDashboardData(userId: string): Promise<DashboardStats> 
       strongTopics,
       recentAttempts,
     ] = await Promise.all([
-      prisma.userAttempt.count({ where: { userId } }),
       prisma.userAttempt.findMany({
         where: {
           userId,
           createdAt: { gte: todayMidnight },
         },
+        select: { questionId: true },
       }),
       prisma.dailyGoal.findFirst({
         where: {
@@ -30,7 +29,7 @@ export async function getDashboardData(userId: string): Promise<DashboardStats> 
       }),
       prisma.userAttempt.findMany({
         where: { userId },
-        select: { isCorrect: true },
+        select: { questionId: true, isCorrect: true },
       }),
       prisma.userTopicProgress.findMany({
         where: { userId, masteryScore: { lt: 40 } },
@@ -52,7 +51,9 @@ export async function getDashboardData(userId: string): Promise<DashboardStats> 
       }),
     ]);
 
-    const todaySolved = todayAttempts.length;
+    const todaySolved = new Set(todayAttempts.map((a) => a.questionId)).size;
+    const totalSolved = new Set(overallAttempts.map((a) => a.questionId)).size;
+    const totalAttempts = overallAttempts.length;
     const todayTarget = dailyGoal?.targetCount ?? 20;
     const correctCount = overallAttempts.filter((a) => a.isCorrect).length;
     const overallAccuracy =
@@ -87,6 +88,7 @@ export async function getDashboardData(userId: string): Promise<DashboardStats> 
 
     return {
       totalSolved,
+      totalAttempts,
       todaySolved,
       todayTarget,
       overallAccuracy,
@@ -94,12 +96,13 @@ export async function getDashboardData(userId: string): Promise<DashboardStats> 
       weakTopics: weakTopics as any,
       strongTopics: strongTopics as any,
       recentAttempts: recentAttempts as any,
-      dailyGoal: dailyGoal as any,
+      dailyGoal: dailyGoal ? { ...dailyGoal, completedCount: todaySolved } as any : null,
     };
   } catch (error) {
     console.error("Error in getDashboardData:", error);
     return {
       totalSolved: 0,
+      totalAttempts: 0,
       todaySolved: 0,
       todayTarget: 20,
       overallAccuracy: 0,

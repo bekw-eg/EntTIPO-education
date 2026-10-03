@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUserId } from "@/lib/user";
+import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,8 @@ export async function PATCH(
   context: { params: Promise<{ mistakeId: string }> }
 ) {
   try {
-    const userId = getCurrentUserId();
+    const userId = getCurrentUserId(request);
+    if (!userId) return unauthorizedResponse();
     const { mistakeId } = await context.params;
     const body = await request.json();
 
@@ -20,12 +21,19 @@ export async function PATCH(
       );
     }
 
-    const mistake = await prisma.mistake.update({
+    const updated = await prisma.mistake.updateMany({
       where: { id: mistakeId, userId },
       data: {
         isReviewed: body.isReviewed,
         reviewedAt: body.isReviewed ? new Date() : null,
       },
+    });
+
+    if (updated.count === 0) {
+      return NextResponse.json({ error: "Mistake not found" }, { status: 404 });
+    }
+    const mistake = await prisma.mistake.findFirst({
+      where: { id: mistakeId, userId },
     });
 
     return NextResponse.json(mistake);

@@ -1,15 +1,25 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import QuestionCard from "@/components/practice/QuestionCard";
 import ResultAnalysis from "@/components/practice/ResultAnalysis";
 import SessionSummary from "@/components/practice/SessionSummary";
 import { toast } from "sonner";
-import { Question, AttemptResult } from "@/types";
+import { Question, AttemptResult, AiAction, SessionStats } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
+import { createSubmissionId } from "@/lib/client-submission";
 
 type Phase = "loading" | "answering" | "result" | "summary";
+interface Submission {
+  submissionId: string;
+  sessionId: string;
+  questionId: string;
+  stepAnswers: { stepId: string; answer: string }[];
+  timeSpent: number;
+  usedHint: boolean;
+}
 
 function PracticeSessionContent() {
   const params = useParams();
@@ -28,12 +38,39 @@ function PracticeSessionContent() {
   const [lastAttemptResult, setLastAttemptResult] = useState<AttemptResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [startTime, setStartTime] = useState<number>(Date.now());
-  const [sessionStats, setSessionStats] = useState({
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [aiAction, setAiAction] = useState<AiAction | undefined>(undefined);
+  const submittingRef = useRef(false);
+  const pendingSubmission = useRef<Submission | null>(null);
+  const hintedQuestions = useRef(new Set<string>());
+  const [sessionStats, setSessionStats] = useState<SessionStats>({
     totalCount: questionIds.length || 0,
     correctCount: 0,
     completedCount: 0,
+    attemptCount: 0,
+    correctAttemptCount: 0,
     mode: "mixed",
   });
+
+  const handleHintUsed = useCallback((questionId: string) => {
+    hintedQuestions.current.add(questionId);
+  }, []);
+
+  const handleRevealHint = async () => {
+    if (!question || submittingRef.current) throw new Error(t.session.hintError);
+    const res = await fetch(`/api/sessions/${sessionId}/hint`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId: question.id }),
+    });
+    if (!res.ok) throw new Error(t.session.hintError);
+    handleHintUsed(question.id);
+  };
+
+  const handleOpenAi = (action?: AiAction) => {
+    setAiAction(action);
+    setIsAiOpen(true);
+  };
 
   const fetchQuestion = async (index: number) => {
     if (!sessionId || questionIds.length === 0 || index >= questionIds.length) {
@@ -49,6 +86,9 @@ function PracticeSessionContent() {
         throw new Error("Failed to load question");
       }
       const data = await res.json();
+      pendingSubmission.current = null;
+      if (data.usedHint) handleHintUsed(data.id);
+      setIsAiOpen(false);
       setQuestion(data);
       setStepAnswers({});
       setLastAttemptResult(null);
@@ -70,29 +110,33 @@ function PracticeSessionContent() {
   }, [sessionId, questionIdsParam]);
 
   const handleStepAnswer = (stepId: string, answer: string) => {
+    if (submittingRef.current) return;
+    pendingSubmission.current = null;
     setStepAnswers((prev) => ({ ...prev, [stepId]: answer }));
   };
 
   const handleSubmit = async () => {
-    if (!question) return;
+    if (!question || submittingRef.current || phase !== "answering") return;
+    submittingRef.current = true;
     setIsLoading(true);
 
-    const timeSpent = Math.max(1, Math.round((Date.now() - startTime) / 1000));
-    const stepAnswersList = Object.entries(stepAnswers).map(([stepId, answer]) => ({
-      stepId,
-      answer,
-    }));
-
+    // Keep the entire payload on network failure, including timing and hint state.
+    // A repeated click retries this submission; a deliberate new answer gets a new ID.
     try {
+      const submission = pendingSubmission.current ?? {
+        submissionId: createSubmissionId(),
+        sessionId,
+        questionId: question.id,
+        stepAnswers: Object.entries(stepAnswers).map(([stepId, answer]) => ({ stepId, answer })),
+        timeSpent: Math.max(1, Math.round((Date.now() - startTime) / 1000)),
+        usedHint: hintedQuestions.current.has(question.id),
+      };
+      pendingSubmission.current = submission;
+
       const res = await fetch("/api/attempts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          questionId: question.id,
-          sessionId,
-          stepAnswers: stepAnswersList,
-          timeSpent,
-        }),
+        body: JSON.stringify(submission),
       });
 
       if (!res.ok) {
@@ -103,22 +147,20 @@ function PracticeSessionContent() {
       const result: AttemptResult = await res.json();
       setLastAttemptResult(result);
 
-      setSessionStats((prev) => ({
-        ...prev,
-        completedCount: prev.completedCount + 1,
-        correctCount: result.isCorrect ? prev.correctCount + 1 : prev.correctCount,
-      }));
+      setSessionStats(result.sessionStats);
 
       setPhase("result");
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Failed to check solution");
     } finally {
+      submittingRef.current = false;
       setIsLoading(false);
     }
   };
 
   const handleRetry = () => {
+    pendingSubmission.current = null;
     setStepAnswers({});
     setLastAttemptResult(null);
     setStartTime(Date.now());
@@ -129,13 +171,17 @@ function PracticeSessionContent() {
     const nextIdx = currentIndex + 1;
     if (nextIdx >= questionIds.length) {
       try {
-        await fetch(`/api/sessions/${sessionId}`, {
+        const res = await fetch(`/api/sessions/${sessionId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status: "completed" }),
         });
+        if (!res.ok) throw new Error("Failed to complete session");
+        setSessionStats(await res.json());
       } catch (e) {
         console.error("Failed to complete session", e);
+        toast.error(t.session.completionError);
+        return;
       }
       setPhase("summary");
     } else {
@@ -162,6 +208,8 @@ function PracticeSessionContent() {
           currentIndex={currentIndex}
           totalCount={questionIds.length}
           isLoading={isLoading}
+          onOpenAi={handleOpenAi}
+          onRevealHint={handleRevealHint}
         />
       )}
 
@@ -171,6 +219,7 @@ function PracticeSessionContent() {
           question={question}
           onRetry={handleRetry}
           onNext={handleNext}
+          onOpenAi={handleOpenAi}
         />
       )}
 
@@ -181,6 +230,18 @@ function PracticeSessionContent() {
           onNewSession={() => router.push("/practice")}
         />
       )}
+
+      <AiTutorPanel
+        isOpen={isAiOpen}
+        onClose={() => setIsAiOpen(false)}
+        question={question}
+        stepAnswers={stepAnswers}
+        hasAttempted={phase === "result"}
+        attemptId={lastAttemptResult?.attemptId}
+        sessionId={sessionId}
+        onHintUsed={handleHintUsed}
+        initialAction={aiAction}
+      />
     </div>
   );
 }

@@ -9,10 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GraduationCap, ArrowRight, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useAccount } from "@/components/providers/AccountProvider";
+import { navigateAfterAuth } from "@/lib/client-auth";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const { demoEnabled } = useAccount();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,7 +34,7 @@ export default function LoginPage() {
         toast.error(data.error || "Ошибка входа");
       } else {
         toast.success(`Добро пожаловать, ${data.user.name}!`);
-        router.push("/");
+        await navigateAfterAuth("/");
       }
     } catch {
       toast.error("Не удалось связаться с сервером");
@@ -56,10 +57,27 @@ export default function LoginPage() {
         toast.error(data.error || "Ошибка регистрации");
       } else {
         toast.success("Аккаунт успешно создан!");
-        router.push("/");
+        await navigateAfterAuth("/");
       }
     } catch {
       toast.error("Ошибка при создании аккаунта");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/demo", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Не удалось открыть демоверсию");
+      } else {
+        await navigateAfterAuth("/");
+      }
+    } catch {
+      toast.error("Не удалось связаться с сервером");
     } finally {
       setLoading(false);
     }
@@ -169,6 +187,16 @@ export default function LoginPage() {
                 </form>
               </TabsContent>
             </Tabs>
+            {demoEnabled && (
+              <div className="border-t pt-4 space-y-2">
+                <Button variant="outline" className="w-full" disabled={loading} onClick={handleDemoLogin}>
+                  Попробовать демоверсию
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  В демоверсии используются общие учебные данные. Для личного прогресса создайте аккаунт.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

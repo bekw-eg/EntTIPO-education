@@ -4,14 +4,10 @@ import React from "react";
 import { Trophy, Target, ArrowRight, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { SessionStats } from "@/types";
 
 interface SessionSummaryProps {
-  session: {
-    totalCount: number;
-    correctCount: number;
-    completedCount: number;
-    mode: string;
-  };
+  session: SessionStats;
   onGoToDashboard: () => void;
   onNewSession: () => void;
 }
@@ -22,9 +18,9 @@ export default function SessionSummary({
   onNewSession,
 }: SessionSummaryProps) {
   const { t } = useLanguage();
-  const { correctCount, completedCount } = session;
+  const { correctCount, completedCount, attemptCount, correctAttemptCount } = session;
   const accuracy =
-    completedCount > 0 ? Math.round((correctCount / completedCount) * 100) : 0;
+    attemptCount > 0 ? Math.round((correctAttemptCount / attemptCount) * 100) : 0;
 
   const getMessage = () => {
     if (accuracy >= 80) return t.summary.excellent;
@@ -78,7 +74,7 @@ export default function SessionSummary({
           <div className="absolute flex flex-col items-center justify-center">
             <span className="text-3xl font-bold">{accuracy}%</span>
             <span className="text-xs text-muted-foreground uppercase font-semibold">
-              {t.dashboard.accuracy}
+              {t.summary.attemptAccuracy}
             </span>
           </div>
         </div>
@@ -102,6 +98,9 @@ export default function SessionSummary({
             <p className="text-xs text-muted-foreground mt-0.5">{t.summary.wrong}</p>
           </div>
         </div>
+        <p className="text-sm text-muted-foreground mt-5">
+          {t.summary.attempts}: {attemptCount}
+        </p>
       </div>
 
       {/* Action Buttons */}

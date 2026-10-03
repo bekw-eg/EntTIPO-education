@@ -21,6 +21,9 @@ export interface GeneratedStep {
 
 export interface GeneratedQuestion {
   topicId: string;
+  subtopicId?: string;
+  skillTag?: string;
+  weakSkill?: string;
   title: string;
   questionText: string;
   latex?: string;
@@ -51,6 +54,8 @@ export function generateRootsAndPowers(index = 1): GeneratedQuestion {
 
   return {
     topicId: "t1",
+    skillTag: "roots_and_powers",
+    weakSkill: "свойства_степеней",
     title: `Упрощение выражений со степенями #${index}`,
     questionText: `Вычислите значение числового выражения применив свойства степеней:`,
     latex: `${a}^{${m}} \\cdot ${a}^{${n}}`,
@@ -100,6 +105,8 @@ export function generatePolynomials(index = 1): GeneratedQuestion {
 
   return {
     topicId: "t2",
+    skillTag: "polynomials_expansion",
+    weakSkill: "формулы_сокращенного_умножения",
     title: `Формула квадрата двучлена #${index}`,
     questionText: `Раскройте скобки по формуле квадрата суммы:`,
     latex: `(x + ${p})^2`,
@@ -152,6 +159,8 @@ export function generateComplexNumbers(index = 1): GeneratedQuestion {
 
   return {
     topicId: "t3",
+    skillTag: "complex_numbers",
+    weakSkill: "комплексные_числа",
     title: `Сложение комплексных чисел #${index}`,
     questionText: `Найдите сумму комплексных чисел:`,
     latex: `z_1 = ${re1} + ${im1}i, \\quad z_2 = ${re2} + ${im2}i`,
@@ -204,6 +213,8 @@ export function generateDerivative(index = 1): GeneratedQuestion {
 
   return {
     topicId: "t4",
+    skillTag: "power_rule_derivative",
+    weakSkill: "вычисление_производной",
     title: `Производная степенной функции #${index}`,
     questionText: `Найдите производную функции f(x):`,
     latex: `f(x) = ${k}x^{${n}}`,
@@ -259,6 +270,8 @@ export function generateTangent(index = 1): GeneratedQuestion {
 
   return {
     topicId: "t5",
+    skillTag: "tangent_equation",
+    weakSkill: "уравнение_касательной",
     title: `Уравнение касательной к параболе #${index}`,
     questionText: `Составьте уравнение касательной к графику функции в заданной точке:`,
     latex: `f(x) = ${a === 1 ? "" : a}x^2, \\quad x_0 = ${x0}`,
@@ -311,6 +324,8 @@ export function generateIntegrals(index = 1): GeneratedQuestion {
 
   return {
     topicId: "t7",
+    skillTag: "definite_integrals",
+    weakSkill: "вычисление_интегралов",
     title: `Определённый интеграл линейной функции #${index}`,
     questionText: `Вычислите определённый интеграл по формуле Ньютона-Лейбница:`,
     latex: `\\int_{0}^{${b}} ${m}x \\, dx`,
@@ -352,6 +367,8 @@ export function generateLogarithms(index = 1): GeneratedQuestion {
 
   return {
     topicId: "t9",
+    skillTag: "logarithm_properties",
+    weakSkill: "свойства_логарифмов",
     title: `Вычисление логарифма по определению #${index}`,
     questionText: `Найдите значение логарифма:`,
     latex: `\\log_{${base}}(${arg})`,
@@ -397,6 +414,8 @@ export function generateTrigonometry(index = 1): GeneratedQuestion {
 
   return {
     topicId: "t11",
+    skillTag: "trigonometry_values",
+    weakSkill: "тригонометрические_функции",
     title: `Табличные значения тригонометрии #${index}`,
     questionText: `Найдите точное значение тригонометрической функции:`,
     latex: `\\sin(${item.rad})`,
@@ -439,6 +458,8 @@ export function generateDiffEq2(index = 1): GeneratedQuestion {
 
   return {
     topicId: "t14",
+    skillTag: "second_order_diffeq",
+    weakSkill: "дифференциальные_уравнения",
     title: `Характеристическое уравнение ДУ второго порядка #${index}`,
     questionText: `Найдите корни характеристического уравнения для дифференциального уравнения:`,
     latex: `y'' ${p < 0 ? `- ${Math.abs(p)}` : `+ ${p}`}y' + ${q}y = 0`,
@@ -493,6 +514,8 @@ export function generateStereometry(index = 1): GeneratedQuestion {
 
   return {
     topicId: "t1", // or related
+    skillTag: "stereometry_volume",
+    weakSkill: "стереометрия_объемы",
     title: `Стереометрия: Объём правильной пирамиды #${index}`,
     questionText: `В правильной четырёхугольной пирамиде сторона основания равна ${a}, а высота равна ${H}. Найдите объём пирамиды.\n[GEOMETRY:${JSON.stringify(geomConfig)}]`,
     latex: `a = ${a}, \\quad H = ${H}`,
@@ -560,4 +583,79 @@ export function generateQuestionsBatch(countPerTopic = 15): GeneratedQuestion[] 
   }
 
   return result;
+}
+
+/**
+ * Mapping from micro-skill tags to dedicated algorithmic generators.
+ */
+export const SKILL_GENERATOR_MAP: Record<string, (index?: number) => GeneratedQuestion> = {
+  roots_and_powers: generateRootsAndPowers,
+  свойства_степеней: generateRootsAndPowers,
+  polynomials_expansion: generatePolynomials,
+  формулы_сокращенного_умножения: generatePolynomials,
+  формулы_многочленов: generatePolynomials,
+  complex_numbers: generateComplexNumbers,
+  комплексные_числа: generateComplexNumbers,
+  power_rule_derivative: generateDerivative,
+  вычисление_производной: generateDerivative,
+  производная_функции: generateDerivative,
+  tangent_equation: generateTangent,
+  уравнение_касательной: generateTangent,
+  definite_integrals: generateIntegrals,
+  вычисление_интегралов: generateIntegrals,
+  logarithm_properties: generateLogarithms,
+  свойства_логарифмов: generateLogarithms,
+  trigonometry_values: generateTrigonometry,
+  тригонометрические_функции: generateTrigonometry,
+  second_order_diffeq: generateDiffEq2,
+  дифференциальные_уравнения: generateDiffEq2,
+  stereometry_volume: generateStereometry,
+  стереометрия_объемы: generateStereometry,
+};
+
+/**
+ * Generates an algorithmic question targeting a student's specific unmastered skill.
+ */
+export function generateQuestionForSkill(
+  skillTag: string,
+  index = 1
+): GeneratedQuestion | null {
+  if (!skillTag) return null;
+  const normalized = skillTag.toLowerCase().trim().replace(/[-\s]+/g, "_");
+  const directGen = SKILL_GENERATOR_MAP[normalized] || SKILL_GENERATOR_MAP[skillTag];
+  if (directGen) {
+    return directGen(index);
+  }
+
+  // Substring / keyword matching
+  for (const [key, gen] of Object.entries(SKILL_GENERATOR_MAP)) {
+    if (normalized.includes(key) || key.includes(normalized)) {
+      return gen(index);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Returns available micro-skills with their topic mappings.
+ */
+export function getAvailableSkills(): {
+  skillTag: string;
+  weakSkill: string;
+  topicId: string;
+  title: string;
+}[] {
+  return [
+    { skillTag: "roots_and_powers", weakSkill: "свойства_степеней", topicId: "t1", title: "Корни и степени" },
+    { skillTag: "polynomials_expansion", weakSkill: "формулы_сокращенного_умножения", topicId: "t2", title: "Многочлены" },
+    { skillTag: "complex_numbers", weakSkill: "комплексные_числа", topicId: "t3", title: "Комплексные числа" },
+    { skillTag: "power_rule_derivative", weakSkill: "вычисление_производной", topicId: "t4", title: "Производная" },
+    { skillTag: "tangent_equation", weakSkill: "уравнение_касательной", topicId: "t5", title: "Касательная к графику" },
+    { skillTag: "definite_integrals", weakSkill: "вычисление_интегралов", topicId: "t7", title: "Интегралы" },
+    { skillTag: "logarithm_properties", weakSkill: "свойства_логарифмов", topicId: "t9", title: "Логарифмические функции" },
+    { skillTag: "trigonometry_values", weakSkill: "тригонометрические_функции", topicId: "t11", title: "Тригонометрия" },
+    { skillTag: "second_order_diffeq", weakSkill: "дифференциальные_уравнения", topicId: "t14", title: "ДУ второго порядка" },
+    { skillTag: "stereometry_volume", weakSkill: "стереометрия_объемы", topicId: "t1", title: "Стереометрия" },
+  ];
 }

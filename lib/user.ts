@@ -1,40 +1,35 @@
-import { verifySessionToken, AUTH_COOKIE_NAME } from "./auth";
+import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
+import { verifySessionToken, getSessionUserId, AUTH_COOKIE_NAME, DEMO_USER_ID, isDemoEnabled } from "./auth";
 
-/**
- * Default fallback user ID for demo / guest mode and automated tests.
- */
-export const SINGLE_USER_ID = "cluser0000000000000000001";
-
-/**
- * Returns the currently authenticated user ID from request headers/cookies,
- * or gracefully falls back to the default user ID.
- */
-export function getCurrentUserId(request?: Request): string {
-  if (request) {
-    // 1. Check Authorization: Bearer <token>
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      const verified = verifySessionToken(token);
-      if (verified) return verified;
-    }
-
-    // 2. Check Cookie header (ent_tipo_session=<token>)
-    const cookieHeader = request.headers.get("cookie");
-    if (cookieHeader) {
-      const match = cookieHeader.match(new RegExp(`${AUTH_COOKIE_NAME}=([^;]+)`));
-      if (match && match[1]) {
-        const verified = verifySessionToken(match[1]);
-        if (verified) return verified;
-      }
-    }
-
-    // 3. Check X-User-Id header (for internal testing / student switching)
-    const customUserId = request.headers.get("X-User-Id");
-    if (customUserId) {
-      return customUserId;
-    }
+/** Resolve only signed credentials; guests and invalid credentials have no user ID. */
+export function getCurrentUserId(request: Request): string | null {
+  const authorization = request.headers.get("Authorization");
+  let token: string | undefined;
+  if (authorization !== null) {
+    if (!authorization.startsWith("Bearer ")) return null;
+    token = authorization.substring(7);
+  } else {
+    token = request.headers.get("cookie")
+      ?.split(";")
+      .map((cookie) => cookie.trim())
+      .find((cookie) => cookie.startsWith(`${AUTH_COOKIE_NAME}=`))
+      ?.slice(AUTH_COOKIE_NAME.length + 1);
   }
+  if (!token) return null;
+  const userId = verifySessionToken(token);
+  return userId === DEMO_USER_ID && !isDemoEnabled() ? null : userId;
+}
 
-  return SINGLE_USER_ID;
+export function unauthorizedResponse() {
+  return NextResponse.json(
+    { error: "Для доступа к личным данным необходимо войти в аккаунт" },
+    { status: 401, headers: { "Cache-Control": "private, no-store" } }
+  );
+}
+
+export async function requirePageUserId(): Promise<string> {
+  const userId = await getSessionUserId();
+  if (!userId) redirect("/login");
+  return userId;
 }

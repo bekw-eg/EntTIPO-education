@@ -2,14 +2,16 @@
 
 import React, { useEffect, useState } from "react";
 import { MathDisplay } from "@/components/ui/MathDisplay";
-import { Timer, CheckCircle, Lightbulb } from "lucide-react";
+import { Timer, CheckCircle, Lightbulb, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Question } from "@/types";
+import { Question, AiAction } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { GeometryViewer, GeometryConfig } from "@/components/ui/GeometryViewer";
+import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
+import { toast } from "sonner";
 
 function tryParseGeometry(text: string): GeometryConfig | null {
   try {
@@ -31,6 +33,8 @@ interface QuestionCardProps {
   currentIndex: number;
   totalCount: number;
   isLoading: boolean;
+  onOpenAi?: (action?: AiAction) => void;
+  onRevealHint?: () => Promise<void>;
 }
 
 export default function QuestionCard({
@@ -41,12 +45,44 @@ export default function QuestionCard({
   currentIndex,
   totalCount,
   isLoading,
+  onOpenAi,
+  onRevealHint,
 }: QuestionCardProps) {
   const { t, getTopicName } = useLanguage();
   const [elapsed, setElapsed] = useState(0);
+  const [localAiOpen, setLocalAiOpen] = useState(false);
+  const [localInitialAction, setLocalInitialAction] = useState<AiAction | undefined>(undefined);
+  const [revealedHints, setRevealedHints] = useState<Set<string>>(new Set());
+  const [isRevealingHint, setIsRevealingHint] = useState(false);
+  const revealingRef = React.useRef(false);
+
+  const revealHint = async (stepId: string) => {
+    if (revealingRef.current || isLoading) return;
+    revealingRef.current = true;
+    setIsRevealingHint(true);
+    try {
+      await onRevealHint?.();
+      setRevealedHints((prev) => new Set([...prev, stepId]));
+    } catch {
+      toast.error(t.session.hintError);
+    } finally {
+      revealingRef.current = false;
+      setIsRevealingHint(false);
+    }
+  };
+
+  const handleOpenAi = (action?: AiAction) => {
+    if (onOpenAi) {
+      onOpenAi(action);
+    } else {
+      setLocalInitialAction(action);
+      setLocalAiOpen(true);
+    }
+  };
 
   useEffect(() => {
     setElapsed(0);
+    setRevealedHints(new Set());
     const timer = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(timer);
   }, [question.id]);
@@ -80,8 +116,8 @@ export default function QuestionCard({
 
       <CardContent className="p-4 sm:p-6 space-y-6">
         {/* Top Header metadata */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-4">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="font-medium text-xs">
               {topicDisplay}
             </Badge>
@@ -101,13 +137,40 @@ export default function QuestionCard({
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span>
-              {t.session.taskOf} {currentIndex + 1} / {totalCount}
-            </span>
-            <div className="flex items-center gap-1 font-mono bg-muted/60 px-2 py-1 rounded">
-              <Timer className="w-3.5 h-3.5 text-primary" />
-              {formatTime(elapsed)}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* [💡 Подсказка] & [🤖 AI көмекші / AI помощник] */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenAi("hint")}
+              disabled={isLoading || isRevealingHint}
+              className="h-8 text-xs font-semibold border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-700 dark:text-amber-400"
+            >
+              <Lightbulb className="w-3.5 h-3.5 mr-1 text-amber-500" />
+              {t.ai.hintBtn}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenAi()}
+              disabled={isLoading || isRevealingHint}
+              className="h-8 text-xs font-semibold border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary"
+            >
+              <Bot className="w-3.5 h-3.5 mr-1" />
+              {t.ai.assistantBtn}
+            </Button>
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground ml-1">
+              <span>
+                {t.session.taskOf} {currentIndex + 1} / {totalCount}
+              </span>
+              <div className="flex items-center gap-1 font-mono bg-muted/60 px-2 py-1 rounded">
+                <Timer className="w-3.5 h-3.5 text-primary" />
+                {formatTime(elapsed)}
+              </div>
             </div>
           </div>
         </div>
@@ -180,12 +243,19 @@ export default function QuestionCard({
                     )}
                   </div>
 
-                  {step.hint && (
+                  {step.hint && revealedHints.has(step.id) ? (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 p-2 rounded-lg">
                       <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                       <span>{step.hint}</span>
                     </div>
-                  )}
+                  ) : step.hint ? (
+                    <Button type="button" variant="ghost" size="sm"
+                      disabled={isLoading || isRevealingHint}
+                      onClick={() => revealHint(step.id)}>
+                      <Lightbulb className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+                      {t.session.hint}
+                    </Button>
+                  ) : null}
 
                   {/* Multiple Choice */}
                   {step.type === "multiple_choice" && (
@@ -197,6 +267,7 @@ export default function QuestionCard({
                           <button
                             key={opt.id}
                             type="button"
+                            disabled={isLoading}
                             onClick={() => onStepAnswer(step.id, opt.text)}
                             className={`p-3 text-left rounded-lg text-sm border transition-all ${
                               isSelected
@@ -220,6 +291,7 @@ export default function QuestionCard({
                       <Input
                         type="text"
                         value={currentVal}
+                        disabled={isLoading}
                         onChange={(e) => onStepAnswer(step.id, e.target.value)}
                         placeholder={t.session.inputNumberPlaceholder}
                         className="font-mono text-sm"
@@ -233,6 +305,7 @@ export default function QuestionCard({
                       <Input
                         type="text"
                         value={currentVal}
+                        disabled={isLoading}
                         onChange={(e) => onStepAnswer(step.id, e.target.value)}
                         placeholder={t.session.inputExpressionPlaceholder}
                         className="font-mono text-sm"
@@ -251,13 +324,37 @@ export default function QuestionCard({
         </div>
 
         {/* Submit Footer */}
-        <div className="pt-4 border-t flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            {t.session.fillAllSteps}
-          </p>
+        <div className="pt-4 border-t flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground hidden sm:block">
+              {t.session.fillAllSteps}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenAi("hint")}
+              className="text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+              disabled={isLoading || isRevealingHint}
+            >
+              <Lightbulb className="w-3.5 h-3.5 mr-1 text-amber-500" />
+              {t.ai.hintBtn}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => handleOpenAi()}
+              className="text-xs text-primary hover:bg-primary/10 font-medium"
+              disabled={isLoading || isRevealingHint}
+            >
+              <Bot className="w-3.5 h-3.5 mr-1" />
+              {t.ai.assistantBtn}
+            </Button>
+          </div>
           <Button
             onClick={onSubmit}
-            disabled={isLoading || !isAllAnswered}
+            disabled={isLoading || isRevealingHint || !isAllAnswered}
             size="lg"
             className="px-8 font-semibold shadow-xs"
           >
@@ -265,6 +362,16 @@ export default function QuestionCard({
           </Button>
         </div>
       </CardContent>
+
+      {!onOpenAi && (
+        <AiTutorPanel
+          isOpen={localAiOpen}
+          onClose={() => setLocalAiOpen(false)}
+          question={question}
+          stepAnswers={stepAnswers}
+          initialAction={localInitialAction}
+        />
+      )}
     </Card>
   );
 }

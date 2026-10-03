@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getCurrentUserId } from "@/lib/user";
+import { requirePageUserId } from "@/lib/user";
 import { TopicDetailView } from "@/components/topics/TopicDetailView";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,7 @@ interface TopicDetailPageProps {
 }
 
 export default async function TopicDetailPage({ params }: TopicDetailPageProps) {
-  const userId = getCurrentUserId();
+  const userId = await requirePageUserId();
   const { topicId } = await params;
 
   const topic = await prisma.topic.findUnique({

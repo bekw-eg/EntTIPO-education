@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, createSessionToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { verifyPassword, createSessionToken, AUTH_COOKIE_NAME, DEMO_USER_ID } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { email, password } = body;
 
-    if (!email || !password) {
+    if (typeof email !== "string" || typeof password !== "string" || !email.trim() || !password) {
       return NextResponse.json(
         { error: "Введите email и пароль" },
         { status: 400 }
@@ -18,25 +18,18 @@ export async function POST(req: NextRequest) {
       where: { email: email.toLowerCase().trim() },
     });
 
-    if (!user) {
+    if (!user || user.id === DEMO_USER_ID || !user.password) {
       return NextResponse.json(
-        { error: "Пользователь с таким email не найден" },
+        { error: "Неверный email или пароль" },
         { status: 401 }
       );
     }
 
-    // If user has no password set (e.g. initial seeded test student), allow demo login or require password
-    let isValid = false;
-    if (user.password) {
-      isValid = verifyPassword(password, user.password);
-    } else {
-      // Demo password or default
-      isValid = password === "demo123" || password === "password" || password === "student";
-    }
+    const isValid = verifyPassword(password, user.password);
 
     if (!isValid) {
       return NextResponse.json(
-        { error: "Неверный пароль" },
+        { error: "Неверный email или пароль" },
         { status: 401 }
       );
     }
