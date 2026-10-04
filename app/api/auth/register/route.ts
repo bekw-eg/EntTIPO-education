@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionToken, AUTH_COOKIE_NAME } from "@/lib/auth";
+import { z } from "zod";
+
+const registrationSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  email: z.string().trim().email().max(254),
+  password: z.string().min(4).max(128),
+});
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password } = body;
-
-    if (!name || !email || !password) {
+    const parsed = registrationSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Имя, email и пароль обязательны для заполнения" },
+        { error: "Введите имя, корректный email и пароль от 4 до 128 символов" },
         { status: 400 }
       );
     }
 
-    if (password.length < 4) {
-      return NextResponse.json(
-        { error: "Пароль должен содержать не менее 4 символов" },
-        { status: 400 }
-      );
-    }
+    const { name, email, password } = parsed.data;
 
     // Check if user already exists
     const existing = await prisma.user.findUnique({

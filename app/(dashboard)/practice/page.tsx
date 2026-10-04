@@ -9,11 +9,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import Link from "next/link";
+import { diagnosticText } from "@/lib/i18n/diagnostics";
+
+interface UnfinishedSession {
+  id: string;
+  mode: "mixed" | "weak_topics" | "specific_topic" | "review_mistakes";
+  completedCount: number;
+  totalCount: number;
+}
 
 function PracticeSetupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t, getTopicName } = useLanguage();
+  const { t, getTopicName, locale } = useLanguage();
+  const skillId = searchParams.get("skillId") || undefined;
 
   const initialMode = searchParams.get("mode") || "mixed";
   const initialTopic = searchParams.get("topicId") || "";
@@ -23,6 +33,7 @@ function PracticeSetupContent() {
   const [topicId, setTopicId] = useState<string>(initialTopic);
   const [topics, setTopics] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [unfinishedSessions, setUnfinishedSessions] = useState<UnfinishedSession[]>([]);
 
   useEffect(() => {
     const fetchTopics = async () => {
@@ -37,6 +48,9 @@ function PracticeSetupContent() {
       }
     };
     fetchTopics();
+    fetch("/api/sessions?status=active", { cache: "no-store" })
+      .then(async (res) => { if (res.ok) setUnfinishedSessions(await res.json()); })
+      .catch((error) => console.error("Could not load unfinished sessions", error));
   }, []);
 
   const counts = [10, 20, 30, 40, 50];
@@ -82,6 +96,7 @@ function PracticeSetupContent() {
           mode,
           totalCount: Number(totalCount),
           topicId: mode === "specific_topic" ? topicId : undefined,
+          skillId,
         }),
       });
 
@@ -91,8 +106,7 @@ function PracticeSetupContent() {
       }
 
       const data = await res.json();
-      const questionIdsString = (data.questionIds || []).join(",");
-      router.push(`/practice/session/${data.id}?questionIds=${questionIdsString}`);
+      router.push(`/practice/session/${data.id}`);
     } catch (error: any) {
       console.error(error);
       toast.error(error.message || "Error");
@@ -110,6 +124,24 @@ function PracticeSetupContent() {
           {t.practice.setupSubtitle}
         </p>
       </div>
+
+      <Link href="/diagnostics" className="block rounded-xl border p-4 hover:bg-muted/50">
+        <span className="font-semibold">{diagnosticText[locale === "kk" ? "kk" : "ru"].title}</span>
+        <p className="mt-1 text-sm text-muted-foreground">{diagnosticText[locale === "kk" ? "kk" : "ru"].intro}</p>
+      </Link>
+
+      {unfinishedSessions.length > 0 && <section className="space-y-3">
+        <h2 className="text-lg font-semibold">{t.practice.unfinished}</h2>
+        {unfinishedSessions.map((session) => <Card key={session.id} className="p-4 flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">{t.practice.modes[session.mode]?.title}</p>
+            <p className="text-xs text-muted-foreground">{t.summary.solved}: {session.completedCount} / {session.totalCount}</p>
+          </div>
+          <Button variant="outline" onClick={() => router.push(`/practice/session/${session.id}`)}>
+            {t.practice.resume}<ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </Card>)}
+      </section>}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Count Selection */}

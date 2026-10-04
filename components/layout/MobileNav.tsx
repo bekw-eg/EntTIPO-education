@@ -13,6 +13,7 @@ export function MobileNav() {
   const navItems = [
     { name: t.nav.home, href: "/", icon: LayoutDashboard },
     { name: t.nav.practice, href: "/practice", icon: BookOpen },
+    { name: "Диагностика", href: "/diagnostics", icon: AlertCircle },
     { name: t.nav.topics, href: "/topics", icon: Library },
     { name: "3D", href: "/geometry", icon: Compass },
     { name: t.nav.mistakes, href: "/mistakes", icon: AlertCircle },

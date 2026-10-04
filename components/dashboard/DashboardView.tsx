@@ -16,9 +16,9 @@ import { Header } from "@/components/layout/Header";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { TopicProgressBar } from "@/components/dashboard/TopicProgressBar";
 import { StreakCard } from "@/components/dashboard/StreakCard";
-import { DailyGoalCard } from "@/components/dashboard/DailyGoalCard";
 import { DashboardStats } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { DailyLearningPlanCard } from "./DailyLearningPlanCard";
 
 interface DashboardViewProps {
   initialData: DashboardStats;
@@ -28,7 +28,7 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
   const { t, locale, getTopicName } = useLanguage();
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
+    const hour = Number(new Intl.DateTimeFormat("en", { timeZone: data.timeZone ?? "Asia/Qyzylorda", hour: "numeric", hourCycle: "h23" }).format(new Date()));
     if (hour < 12) return t.dashboard.morningGreeting;
     if (hour < 18) return t.dashboard.afternoonGreeting;
     return t.dashboard.eveningGreeting;
@@ -44,6 +44,7 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
       weekday: "long",
       day: "numeric",
       month: "long",
+      timeZone: data.timeZone ?? "Asia/Qyzylorda",
     });
     return dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
   };
@@ -64,6 +65,7 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
       />
 
       <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+        <DailyLearningPlanCard />
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard
@@ -92,17 +94,13 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
           <StatsCard
             title={t.dashboard.totalSolved}
             value={data.totalSolved}
-            subtitle={t.dashboard.tasksInDb}
+            subtitle={`${data.totalAttempts} ${t.statistics.solutionAttempts}`}
             icon={<BarChart3 className="w-5 h-5" />}
             iconBg="bg-purple-500/10 text-purple-500"
           />
         </div>
 
-        {/* Goal + Streak */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <DailyGoalCard completed={data.todaySolved} target={data.todayTarget} />
-          <StreakCard streak={data.streak} />
-        </div>
+        <StreakCard streak={data.streak} />
 
         {/* CTA Buttons */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

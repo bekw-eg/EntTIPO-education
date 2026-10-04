@@ -1,12 +1,26 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
-import { prisma } from "./prisma";
 
 export const AUTH_COOKIE_NAME = "ent_tipo_session";
-const SESSION_SECRET = process.env.SESSION_SECRET || "ent_tipo_super_secret_jwt_key_2025";
+export const DEMO_USER_ID = "cluser0000000000000000001";
+
+export function isDemoEnabled(): boolean {
+  return process.env.ENABLE_DEMO_MODE === "true";
+}
+
+const authGlobal = globalThis as typeof globalThis & { entTipoSessionSecret?: string };
+
+function getSessionSecret(): string {
+  if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET must be configured in production");
+  }
+  // Keep development sessions stable across hot reloads without a public default key.
+  return (authGlobal.entTipoSessionSecret ??= crypto.randomBytes(32).toString("hex"));
+}
 
 /**
- * Hashes password using SHA-256 with a unique salt.
+ * Hashes a password using PBKDF2 with a unique salt.
  */
 export function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -45,7 +59,7 @@ export function createSessionToken(userId: string): string {
 
   const base64Payload = Buffer.from(payload).toString("base64url");
   const signature = crypto
-    .createHmac("sha256", SESSION_SECRET)
+    .createHmac("sha256", getSessionSecret())
     .update(base64Payload)
     .digest("base64url");
 
@@ -57,11 +71,13 @@ export function createSessionToken(userId: string): string {
  */
 export function verifySessionToken(token: string): string | null {
   try {
-    const [base64Payload, signature] = token.split(".");
+    const parts = token.split(".");
+    if (parts.length !== 2) return null;
+    const [base64Payload, signature] = parts;
     if (!base64Payload || !signature) return null;
 
     const expectedSignature = crypto
-      .createHmac("sha256", SESSION_SECRET)
+      .createHmac("sha256", getSessionSecret())
       .update(base64Payload)
       .digest("base64url");
 
@@ -78,8 +94,15 @@ export function verifySessionToken(token: string): string | null {
       Buffer.from(base64Payload, "base64url").toString("utf-8")
     );
 
-    if (payload.expiresAt && payload.expiresAt < Date.now()) {
-      return null; // Expired
+    if (
+      !payload ||
+      typeof payload.userId !== "string" ||
+      !payload.userId.trim() ||
+      typeof payload.expiresAt !== "number" ||
+      !Number.isFinite(payload.expiresAt) ||
+      payload.expiresAt <= Date.now()
+    ) {
+      return null;
     }
 
     return payload.userId;
@@ -97,7 +120,8 @@ export async function getSessionUserId(): Promise<string | null> {
     const cookieStore = await cookies();
     const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
     if (!token) return null;
-    return verifySessionToken(token);
+    const userId = verifySessionToken(token);
+    return userId === DEMO_USER_ID && !isDemoEnabled() ? null : userId;
   } catch {
     return null;
   }

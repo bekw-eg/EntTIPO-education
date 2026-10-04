@@ -67,6 +67,7 @@ export interface QuestionStep {
   order: number;
   type: StepType;
   prompt: string;
+  promptKk?: string | null;
   expectedAnswer: string;
   hint: string | null;
   options: QuestionOption[];
@@ -77,7 +78,9 @@ export interface Question {
   topicId: string;
   subtopicId: string | null;
   title: string;
+  titleKk?: string | null;
   questionText: string;
+  questionTextKk?: string | null;
   latex: string | null;
   difficulty: number; // 1-5
   correctAnswer: string;
@@ -87,7 +90,17 @@ export interface Question {
   topic: Topic;
   subtopic: Subtopic | null;
   steps: QuestionStep[];
+  usedHint?: boolean;
 }
+
+/** Public exercise data. Solutions are supplied only by a checked attempt. */
+export type PracticeQuestion = Omit<Question, "correctAnswer" | "explanation" | "steps"> & {
+  steps: (Omit<QuestionStep, "expectedAnswer" | "hint" | "options"> & {
+    hasHint: boolean;
+    hint?: string | null;
+    options: Omit<QuestionOption, "isCorrect">[];
+  })[];
+};
 
 // ─── Practice Session ────────────────────────────────────────────────────────
 
@@ -230,16 +243,64 @@ export interface Mistake {
   id: string;
   userId: string;
   questionId: string;
-  attemptId: string;
+  attemptId: string | null;
   topicId: string;
   subtopicId: string | null;
   errorType: ErrorType;
+  weakSkill?: string | null;
+  userAnswer?: string | null;
+  correctAnswer?: string | null;
+  explanation?: string | null;
+  aiReason?: string | null;
+  aiHint?: string | null;
   description: string | null;
   isReviewed: boolean;
   reviewedAt: Date | null;
   createdAt: Date;
   question: Question;
   topic: Topic;
+}
+
+// ─── AI Tutor Types ──────────────────────────────────────────────────────────
+
+export type AiAction =
+  | "hint"
+  | "explain"
+  | "explain_formula"
+  | "analyze_error"
+  | "check_steps"
+  | "where_mistake"
+  | "why_formula"
+  | "explain_topic"
+  | "similar_question"
+  | "chat";
+
+export interface AiErrorAnalysis {
+  errorType: string;
+  weakSkill: string;
+  reason: string;
+  shortExplanation: string;
+  hint: string;
+  recommendedAction: "practice" | "repeat_theory" | "review_examples";
+  recommendedDifficulty: number;
+}
+
+export interface AiSimilarQuestion {
+  title: string;
+  questionText: string;
+  latex?: string;
+  hint?: string;
+  expectedAnswer: string;
+  explanation: string;
+}
+
+export interface AiTutorResponse {
+  action: AiAction;
+  text?: string;
+  hintLevel?: number;
+  structuredError?: AiErrorAnalysis;
+  similarQuestion?: AiSimilarQuestion;
+  error?: string;
 }
 
 // ─── Daily Goal ───────────────────────────────────────────────────────────────
@@ -255,7 +316,9 @@ export interface DailyGoal {
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 export interface DashboardStats {
+  timeZone?: string;
   totalSolved: number;
+  totalAttempts: number;
   todaySolved: number;
   todayTarget: number;
   overallAccuracy: number;
@@ -292,16 +355,43 @@ export interface StepResult {
   isCorrect: boolean;
   userAnswer: string;
   expectedAnswer: string;
+  skillIds?: string[];
+  feedback?: { ru: string; kk: string };
 }
 
 export interface AttemptResult {
+  learningCheck?: { status: string; mistakeId: string | null; dueDay: string | null } | null;
   attemptId: string;
   isCorrect: boolean;
   isPartial: boolean;
   score: number;
   stepResults: StepResult[];
   explanation: string;
+  correctAnswer?: string;
   errorType?: ErrorType;
+  usedHint: boolean;
+  attemptNumber: number;
+  sessionStats: SessionStats;
+}
+
+export interface SessionStats {
+  totalCount: number;
+  completedCount: number;
+  correctCount: number;
+  attemptCount: number;
+  correctAttemptCount: number;
+  mode: string;
+}
+
+export interface PracticeSnapshot extends SessionStats {
+  id: string;
+  status: SessionStatus;
+  questionIds: string[];
+  currentIndex: number;
+  revision: number;
+  draftAnswers: Record<string, string>;
+  question: PracticeQuestion | null;
+  result: AttemptResult | null;
 }
 
 // ─── Statistics ───────────────────────────────────────────────────────────────
@@ -315,6 +405,7 @@ export interface DailyAccuracy {
 export interface Statistics {
   overallAccuracy: number;
   totalSolved: number;
+  totalAttempts: number;
   totalDays: number;
   dailyAccuracy: DailyAccuracy[];
   topicProgress: UserTopicProgress[];

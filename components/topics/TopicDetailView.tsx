@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,10 +15,13 @@ import {
   AlertTriangle,
   Lightbulb,
   CheckCircle,
+  Bot,
+  Sparkles,
 } from "lucide-react";
-import { getMasteryBadgeColor } from "@/types";
+import { getMasteryBadgeColor, AiAction } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { getLocalizedLesson } from "@/lib/i18n/lessons";
+import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 
 interface TopicDetailViewProps {
   topic: any;
@@ -39,6 +42,14 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
   const formula = localized?.formula || lesson?.formula;
   const example = localized?.example || lesson?.example;
   const commonErrors = localized?.commonErrors || lesson?.commonErrors;
+
+  const [isAiOpen, setIsAiOpen] = useState(false);
+  const [selectedFormula, setSelectedFormula] = useState<string | undefined>(undefined);
+
+  const openFormulaExplanation = (formulaString?: string) => {
+    setSelectedFormula(formulaString || formulaLatex || formula || undefined);
+    setIsAiOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -116,11 +127,21 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
             {/* 3. Основная формула */}
             {(formulaLatex || formula) && (
               <Card className="border-primary/30 bg-primary/5">
-                <CardHeader className="pb-2">
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-base flex items-center gap-2 text-primary">
                     <BookOpen className="w-4 h-4" />
                     {t.lesson.keyFormula}
                   </CardTitle>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openFormulaExplanation(formulaLatex || formula || undefined)}
+                    className="h-7 text-xs border-primary/40 bg-background/90 text-primary hover:bg-primary/10 font-semibold shadow-2xs"
+                  >
+                    <Bot className="w-3.5 h-3.5 mr-1 text-primary" />
+                    {t.ai.didNotUnderstand}
+                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {formulaLatex && (
@@ -226,6 +247,15 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
           </div>
         </div>
       </div>
+
+      <AiTutorPanel
+        isOpen={isAiOpen}
+        onClose={() => setIsAiOpen(false)}
+        topicId={topic.id}
+        formulaLatex={selectedFormula}
+        formulaName={translatedName}
+        initialAction="explain_formula"
+      />
     </div>
   );
 }

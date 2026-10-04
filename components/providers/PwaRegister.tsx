@@ -11,16 +11,38 @@ export function PwaRegister() {
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
-    // 1. Register Service Worker
+    // 1. Service Worker: only register in production.
+    // On localhost or in development, proactively unregister any active SW and clear cache
+    // to prevent CSS caching conflicts and HMR deadlocks.
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((reg) => {
-          console.log("PWA Service Worker registered with scope:", reg.scope);
-        })
-        .catch((err) => {
-          console.warn("Service Worker registration failed:", err);
+      const isLocalhost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname.endsWith(".local");
+
+      if (process.env.NODE_ENV === "development" || isLocalhost) {
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          for (const reg of registrations) {
+            reg.unregister();
+          }
         });
+        if ("caches" in window) {
+          caches.keys().then((keys) => {
+            for (const key of keys) {
+              caches.delete(key);
+            }
+          });
+        }
+      } else {
+        navigator.serviceWorker
+          .register("/sw.js")
+          .then((reg) => {
+            console.log("PWA Service Worker registered with scope:", reg.scope);
+          })
+          .catch((err) => {
+            console.warn("Service Worker registration failed:", err);
+          });
+      }
     }
 
     // 2. Listen to beforeinstallprompt event for PWA installation
@@ -40,7 +62,7 @@ export function PwaRegister() {
 
     const handleOffline = () => {
       setIsOffline(true);
-      toast.warning("Офлайн-режим: доступна локальная теория и формулы", {
+      toast.warning("Нет подключения. Для загрузки личных данных восстановите сеть.", {
         icon: <WifiOff className="w-4 h-4 text-amber-500" />,
       });
     };

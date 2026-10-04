@@ -1,17 +1,12 @@
 /**
  * Service Worker for ENT TIPO PWA.
- * Enables offline caching of KaTeX assets, pages, styles, and API responses.
+ * Caches public static assets; personal pages and API responses stay on the network.
  */
 
-const CACHE_NAME = "ent-tipo-v1.0.0";
+const CACHE_NAME = "ent-tipo-static-v2";
 const PRECACHE_ASSETS = [
-  "/",
   "/manifest.json",
-  "/topics",
-  "/practice",
-  "/geometry",
-  "/mistakes",
-  "/statistics",
+  "/icon.svg",
   "/offline.html",
 ];
 
@@ -33,7 +28,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key.startsWith("ent-tipo-") && key !== CACHE_NAME) {
             return caches.delete(key);
           }
         })
@@ -48,19 +43,27 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Ignore non-GET requests and chrome-extension
-  if (request.method !== "GET" || url.protocol.startsWith("chrome-extension")) {
+  // Ignore non-GET requests, chrome-extension, and localhost development
+  if (
+    request.method !== "GET" ||
+    url.origin !== self.location.origin ||
+    url.protocol.startsWith("chrome-extension") ||
+    url.hostname === "localhost" ||
+    url.hostname === "127.0.0.1"
+  ) {
+    return;
+  }
+
+  // Never read or write a shared cache for account data, including auth endpoints.
+  if (url.pathname.startsWith("/api/")) {
+    event.respondWith(fetch(request, { cache: "no-store" }));
     return;
   }
 
   // A. Static assets (JS, CSS, fonts, KaTeX fonts, icons): Cache-First
   if (
     url.pathname.startsWith("/_next/static/") ||
-    url.pathname.includes("fonts") ||
-    url.pathname.endsWith(".css") ||
-    url.pathname.endsWith(".png") ||
-    url.pathname.endsWith(".svg") ||
-    url.pathname.endsWith(".woff2")
+    PRECACHE_ASSETS.includes(url.pathname)
   ) {
     event.respondWith(
       caches.match(request).then((cachedResponse) => {
@@ -81,52 +84,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // B. Navigation requests (HTML pages): Network-First, fallback to Cache or offline.html
+  // B. Private pages must never survive an account change in a shared cache.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
+      fetch(request, { cache: "no-store" })
         .catch(async () => {
-          const cached = await caches.match(request);
-          if (cached) return cached;
           const offlinePage = await caches.match("/offline.html");
           if (offlinePage) return offlinePage;
-          return caches.match("/");
+          return new Response("Нет подключения к сети", { status: 503 });
         })
     );
     return;
   }
 
-  // C. API requests: Network-First with cache fallback
-  if (url.pathname.startsWith("/api/")) {
-    event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(() => {
-          return caches.match(request);
-        })
-    );
-    return;
-  }
-
-  // Default: Network with Cache fallback
-  event.respondWith(
-    fetch(request).catch(() => caches.match(request))
-  );
+  // React Server Component responses can also contain account data.
+  event.respondWith(fetch(request, { cache: "no-store" }));
 });

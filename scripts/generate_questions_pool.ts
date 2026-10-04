@@ -71,6 +71,7 @@ async function main() {
           correctAnswer: q.correctAnswer,
           answerType: q.answerType,
           explanation: q.explanation,
+          skills: q.skillIds ? { create: q.skillIds.map((skillId) => ({ skillId })) } : undefined,
           steps: {
             create: q.steps.map((s) => ({
               order: s.order,
@@ -78,6 +79,7 @@ async function main() {
               prompt: s.prompt,
               expectedAnswer: s.expectedAnswer,
               hint: s.hint,
+              skills: s.skillIds ? { create: s.skillIds.map((skillId) => ({ skillId })) } : undefined,
               options: {
                 create: s.options.map((opt) => ({
                   text: opt.text,

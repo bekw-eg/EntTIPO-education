@@ -22,11 +22,12 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
 export function Sidebar() {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
 
   const navItems = [
     { name: t.nav.home, href: "/", icon: LayoutDashboard },
     { name: t.nav.practice, href: "/practice", icon: BookOpen },
+    { name: locale === "kk" ? "Диагностика" : "Диагностика навыков", href: "/diagnostics", icon: GraduationCap },
     { name: t.nav.topics, href: "/topics", icon: Library },
     { name: "Геометрия", href: "/geometry", icon: Compass },
     { name: t.nav.mistakes, href: "/mistakes", icon: AlertCircle },
@@ -74,9 +75,7 @@ export function Sidebar() {
 
       <div className="p-4 border-t space-y-3">
         {/* Language selector in sidebar */}
-        <div className="space-y-1">
-          <LanguageSwitcher variant="buttons" className="w-full justify-between" />
-        </div>
+        <LanguageSwitcher variant="buttons" className="w-full" />
 
         {/* Theme toggle */}
         <Button

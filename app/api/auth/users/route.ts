@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const userId = getCurrentUserId(request);
+    if (!userId) return unauthorizedResponse();
     const users = await prisma.user.findMany({
+      where: { id: userId },
       select: {
         id: true,
         name: true,
@@ -12,7 +16,7 @@ export async function GET() {
         createdAt: true,
       },
       orderBy: { createdAt: "asc" },
-      take: 20,
+      take: 1,
     });
 
     return NextResponse.json({ users });

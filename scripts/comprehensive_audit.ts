@@ -312,6 +312,7 @@ async function auditPracticeFlow() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             questionId: q.id,
+            submissionId: crypto.randomUUID(),
             sessionId: session.id,
             stepAnswers,
             timeSpent: 15
