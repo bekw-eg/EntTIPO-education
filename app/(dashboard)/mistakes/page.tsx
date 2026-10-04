@@ -22,9 +22,14 @@ import { errorTypeTranslations } from "@/lib/i18n/translations";
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 import { AiAction } from "@/types";
 import { diagnosticText } from "@/lib/i18n/diagnostics";
+import { learningText } from "@/lib/i18n/learning";
+import { useRouter } from "next/navigation";
 
 export default function MistakesPage() {
   const { t, getTopicName, getErrorLabel, locale } = useLanguage();
+  const router = useRouter();
+  const copy = learningText[locale === "kk" ? "kk" : "ru"];
+  const [checkingId, setCheckingId] = useState<string | null>(null);
 
   const [mistakes, setMistakes] = useState<any[]>([]);
   const [weakSkills, setWeakSkills] = useState<any[]>([]);
@@ -75,8 +80,9 @@ export default function MistakesPage() {
       const params = new URLSearchParams();
       if (selectedTopic) params.set("topicId", selectedTopic);
       if (selectedErrorType) params.set("errorType", selectedErrorType);
-      if (reviewFilter === "unreviewed") params.set("isReviewed", "false");
-      if (reviewFilter === "reviewed") params.set("isReviewed", "true");
+      if (reviewFilter === "unreviewed") params.set("state", "outstanding");
+      if (reviewFilter === "reviewed") params.set("state", "confirmed");
+      if (reviewFilter === "due") params.set("state", "due");
 
       const res = await fetch(`/api/mistakes?${params.toString()}`);
       if (res.ok) {
@@ -112,7 +118,7 @@ export default function MistakesPage() {
 
       if (res.ok) {
         toast.success(
-          !currentStatus ? t.mistakes.reviewedBadge : t.mistakes.returnToUnreviewed
+          !currentStatus ? copy.viewed : copy.unmarkViewed
         );
         setMistakes((prev) =>
           prev.map((m) =>
@@ -123,6 +129,17 @@ export default function MistakesPage() {
     } catch {
       toast.error("Error updating mistake");
     }
+  };
+
+  const startCheck = async (mistakeId: string) => {
+    setCheckingId(mistakeId);
+    try {
+      const response = await fetch(`/api/mistakes/${mistakeId}/check`, { method: "POST" });
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      if (data.href) router.push(data.href);
+      else setMistakes((prev) => prev.map((m) => m.id === mistakeId ? { ...m, checkUnavailable: true } : m));
+    } catch { toast.error(copy.error); } finally { setCheckingId(null); }
   };
 
   return (
@@ -272,7 +289,7 @@ export default function MistakesPage() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {t.mistakes.unreviewedTab}
+                {copy.outstanding}
               </button>
               <button
                 type="button"
@@ -283,8 +300,9 @@ export default function MistakesPage() {
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                {t.mistakes.reviewedTab}
+                {copy.verifiedTab}
               </button>
+              <button type="button" onClick={() => setReviewFilter("due")} className={`px-3 py-1.5 rounded-md text-xs ${reviewFilter === "due" ? "bg-background shadow-sm" : "text-muted-foreground"}`}>{copy.dueTab}</button>
               <button
                 type="button"
                 onClick={() => setReviewFilter("all")}
@@ -330,7 +348,7 @@ export default function MistakesPage() {
                 <Card
                   key={m.id}
                   className={`overflow-hidden border transition-all ${
-                    m.isReviewed ? "opacity-75 bg-muted/10" : ""
+                    m.confirmedAt ? "bg-muted/10" : ""
                   }`}
                 >
                   <CardContent className="p-5 space-y-4">
@@ -344,10 +362,11 @@ export default function MistakesPage() {
                           {errorLabel}
                         </Badge>
                         {m.isReviewed && (
-                          <Badge variant="secondary" className="text-xs bg-emerald-500/10 text-emerald-600">
-                            {t.mistakes.reviewedBadge}
+                          <Badge variant="secondary" className="text-xs text-muted-foreground">
+                            {copy.viewed}
                           </Badge>
                         )}
+                        {m.confirmedAt && <Badge className="bg-emerald-600 text-xs">{copy.confirmed}</Badge>}
                       </div>
                       <span className="text-xs text-muted-foreground">
                         {formatDate(m.createdAt)}
@@ -356,10 +375,10 @@ export default function MistakesPage() {
 
                     {/* Question text & formula */}
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-base">{q?.title}</h4>
+                      <h4 className="font-semibold text-base">{locale === "kk" ? q?.titleKk ?? q?.title : q?.title}</h4>
                       {q?.questionText && (
                         <p className="text-sm text-foreground/80 whitespace-pre-line">
-                          {q.questionText}
+                          {locale === "kk" ? q.questionTextKk ?? q.questionText : q.questionText}
                         </p>
                       )}
                       {q?.latex && (
@@ -384,7 +403,7 @@ export default function MistakesPage() {
                                 className="flex items-center justify-between text-xs py-1 border-b last:border-0"
                               >
                                 <span className="text-muted-foreground">
-                                  {step?.prompt ? `${t.session.step} ${sIdx + 1}: ${step.prompt}` : `${t.session.step} ${sIdx + 1}`}
+                                  {step?.prompt ? `${t.session.step} ${sIdx + 1}: ${locale === "kk" ? step.promptKk ?? step.prompt : step.prompt}` : `${t.session.step} ${sIdx + 1}`}
                                 </span>
                                 <span
                                   className={`font-mono font-medium ${
@@ -409,10 +428,19 @@ export default function MistakesPage() {
                           {t.mistakes.correctSolution}
                         </span>
                         <p className="whitespace-pre-line leading-relaxed">
-                          {q.explanation}
+                          {locale === "kk" ? q.explanationKk ?? q.explanation : q.explanation}
                         </p>
                       </div>
                     )}
+
+                    <div className="space-y-1 text-sm">
+                      <p className="text-muted-foreground">{copy.checkHint}</p>
+                      {m.skill && <Link className="text-primary underline" href={`/learn/rules/${m.skillId}`}>{locale === "kk" ? m.skill.nameKk : m.skill.nameRu}</Link>}
+                      {m.nextReviewDay && <p>{copy.next}: <strong>{m.nextReviewDay}</strong>{m.reviewDue && <span className="ml-2 text-amber-700 dark:text-amber-400">{copy.due}</span>}</p>}
+                      {m.confirmationAttempt && <p className="text-xs text-muted-foreground">{copy.checkedTask}: <Link className="text-primary underline" href={`/practice/session/${m.confirmationAttempt.sessionId}`}>{locale === "kk" ? m.confirmationAttempt.question.titleKk ?? m.confirmationAttempt.question.title : m.confirmationAttempt.question.title}</Link> · {formatDate(m.confirmationAttempt.createdAt)}</p>}
+                      {!m.skillId && <p className="text-amber-700 dark:text-amber-400">{copy.unmapped}</p>}
+                      {m.checkUnavailable && <p role="status" className="text-amber-700 dark:text-amber-400">{copy.noSimilar}</p>}
+                    </div>
 
                     {/* Actions */}
                     <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t">
@@ -423,8 +451,8 @@ export default function MistakesPage() {
                         className="text-xs"
                       >
                         {m.isReviewed
-                          ? t.mistakes.returnToUnreviewed
-                          : t.mistakes.markAsReviewed}
+                          ? copy.unmarkViewed
+                          : copy.markViewed}
                       </Button>
 
                       <div className="flex items-center gap-2">
@@ -439,14 +467,10 @@ export default function MistakesPage() {
                           {t.ai.reviewWithAi}
                         </Button>
 
-                        <Button asChild size="sm" className="text-xs h-8 font-semibold">
-                          <Link
-                            href={`/practice?mode=specific_topic&topicId=${q?.topicId}`}
-                          >
-                            {t.mistakes.repeatSimilar}
+                        {(!m.confirmedAt || m.reviewDue) && <Button size="sm" className="text-xs h-8 font-semibold" disabled={!!checkingId || !m.skillId} onClick={() => startCheck(m.id)}>
+                            {m.confirmedAt ? copy.review : copy.verify}
                             <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-                          </Link>
-                        </Button>
+                        </Button>}
                       </div>
                     </div>
                   </CardContent>

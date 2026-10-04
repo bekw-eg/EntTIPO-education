@@ -25,6 +25,7 @@ export async function getUserSkillProfile(userId: string): Promise<UserSkillProf
       skillId: true,
       errorType: true,
       isReviewed: true,
+      confirmedAt: true,
     },
     orderBy: { createdAt: "desc" },
     take: 60,
@@ -36,9 +37,9 @@ export async function getUserSkillProfile(userId: string): Promise<UserSkillProf
   const unreviewedQIds: string[] = [];
 
   for (const m of mistakes) {
-    const penalty = m.isReviewed ? 1 : 3;
+    const penalty = m.confirmedAt ? 1 : 3;
 
-    if (!m.isReviewed) {
+    if (!m.confirmedAt) {
       unreviewedQIds.push(m.questionId);
     }
     if (m.subtopicId) {
@@ -283,7 +284,7 @@ async function selectFromTopic(
     }),
     prisma.mistake.findMany({
       where: { userId, topicId },
-      select: { questionId: true, isReviewed: true, weakSkill: true },
+      select: { questionId: true, confirmedAt: true, weakSkill: true },
       orderBy: { createdAt: "desc" },
       take: 20,
     }),
@@ -293,7 +294,7 @@ async function selectFromTopic(
 
   // Unreviewed mistake questions in this topic
   const mistakeQIds = topicMistakes
-    .filter((m) => !m.isReviewed)
+    .filter((m) => !m.confirmedAt)
     .map((m) => m.questionId);
 
   let questions = await prisma.question.findMany({
@@ -338,7 +339,7 @@ async function selectMistakeQuestions(
   count: number
 ): Promise<string[]> {
   const mistakes = await prisma.mistake.findMany({
-    where: { userId, isReviewed: false },
+    where: { userId, confirmedAt: null },
     select: { questionId: true },
     distinct: ["questionId"],
     orderBy: { createdAt: "desc" },

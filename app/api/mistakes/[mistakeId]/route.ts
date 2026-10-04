@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
+import { z, ZodError } from "zod";
+import { lockAccount, PracticeError } from "@/lib/practiceStorage";
 
 export const dynamic = "force-dynamic";
 
@@ -12,32 +14,20 @@ export async function PATCH(
     const userId = getCurrentUserId(request);
     if (!userId) return unauthorizedResponse();
     const { mistakeId } = await context.params;
-    const body = await request.json();
-
-    if (typeof body.isReviewed !== "boolean") {
-      return NextResponse.json(
-        { error: "isReviewed must be a boolean" },
-        { status: 400 }
-      );
-    }
-
-    const updated = await prisma.mistake.updateMany({
-      where: { id: mistakeId, userId },
-      data: {
-        isReviewed: body.isReviewed,
-        reviewedAt: body.isReviewed ? new Date() : null,
-      },
-    });
-
-    if (updated.count === 0) {
-      return NextResponse.json({ error: "Mistake not found" }, { status: 404 });
-    }
-    const mistake = await prisma.mistake.findFirst({
-      where: { id: mistakeId, userId },
+    const body = z.object({ isReviewed: z.boolean() }).strict().parse(await request.json());
+    const mistake = await prisma.$transaction(async (tx) => {
+      await lockAccount(tx, userId);
+      const existing = await tx.mistake.findFirst({ where: { id: mistakeId, userId } });
+      if (!existing) throw new PracticeError("Mistake not found", 404);
+      if (existing.isReviewed === body.isReviewed) return existing;
+      return tx.mistake.update({ where: { id: mistakeId }, data: { isReviewed: body.isReviewed,
+        reviewedAt: body.isReviewed ? new Date() : null } });
     });
 
     return NextResponse.json(mistake);
   } catch (error) {
+    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof ZodError || error instanceof SyntaxError) return NextResponse.json({ error: "Only a viewing flag may be changed manually" }, { status: 400 });
     console.error("Error in PATCH /api/mistakes/[mistakeId]:", error);
     return NextResponse.json(
       { error: "Internal server error" },

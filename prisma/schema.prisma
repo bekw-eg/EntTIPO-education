@@ -13,6 +13,7 @@ model User {
   email     String   @unique
   password  String?
   avatar    String?
+  timeZone  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -24,6 +25,10 @@ model User {
   skillObservations SkillObservation[]
   skillProgress UserSkillProgress[]
   diagnostics DiagnosticSession[]
+  learningPlans DailyLearningPlan[]
+  learningChecks LearningCheck[]
+  skillReviews SkillReview[]
+  questionHelp QuestionHelp[]
 }
 
 model Topic {
@@ -67,7 +72,7 @@ model Question {
   titleKk       String?
   questionTextKk String?
   explanationKk String?
-  purpose       String   @default("practice") // practice | diagnostic
+  purpose       String   @default("practice") // practice | diagnostic | verification
 
   topic    Topic          @relation(fields: [topicId], references: [id])
   subtopic Subtopic?      @relation(fields: [subtopicId], references: [id])
@@ -76,6 +81,8 @@ model Question {
   mistakes Mistake[]
   skills   QuestionSkill[]
   diagnosticAnswers DiagnosticAnswer[]
+  learningChecks LearningCheck[]
+  questionHelp QuestionHelp[]
 }
 
 model QuestionStep {
@@ -126,6 +133,8 @@ model PracticeSession {
 
   user     User          @relation(fields: [userId], references: [id])
   attempts UserAttempt[]
+  planActions LearningPlanAction[]
+  learningCheck LearningCheck?
 }
 
 model UserAttempt {
@@ -150,6 +159,9 @@ model UserAttempt {
   stepAnswers UserStepAnswer[]
   mistakes    Mistake[]
   skillObservations SkillObservation[]
+  confirmedMistakes Mistake[] @relation("MistakeConfirmation")
+  learningCheck LearningCheck?
+  reviewSchedules SkillReview[]
 
   @@unique([userId, submissionId])
   @@index([userId, createdAt])
@@ -204,6 +216,8 @@ model Mistake {
   description   String?
   isReviewed    Boolean   @default(false)
   reviewedAt    DateTime?
+  confirmedAt   DateTime?
+  confirmationAttemptId String?
   createdAt     DateTime  @default(now())
 
   user     User         @relation(fields: [userId], references: [id])
@@ -212,6 +226,11 @@ model Mistake {
   topic    Topic        @relation(fields: [topicId], references: [id])
   skill    Skill?       @relation(fields: [skillId], references: [id], onDelete: SetNull)
   step     QuestionStep? @relation("MistakeStep", fields: [stepId], references: [id], onDelete: SetNull)
+  confirmationAttempt UserAttempt? @relation("MistakeConfirmation", fields: [confirmationAttemptId], references: [id], onDelete: SetNull)
+  learningChecks LearningCheck[]
+  planActions LearningPlanAction[]
+
+  @@index([userId, confirmedAt, createdAt])
 }
 
 model Skill {
@@ -229,6 +248,90 @@ model Skill {
   observations SkillObservation[]
   progress UserSkillProgress[]
   mistakes Mistake[]
+  planActions LearningPlanAction[]
+  learningChecks LearningCheck[]
+  reviews SkillReview[]
+}
+
+model DailyLearningPlan {
+  id String @id @default(cuid())
+  userId String
+  day String // ISO calendar date in timeZone, never server-local midnight
+  timeZone String
+  status String @default("active") // active | archived
+  diagnosticId String? // source snapshot; later diagnostics don't rewrite started work
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actions LearningPlanAction[]
+  @@unique([userId, day])
+}
+
+model LearningPlanAction {
+  id String @id @default(cuid())
+  planId String
+  position Int
+  kind String // diagnostic | rule | practice | check
+  skillId String?
+  mistakeId String?
+  questionIds String[] @default([])
+  reasons String[] @default([])
+  status String @default("ready") // ready | blocked | retry | completed | superseded
+  sessionId String?
+  completedAt DateTime?
+  plan DailyLearningPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  skill Skill? @relation(fields: [skillId], references: [id])
+  mistake Mistake? @relation(fields: [mistakeId], references: [id], onDelete: SetNull)
+  session PracticeSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  @@index([planId, position])
+}
+
+// Every check is tied to one saved session and its first submitted answer.
+model LearningCheck {
+  id String @id @default(cuid())
+  userId String
+  skillId String
+  mistakeId String?
+  questionId String
+  sessionId String @unique
+  attemptId String? @unique
+  purpose String // confirmation | review
+  targetDifficulty Int @default(1)
+  reviewVersion Int?
+  status String @default("pending") // pending | passed | failed
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+  mistake Mistake? @relation(fields: [mistakeId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+  session PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  attempt UserAttempt? @relation(fields: [attemptId], references: [id], onDelete: SetNull)
+  @@index([userId, skillId, status])
+}
+
+model SkillReview {
+  userId String
+  skillId String
+  intervalIndex Int @default(0)
+  dueDay String
+  timeZone String
+  version Int @default(0)
+  lastAttemptId String?
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+  lastAttempt UserAttempt? @relation(fields: [lastAttemptId], references: [id], onDelete: SetNull)
+  @@id([userId, skillId])
+}
+
+// Assistance persists across sessions, including AI help without a sessionId.
+model QuestionHelp {
+  userId String
+  questionId String
+  firstAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  @@id([userId, questionId])
 }
 
 model QuestionSkill {
@@ -296,9 +399,11 @@ model DiagnosticSession {
   result Json?
   startedAt DateTime @default(now())
   completedAt DateTime?
+  restartFromId String?
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers DiagnosticAnswer[]
   @@index([userId, startedAt])
+  @@unique([userId, restartFromId])
 }
 
 model DiagnosticAnswer {

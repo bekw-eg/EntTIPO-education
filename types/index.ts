@@ -316,6 +316,7 @@ export interface DailyGoal {
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 export interface DashboardStats {
+  timeZone?: string;
   totalSolved: number;
   totalAttempts: number;
   todaySolved: number;
@@ -359,6 +360,7 @@ export interface StepResult {
 }
 
 export interface AttemptResult {
+  learningCheck?: { status: string; mistakeId: string | null; dueDay: string | null } | null;
   attemptId: string;
   isCorrect: boolean;
   isPartial: boolean;

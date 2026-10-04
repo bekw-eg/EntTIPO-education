@@ -9,6 +9,7 @@ import { DiagnosticResults, SkillProgressCards } from "@/components/diagnostics/
 import { useAccount } from "@/components/providers/AccountProvider";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { diagnosticText } from "@/lib/i18n/diagnostics";
+import { learningText } from "@/lib/i18n/learning";
 import { createSubmissionId } from "@/lib/client-submission";
 import { PracticeDraft, clearPracticeDraft, readPracticeDraft, sameAnswers, writePracticeDraft } from "@/lib/client-practice";
 import type { PracticeSnapshot } from "@/types";
@@ -133,11 +134,11 @@ export default function DiagnosticsPage() {
     draft.answers = { ...draft.answers, [stepId]: answer }; dirtyRef.current = true; backup();
     setAnswers(draft.answers); setSaveStatus("saving");
   };
-  const start = async () => {
+  const start = async (restartFromId?: string) => {
     if (busyRef.current) return;
     busyRef.current = true; setBusy(true);
     try {
-      const res = await fetch("/api/diagnostics", { method: "POST" });
+      const res = await fetch("/api/diagnostics", { method: "POST", ...(restartFromId ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ restartFromId }) } : {}) });
       if (!res.ok) throw new Error(copy.error);
       apply(await res.json(), true);
     } catch { toast.error(copy.error); }
@@ -181,6 +182,10 @@ export default function DiagnosticsPage() {
           submitLabel={snapshot.currentIndex + 1 === snapshot.totalCount ? copy.finish : copy.next} />
       </>}
       {snapshot?.result && <DiagnosticResults report={snapshot.result} />}
+      {snapshot?.status === "completed" && <div className="space-y-2">
+        <Button variant="outline" disabled={busy} onClick={() => { void start(snapshot.id); }}>{learningText[locale === "kk" ? "kk" : "ru"].retake}</Button>
+        <p className="text-sm text-muted-foreground">{learningText[locale === "kk" ? "kk" : "ru"].retakeNote}</p>
+      </div>}
       {snapshot?.status !== "active" && <SkillProgressCards skills={skills} />}
     </>}
   </div>;

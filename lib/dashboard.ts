@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { DashboardStats } from "@/types";
+import { addDays, dayBounds, localDay, studentTimeZone } from "./learningPolicy";
 
 export async function getDashboardData(userId: string): Promise<DashboardStats> {
   try {
-    const todayMidnight = new Date();
-    todayMidnight.setHours(0, 0, 0, 0);
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId }, select: { timeZone: true } });
+    const timeZone = studentTimeZone(user.timeZone);
+    const { day, gte: todayMidnight, lt: tomorrow } = dayBounds(new Date(), timeZone);
 
     const [
       todayAttempts,
@@ -17,14 +19,14 @@ export async function getDashboardData(userId: string): Promise<DashboardStats> 
       prisma.userAttempt.findMany({
         where: {
           userId,
-          createdAt: { gte: todayMidnight },
+          createdAt: { gte: todayMidnight, lt: tomorrow },
         },
         select: { questionId: true },
       }),
       prisma.dailyGoal.findFirst({
         where: {
           userId,
-          date: { gte: todayMidnight },
+          date: { gte: todayMidnight, lt: tomorrow },
         },
       }),
       prisma.userAttempt.findMany({
@@ -69,24 +71,22 @@ export async function getDashboardData(userId: string): Promise<DashboardStats> 
     });
 
     const dateStrings = [
-      ...new Set(attemptDates.map((a) => new Date(a.createdAt).toDateString())),
+      ...new Set(attemptDates.map((a) => localDay(a.createdAt, timeZone))),
     ];
     let streak = 0;
-    const today = new Date().toDateString();
-    const yesterday = new Date(Date.now() - 86400000).toDateString();
+    const today = day;
+    const yesterday = addDays(day, -1);
 
     if (dateStrings[0] === today || dateStrings[0] === yesterday) {
       streak = 1;
       for (let i = 1; i < dateStrings.length; i++) {
-        const prev = new Date(dateStrings[i - 1]);
-        const curr = new Date(dateStrings[i]);
-        const diff = (prev.getTime() - curr.getTime()) / 86400000;
-        if (Math.round(diff) === 1) streak++;
+        if (addDays(dateStrings[i - 1], -1) === dateStrings[i]) streak++;
         else break;
       }
     }
 
     return {
+      timeZone,
       totalSolved,
       totalAttempts,
       todaySolved,
@@ -101,6 +101,7 @@ export async function getDashboardData(userId: string): Promise<DashboardStats> 
   } catch (error) {
     console.error("Error in getDashboardData:", error);
     return {
+      timeZone: studentTimeZone(null),
       totalSolved: 0,
       totalAttempts: 0,
       todaySolved: 0,

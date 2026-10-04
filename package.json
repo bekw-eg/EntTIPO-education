@@ -15,6 +15,8 @@
     "test:session": "tsx scripts/test_practice_persistence.ts",
     "test:skills:unit": "tsx scripts/test_skill_diagnostics_unit.ts",
     "test:skills": "tsx scripts/test_skill_diagnostics.ts",
+    "test:plan:unit": "tsx scripts/test_daily_learning_unit.ts",
+    "test:plan": "tsx scripts/test_daily_learning_plan.ts",
     "db:skills": "tsx scripts/seed_skills.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

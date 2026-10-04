@@ -1,5 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 import { DIAGNOSTIC_EXERCISES, PRACTICE_EXERCISES, SKILLS } from "../lib/skillCatalog";
+import { DAILY_EXERCISES } from "../lib/dailyLearningBank";
 
 /** Additive and idempotent: never edit existing answers, attempts or legacy mistakes. */
 export async function seedSkills(prisma: PrismaClient) {
@@ -9,7 +10,7 @@ export async function seedSkills(prisma: PrismaClient) {
     for (const skill of SKILLS) {
       await tx.skill.upsert({ where: { id: skill.id }, update: { ...skill }, create: { ...skill } });
     }
-    for (const q of [...DIAGNOSTIC_EXERCISES, ...PRACTICE_EXERCISES]) {
+    for (const q of [...DIAGNOSTIC_EXERCISES, ...PRACTICE_EXERCISES, ...DAILY_EXERCISES]) {
       await tx.question.upsert({ where: { id: q.id }, update: {}, create: {
         id: q.id, topicId: q.topicId, purpose: q.purpose, title: q.title, titleKk: q.titleKk,
         questionText: q.questionText, questionTextKk: q.questionTextKk,
@@ -19,7 +20,7 @@ export async function seedSkills(prisma: PrismaClient) {
         steps: { create: q.steps.map((s, index) => ({
           id: `${q.id}_step_${index + 1}`, order: index + 1, type: "expression_input",
           prompt: s.prompt, promptKk: s.promptKk, expectedAnswer: s.expectedAnswer,
-          hint: q.purpose === "practice" ? s.hint : null,
+          hint: q.purpose !== "diagnostic" ? s.hint : null,
           misconceptions: s.misconceptions as unknown as Prisma.InputJsonValue,
           skills: { create: s.skillIds.map((skillId) => ({ skillId })) },
         })) },

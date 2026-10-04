@@ -30,14 +30,14 @@ export interface SkillExerciseStep {
   misconceptions: Misconception[]; hint: string;
 }
 export interface SkillExercise {
-  id: string; topicId: string; purpose: "diagnostic" | "practice";
+  id: string; topicId: string; purpose: "diagnostic" | "practice" | "verification";
   title: string; titleKk: string; questionText: string; questionTextKk: string;
   explanation: string; explanationKk: string; difficulty: number;
   steps: SkillExerciseStep[];
 }
 
-function exercise(id: string, skillId: SkillId, expression: string, answer: string,
-  explanation: string, explanationKk: string, misconceptions: Misconception[] = [], purpose: "diagnostic" | "practice" = "diagnostic"): SkillExercise {
+export function exercise(id: string, skillId: SkillId, expression: string, answer: string,
+  explanation: string, explanationKk: string, misconceptions: Misconception[] = [], purpose: SkillExercise["purpose"] = "diagnostic"): SkillExercise {
   const skill = SKILLS.find((s) => s.id === skillId)!;
   const derivative = skillId === "chain_rule";
   const questionText = `${derivative ? "Найди производную" : "Упрости выражение"}: ${expression}`;

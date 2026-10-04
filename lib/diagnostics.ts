@@ -34,15 +34,21 @@ export async function readDiagnosticSnapshot(tx: Prisma.TransactionClient, sessi
   };
 }
 
-export async function startDiagnostic(userId: string) {
+export async function startDiagnostic(userId: string, restartFromId?: string) {
   return prisma.$transaction(async (tx) => {
     await lockAccount(tx, userId);
+    if (restartFromId) {
+      const source = await tx.diagnosticSession.findFirst({ where: { id: restartFromId, userId, status: "completed" } });
+      if (!source) throw new PracticeError("Completed source diagnostic not found", 404);
+      const replay = await tx.diagnosticSession.findUnique({ where: { userId_restartFromId: { userId, restartFromId } } });
+      if (replay) return readDiagnosticSnapshot(tx, replay.id, userId);
+    }
     const existing = await tx.diagnosticSession.findFirst({ where: { userId }, orderBy: { startedAt: "desc" } });
     // This is an entrance assessment. Repeated clicks resume or open the saved result.
-    if (existing) return readDiagnosticSnapshot(tx, existing.id, userId);
+    if (existing && (!restartFromId || existing.status === "active")) return readDiagnosticSnapshot(tx, existing.id, userId);
     const count = await tx.question.count({ where: { id: { in: DIAGNOSTIC_QUESTION_IDS }, purpose: "diagnostic" } });
     if (count !== DIAGNOSTIC_QUESTION_IDS.length) throw new PracticeError("Diagnostic bank is unavailable; apply the skill data upgrade", 503);
-    const session = await tx.diagnosticSession.create({ data: { userId, questionIds: DIAGNOSTIC_QUESTION_IDS } });
+    const session = await tx.diagnosticSession.create({ data: { userId, questionIds: DIAGNOSTIC_QUESTION_IDS, restartFromId } });
     return readDiagnosticSnapshot(tx, session.id, userId);
   }, { maxWait: 10000, timeout: 10000 });
 }
@@ -55,9 +61,10 @@ async function finishDiagnostic(tx: Prisma.TransactionClient, sessionId: string,
   for (const answer of answers) {
     for (const outcome of skillOutcomes(answer.question.steps, answer.stepResults as unknown as StepResult[])) {
       skillIds.add(outcome.skillId);
+      const previous = await tx.skillObservation.count({ where: { userId, skillId: outcome.skillId, questionId: answer.questionId } });
       await tx.skillObservation.create({ data: { ...outcome, userId, questionId: answer.questionId,
         diagnosticAnswerId: answer.id, usedHint: false, difficulty: answer.question.difficulty,
-        attemptNumber: 1, createdAt: answer.createdAt } });
+        attemptNumber: previous + 1, createdAt: answer.createdAt } });
     }
   }
   await refreshSkillProgress(tx, userId, [...skillIds]);

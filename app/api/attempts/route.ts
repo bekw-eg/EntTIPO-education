@@ -11,6 +11,8 @@ import { ZodError } from "zod";
 import { PracticeError, lockAccount } from "@/lib/practiceStorage";
 import { summarizeAttempts } from "@/lib/practiceStats";
 import { explainSkillError, recordPracticeSkills } from "@/lib/skillProgress";
+import { recordLearningAttempt } from "@/lib/learningChecks";
+import { dayBounds, studentTimeZone } from "@/lib/learningPolicy";
 
 export const dynamic = "force-dynamic";
 
@@ -146,7 +148,8 @@ export async function POST(request: NextRequest) {
       if (prevCount === 0 && summarizeAttempts(sessionAttempts).completedCount >= ownedSession.totalCount) {
         throw new PracticeError("All questions in this session have already been answered", 409);
       }
-      const usedHint = data.usedHint || ownedSession.hintedQuestionIds.includes(question.id);
+      const priorHelp = await tx.questionHelp.findUnique({ where: { userId_questionId: { userId, questionId: question.id } } });
+      const usedHint = data.usedHint || ownedSession.hintedQuestionIds.includes(question.id) || !!priorHelp;
       const latestAttempt = await tx.userAttempt.findFirst({
         where: { userId }, orderBy: { createdAt: "desc" }, select: { createdAt: true },
       });
@@ -210,6 +213,7 @@ export async function POST(request: NextRequest) {
       await recordPracticeSkills(tx, { userId, attemptId: attempt.id, questionId: question.id,
         difficulty: question.difficulty, usedHint, attemptNumber: attempt.attemptNumber,
         createdAt, steps: question.steps, stepResults });
+      const learningCheck = await recordLearningAttempt(tx, attempt, question);
 
       // Update topic progress
       const currentProgress = (await tx.userTopicProgress.findUnique({
@@ -277,10 +281,8 @@ export async function POST(request: NextRequest) {
       });
 
       // Update DailyGoal
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+      const profile = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { timeZone: true } });
+      const { gte: today, lt: tomorrow } = dayBounds(createdAt, studentTimeZone(profile.timeZone));
       const todayQuestions = await tx.userAttempt.findMany({
         where: { userId, createdAt: { gte: today, lt: tomorrow } },
         select: { questionId: true },
@@ -310,6 +312,7 @@ export async function POST(request: NextRequest) {
         usedHint,
         attemptNumber: attempt.attemptNumber,
         sessionStats,
+        learningCheck,
       };
       // Persist the response in the same transaction so a lost response can be replayed exactly.
       const snapshot = JSON.parse(JSON.stringify(savedResult)) as Prisma.InputJsonValue;

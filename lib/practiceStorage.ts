@@ -1,5 +1,19 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
+import { nextReview, studentTimeZone } from "./learningPolicy";
+
+async function saveHelpEvidence(tx: Prisma.TransactionClient, userId: string, questionId: string) {
+  const existing = await tx.questionHelp.findUnique({ where: { userId_questionId: { userId, questionId } } });
+  if (existing) return;
+  await tx.questionHelp.create({ data: { userId, questionId } });
+  const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { timeZone: true } });
+  const links = await tx.stepSkill.findMany({ where: { step: { questionId } }, select: { skillId: true } });
+  for (const skillId of new Set(links.map((s) => s.skillId))) {
+    await tx.skillReview.updateMany({ where: { userId, skillId }, data: {
+      ...nextReview(new Date(), studentTimeZone(user.timeZone), 0, false), version: { increment: 1 },
+    } });
+  }
+}
 
 export class PracticeError extends Error {
   constructor(message: string, public status: number) {
@@ -35,8 +49,20 @@ export async function recordHintUsage(userId: string, sessionId: string, questio
         data: { hintedQuestionIds: { push: questionId } },
       });
     }
+    await saveHelpEvidence(tx, userId, questionId);
     const hints = await tx.questionStep.findMany({ where: { questionId, hint: { not: null } },
       select: { id: true, hint: true } });
     return { usedHint: true, hints: Object.fromEntries(hints.map((step) => [step.id, step.hint])) };
   }, { maxWait: 10000, timeout: 10000 });
+}
+
+export async function recordQuestionHelp(userId: string, questionId: string) {
+  return prisma.$transaction(async (tx) => {
+    await lockAccount(tx, userId);
+    await saveHelpEvidence(tx, userId, questionId);
+    const sessions = await tx.practiceSession.findMany({ where: { userId, status: "active", questionIds: { has: questionId } } });
+    for (const session of sessions) if (!session.hintedQuestionIds.includes(questionId)) {
+      await tx.practiceSession.update({ where: { id: session.id }, data: { hintedQuestionIds: { push: questionId } } });
+    }
+  });
 }

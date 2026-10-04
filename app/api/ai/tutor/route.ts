@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
-import { PracticeError, recordHintUsage } from "@/lib/practiceStorage";
+import { PracticeError, recordHintUsage, recordQuestionHelp } from "@/lib/practiceStorage";
 import {
   aiTutorRequestSchema,
   aiErrorAnalysisSchema,
@@ -85,6 +85,13 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       );
     }
+
+    // All assistance tied to a task is evidence of help, including calls without sessionId.
+    const helpSession = data.sessionId ? await prisma.practiceSession.findFirst({
+      where: { id: data.sessionId, userId }, select: { questionIds: true, currentIndex: true },
+    }) : null;
+    const helpQuestionId = data.questionId ?? helpSession?.questionIds[helpSession.currentIndex];
+    if (helpQuestionId && await prisma.question.count({ where: { id: helpQuestionId } })) await recordQuestionHelp(userId, helpQuestionId);
 
     // 2. Resolve Question and Topic details if questionId is provided
     let questionRecord: any = null;

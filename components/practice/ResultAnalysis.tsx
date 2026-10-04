@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { AttemptResult, PracticeQuestion, AiAction } from "@/types";
+import { learningText } from "@/lib/i18n/learning";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 
@@ -36,6 +37,7 @@ export default function ResultAnalysis({
   isLoading = false,
 }: ResultAnalysisProps) {
   const { t, getErrorLabel, locale } = useLanguage();
+  const learningCopy = learningText[locale === "kk" ? "kk" : "ru"];
   const [showExplanation, setShowExplanation] = useState(false);
   const [localAiOpen, setLocalAiOpen] = useState(false);
   const isFull = result.isCorrect;
@@ -104,6 +106,12 @@ export default function ResultAnalysis({
       </div>
 
       <CardContent className="p-4 sm:p-6 space-y-6">
+        {result.learningCheck && <div role="status" className="rounded-lg border p-4 text-sm space-y-2">
+          <p className="font-semibold">{result.learningCheck.status === "passed" ? learningCopy.success : learningCopy.failed}</p>
+          {result.learningCheck.status !== "passed" && <p>{learningCopy.retry}</p>}
+          {result.learningCheck.dueDay && <p>{learningCopy.next}: {result.learningCheck.dueDay}</p>}
+          <a className="text-primary underline" href="/">{learningCopy.home}</a>
+        </div>}
         {/* Step-by-step review */}
         <div className="space-y-3">
           <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
