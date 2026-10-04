@@ -76,6 +76,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Rate Limiting Check
+    if (data.questionId && await prisma.question.count({ where: { id: data.questionId, purpose: "diagnostic" } })) {
+      return NextResponse.json({ error: "AI help is disabled for entrance diagnostic tasks" }, { status: 403 });
+    }
     if (!checkRateLimit(userId)) {
       return NextResponse.json(
         { error: RATE_LIMIT_MESSAGES[lang] || RATE_LIMIT_MESSAGES.ru },

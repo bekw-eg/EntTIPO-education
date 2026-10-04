@@ -37,6 +37,8 @@ interface QuestionCardProps {
   onRevealHint?: () => Promise<Record<string, string>>;
   answersLocked?: boolean;
   startedAt?: number;
+  assistanceDisabled?: boolean;
+  submitLabel?: string;
 }
 
 export default function QuestionCard({
@@ -51,8 +53,10 @@ export default function QuestionCard({
   onRevealHint,
   answersLocked = false,
   startedAt,
+  assistanceDisabled = false,
+  submitLabel,
 }: QuestionCardProps) {
-  const { t, getTopicName } = useLanguage();
+  const { t, getTopicName, locale } = useLanguage();
   const [elapsed, setElapsed] = useState(0);
   const [localAiOpen, setLocalAiOpen] = useState(false);
   const [localInitialAction, setLocalInitialAction] = useState<AiAction | undefined>(undefined);
@@ -146,7 +150,7 @@ export default function QuestionCard({
 
           <div className="flex flex-wrap items-center gap-2">
             {/* [💡 Подсказка] & [🤖 AI көмекші / AI помощник] */}
-            <Button
+            {!assistanceDisabled && <><Button
               type="button"
               variant="outline"
               size="sm"
@@ -168,7 +172,7 @@ export default function QuestionCard({
               <Bot className="w-3.5 h-3.5 mr-1" />
               {t.ai.assistantBtn}
             </Button>
-
+            </>}
             <div className="flex items-center gap-2 text-xs text-muted-foreground ml-1">
               <span>
                 {t.session.taskOf} {currentIndex + 1} / {totalCount}
@@ -184,11 +188,11 @@ export default function QuestionCard({
         {/* Question Title & Text */}
         <div className="space-y-3">
           <h2 className="text-lg sm:text-xl font-bold tracking-tight">
-            {question.title}
+            {locale === "kk" ? question.titleKk ?? question.title : question.title}
           </h2>
           {question.questionText && (
             <p className="text-sm sm:text-base text-foreground/90 whitespace-pre-line">
-              {question.questionText}
+              {locale === "kk" ? question.questionTextKk ?? question.questionText : question.questionText}
             </p>
           )}
 
@@ -242,7 +246,7 @@ export default function QuestionCard({
                       <span className="text-primary font-bold mr-2">
                         {t.session.step} {idx + 1}:
                       </span>
-                      {step.prompt}
+                      {locale === "kk" ? step.promptKk ?? step.prompt : step.prompt}
                     </p>
                     {currentVal && (
                       <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-1" />
@@ -254,7 +258,7 @@ export default function QuestionCard({
                       <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                       <span>{revealedHints[step.id]}</span>
                     </div>
-                  ) : step.hasHint ? (
+                  ) : step.hasHint && !assistanceDisabled ? (
                     <Button type="button" variant="ghost" size="sm"
                       disabled={isLoading || isRevealingHint}
                       onClick={() => revealHint(step.id)}>
@@ -337,7 +341,7 @@ export default function QuestionCard({
             <p className="text-xs text-muted-foreground hidden sm:block">
               {t.session.fillAllSteps}
             </p>
-            <Button
+            {!assistanceDisabled && <><Button
               type="button"
               variant="ghost"
               size="sm"
@@ -359,6 +363,7 @@ export default function QuestionCard({
               <Bot className="w-3.5 h-3.5 mr-1" />
               {t.ai.assistantBtn}
             </Button>
+            </>}
           </div>
           <Button
             onClick={onSubmit}
@@ -366,12 +371,12 @@ export default function QuestionCard({
             size="lg"
             className="px-8 font-semibold shadow-xs"
           >
-            {isLoading ? t.session.checking : t.session.checkSolution}
+            {isLoading ? t.session.checking : submitLabel ?? t.session.checkSolution}
           </Button>
         </div>
       </CardContent>
 
-      {!onOpenAi && (
+      {!onOpenAi && !assistanceDisabled && (
         <AiTutorPanel
           isOpen={localAiOpen}
           onClose={() => setLocalAiOpen(false)}

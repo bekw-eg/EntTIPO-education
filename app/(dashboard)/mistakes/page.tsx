@@ -21,9 +21,10 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { errorTypeTranslations } from "@/lib/i18n/translations";
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 import { AiAction } from "@/types";
+import { diagnosticText } from "@/lib/i18n/diagnostics";
 
 export default function MistakesPage() {
-  const { t, getTopicName, getErrorLabel } = useLanguage();
+  const { t, getTopicName, getErrorLabel, locale } = useLanguage();
 
   const [mistakes, setMistakes] = useState<any[]>([]);
   const [weakSkills, setWeakSkills] = useState<any[]>([]);
@@ -159,7 +160,7 @@ export default function MistakesPage() {
               {weakSkills.slice(0, 5).map((skill, idx) => {
                 const errorLabel = getErrorLabel(skill.skillName);
                 const displayName =
-                  errorLabel !== skill.skillName ? errorLabel : skill.skillName;
+                  locale === "kk" ? skill.skillNameKk ?? skill.skillName : errorLabel !== skill.skillName ? errorLabel : skill.skillName;
 
                 return (
                   <div
@@ -190,7 +191,7 @@ export default function MistakesPage() {
                         <span>
                           Mastery:{" "}
                           <strong className="text-primary">
-                            {skill.masteryScore}%
+                            {skill.masteryScore === null ? diagnosticText[locale === "kk" ? "kk" : "ru"].insufficient : `${skill.masteryScore}%`}
                           </strong>
                         </span>
                       </div>
@@ -210,7 +211,7 @@ export default function MistakesPage() {
 
                       <Button asChild size="sm" className="text-xs h-8 font-semibold">
                         <Link
-                          href={`/practice?mode=specific_topic&topicId=${skill.topicId}`}
+                          href={`/practice?mode=mixed&skillId=${skill.skillKey}`}
                         >
                           {t.ai.repeat}
                           <ArrowRight className="w-3.5 h-3.5 ml-1.5" />

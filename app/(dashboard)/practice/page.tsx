@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import Link from "next/link";
+import { diagnosticText } from "@/lib/i18n/diagnostics";
 
 interface UnfinishedSession {
   id: string;
@@ -20,7 +22,8 @@ interface UnfinishedSession {
 function PracticeSetupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t, getTopicName } = useLanguage();
+  const { t, getTopicName, locale } = useLanguage();
+  const skillId = searchParams.get("skillId") || undefined;
 
   const initialMode = searchParams.get("mode") || "mixed";
   const initialTopic = searchParams.get("topicId") || "";
@@ -93,6 +96,7 @@ function PracticeSetupContent() {
           mode,
           totalCount: Number(totalCount),
           topicId: mode === "specific_topic" ? topicId : undefined,
+          skillId,
         }),
       });
 
@@ -120,6 +124,11 @@ function PracticeSetupContent() {
           {t.practice.setupSubtitle}
         </p>
       </div>
+
+      <Link href="/diagnostics" className="block rounded-xl border p-4 hover:bg-muted/50">
+        <span className="font-semibold">{diagnosticText[locale === "kk" ? "kk" : "ru"].title}</span>
+        <p className="mt-1 text-sm text-muted-foreground">{diagnosticText[locale === "kk" ? "kk" : "ru"].intro}</p>
+      </Link>
 
       {unfinishedSessions.length > 0 && <section className="space-y-3">
         <h2 className="text-lg font-semibold">{t.practice.unfinished}</h2>

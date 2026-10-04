@@ -67,6 +67,7 @@ export interface QuestionStep {
   order: number;
   type: StepType;
   prompt: string;
+  promptKk?: string | null;
   expectedAnswer: string;
   hint: string | null;
   options: QuestionOption[];
@@ -77,7 +78,9 @@ export interface Question {
   topicId: string;
   subtopicId: string | null;
   title: string;
+  titleKk?: string | null;
   questionText: string;
+  questionTextKk?: string | null;
   latex: string | null;
   difficulty: number; // 1-5
   correctAnswer: string;
@@ -351,6 +354,8 @@ export interface StepResult {
   isCorrect: boolean;
   userAnswer: string;
   expectedAnswer: string;
+  skillIds?: string[];
+  feedback?: { ru: string; kk: string };
 }
 
 export interface AttemptResult {

@@ -10,6 +10,7 @@ import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { PracticeError, lockAccount } from "@/lib/practiceStorage";
 import { summarizeAttempts } from "@/lib/practiceStats";
+import { explainSkillError, recordPracticeSkills } from "@/lib/skillProgress";
 
 export const dynamic = "force-dynamic";
 
@@ -27,25 +28,6 @@ function determineErrorType(stepResults: StepResult[], question: any): ErrorType
   if (firstFailed.stepOrder === 1) return "concept_error";
   if (question.answerType === "expression") return "algebra_error";
   return "calculation_error";
-}
-
-function inferWeakSkill(question: any, errorType: string): string {
-  if (question.subtopic?.name) {
-    return question.subtopic.name;
-  }
-  const title = (question.title || "").toLowerCase();
-  if (title.includes("степен") || title.includes("корн")) return "свойства_степеней";
-  if (title.includes("многочлен") || title.includes("двучлен")) return "формулы_сокращенного_умножения";
-  if (title.includes("комплексн")) return "комплексные_числа";
-  if (title.includes("производн")) return "вычисление_производной";
-  if (title.includes("касательн")) return "уравнение_касательной";
-  if (title.includes("интеграл")) return "вычисление_интегралов";
-  if (title.includes("первообразн")) return "первообразная_функция";
-  if (title.includes("логарифм")) return "свойства_логарифмов";
-  if (title.includes("тригонометр")) return "тригонометрические_функции";
-  if (title.includes("дифференциальн") || title.includes("ду")) return "дифференциальные_уравнения";
-  if (title.includes("стереометр") || title.includes("пирамид")) return "стереометрия_объемы";
-  return errorType || "базовая_алгебра";
 }
 
 export async function POST(request: NextRequest) {
@@ -82,13 +64,14 @@ export async function POST(request: NextRequest) {
       where: { id: data.questionId },
       include: {
         subtopic: true,
-        steps: { include: { options: true }, orderBy: { order: "asc" } },
+        steps: { include: { options: true, skills: { include: { skill: true } } }, orderBy: { order: "asc" } },
       },
     });
 
     if (!question) {
       return NextResponse.json({ error: "Question not found" }, { status: 404 });
     }
+    if (question.purpose === "diagnostic") throw new PracticeError("Use the diagnostic endpoint for this question", 400);
 
     const answerMap = new Map(data.stepAnswers.map((answer) => [answer.stepId, answer.answer]));
     if (answerMap.size !== question.steps.length || question.steps.some((step) => !answerMap.has(step.id))) {
@@ -129,6 +112,8 @@ export async function POST(request: NextRequest) {
         isCorrect,
         userAnswer: userAns,
         expectedAnswer: step.expectedAnswer,
+        skillIds: step.skills.map((link) => link.skillId),
+        ...(!isCorrect && step.skills.length ? { feedback: explainSkillError(userAns, step.expectedAnswer, step.misconceptions) } : {}),
       });
     }
 
@@ -199,9 +184,11 @@ export async function POST(request: NextRequest) {
           .filter(Boolean)
           .join("; ");
 
-        const initialWeakSkill = inferWeakSkill(question, errorType);
-
-        await tx.mistake.create({
+        // A failed mapped step creates a precise mistake. Untagged failures remain unassigned.
+        const failures = stepResults.filter((sr) => !sr.isCorrect);
+        const mappedFailures = failures.flatMap((sr) => question.steps.find((s) => s.id === sr.stepId)!.skills.map((link) => ({ sr, link })));
+        const hasUnmappedFailure = failures.some((sr) => question.steps.find((s) => s.id === sr.stepId)!.skills.length === 0);
+        for (const failure of [...mappedFailures, ...(hasUnmappedFailure ? [null] : [])]) await tx.mistake.create({
           data: {
             userId,
             attemptId: attempt.id,
@@ -209,14 +196,20 @@ export async function POST(request: NextRequest) {
             topicId: question.topicId,
             subtopicId: question.subtopicId,
             errorType,
-            weakSkill: initialWeakSkill,
-            userAnswer: combinedUserAnswer || undefined,
-            correctAnswer: question.correctAnswer || undefined,
-            explanation: question.explanation,
+            skillId: failure?.link.skillId,
+            stepId: failure?.sr.stepId,
+            weakSkill: failure?.link.skill.nameRu,
+            userAnswer: failure?.sr.userAnswer ?? (combinedUserAnswer || undefined),
+            correctAnswer: failure?.sr.expectedAnswer ?? question.correctAnswer,
+            explanation: failure?.sr.feedback?.ru ?? question.explanation,
             description: question.explanation,
           },
         });
       }
+
+      await recordPracticeSkills(tx, { userId, attemptId: attempt.id, questionId: question.id,
+        difficulty: question.difficulty, usedHint, attemptNumber: attempt.attemptNumber,
+        createdAt, steps: question.steps, stepResults });
 
       // Update topic progress
       const currentProgress = (await tx.userTopicProgress.findUnique({

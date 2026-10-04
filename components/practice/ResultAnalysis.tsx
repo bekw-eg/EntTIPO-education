@@ -35,7 +35,7 @@ export default function ResultAnalysis({
   onOpenAi,
   isLoading = false,
 }: ResultAnalysisProps) {
-  const { t, getErrorLabel } = useLanguage();
+  const { t, getErrorLabel, locale } = useLanguage();
   const [showExplanation, setShowExplanation] = useState(false);
   const [localAiOpen, setLocalAiOpen] = useState(false);
   const isFull = result.isCorrect;
@@ -134,7 +134,7 @@ export default function ResultAnalysis({
                       <span className="font-bold mr-1">
                         {t.result.stepItem} {sr.stepOrder}:
                       </span>
-                      {step?.prompt || "..."}
+                      {(locale === "kk" ? step?.promptKk ?? step?.prompt : step?.prompt) || "..."}
                     </p>
                     <div className="text-xs flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
                       <span>
@@ -152,6 +152,7 @@ export default function ResultAnalysis({
                         </span>
                       )}
                     </div>
+                    {sr.feedback && <p className="text-sm text-rose-700 dark:text-rose-300">{locale === "kk" ? sr.feedback.kk : sr.feedback.ru}</p>}
                   </div>
                 </div>
               );

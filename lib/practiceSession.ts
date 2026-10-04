@@ -6,9 +6,10 @@ import { summarizeAttempts } from "./practiceStats";
 export const practiceQuestionSelect = {
   id: true, topicId: true, subtopicId: true, title: true, questionText: true,
   latex: true, difficulty: true, answerType: true, createdAt: true,
+  titleKk: true, questionTextKk: true,
   topic: true, subtopic: true,
   steps: { orderBy: { order: "asc" as const }, select: {
-    id: true, questionId: true, order: true, type: true, prompt: true, hint: true,
+    id: true, questionId: true, order: true, type: true, prompt: true, promptKk: true, hint: true,
     options: { orderBy: { order: "asc" as const }, select: {
       id: true, stepId: true, text: true, order: true,
     } },

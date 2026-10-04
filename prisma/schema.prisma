@@ -21,6 +21,9 @@ model User {
   topicProgress UserTopicProgress[]
   mistakes      Mistake[]
   dailyGoals    DailyGoal[]
+  skillObservations SkillObservation[]
+  skillProgress UserSkillProgress[]
+  diagnostics DiagnosticSession[]
 }
 
 model Topic {
@@ -36,6 +39,7 @@ model Topic {
   progress  UserTopicProgress[]
   mistakes  Mistake[]
   lesson    Lesson?
+  skills    Skill[]
 }
 
 model Subtopic {
@@ -60,12 +64,18 @@ model Question {
   answerType    String   // expression | number | multiple_choice
   explanation   String
   createdAt     DateTime @default(now())
+  titleKk       String?
+  questionTextKk String?
+  explanationKk String?
+  purpose       String   @default("practice") // practice | diagnostic
 
   topic    Topic          @relation(fields: [topicId], references: [id])
   subtopic Subtopic?      @relation(fields: [subtopicId], references: [id])
   steps    QuestionStep[]
   attempts UserAttempt[]
   mistakes Mistake[]
+  skills   QuestionSkill[]
+  diagnosticAnswers DiagnosticAnswer[]
 }
 
 model QuestionStep {
@@ -76,10 +86,14 @@ model QuestionStep {
   prompt         String
   expectedAnswer String
   hint           String?
+  promptKk       String?
+  misconceptions Json @default("[]")
 
   question Question        @relation(fields: [questionId], references: [id])
   options  QuestionOption[]
   answers  UserStepAnswer[]
+  skills   StepSkill[]
+  mistakes Mistake[] @relation("MistakeStep")
 }
 
 model QuestionOption {
@@ -135,6 +149,7 @@ model UserAttempt {
   session     PracticeSession  @relation(fields: [sessionId], references: [id])
   stepAnswers UserStepAnswer[]
   mistakes    Mistake[]
+  skillObservations SkillObservation[]
 
   @@unique([userId, submissionId])
   @@index([userId, createdAt])
@@ -179,6 +194,8 @@ model Mistake {
   subtopicId    String?
   errorType     String    // wrong_formula | calculation_error | sign_error | algebra_error | domain_error | concept_error | incorrect_method
   weakSkill     String?
+  skillId       String?
+  stepId        String?
   userAnswer    String?
   correctAnswer String?
   explanation   String?
@@ -193,6 +210,112 @@ model Mistake {
   question Question     @relation(fields: [questionId], references: [id])
   attempt  UserAttempt? @relation(fields: [attemptId], references: [id])
   topic    Topic        @relation(fields: [topicId], references: [id])
+  skill    Skill?       @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  step     QuestionStep? @relation("MistakeStep", fields: [stepId], references: [id], onDelete: SetNull)
+}
+
+model Skill {
+  id String @id
+  topicId String
+  nameRu String
+  nameKk String
+  explanationRu String
+  explanationKk String
+  ruleRu String
+  ruleKk String
+  topic Topic @relation(fields: [topicId], references: [id])
+  questions QuestionSkill[]
+  steps StepSkill[]
+  observations SkillObservation[]
+  progress UserSkillProgress[]
+  mistakes Mistake[]
+}
+
+model QuestionSkill {
+  questionId String
+  skillId String
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+  @@id([questionId, skillId])
+  @@index([skillId])
+}
+
+model StepSkill {
+  stepId String
+  skillId String
+  step QuestionStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+  @@id([stepId, skillId])
+}
+
+model SkillObservation {
+  id String @id @default(cuid())
+  userId String
+  skillId String
+  questionId String
+  attemptId String?
+  diagnosticAnswerId String?
+  score Int
+  isCorrect Boolean
+  isPartial Boolean
+  usedHint Boolean
+  difficulty Int
+  attemptNumber Int
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+  attempt UserAttempt? @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  diagnosticAnswer DiagnosticAnswer? @relation(fields: [diagnosticAnswerId], references: [id], onDelete: Cascade)
+  @@unique([attemptId, skillId])
+  @@unique([diagnosticAnswerId, skillId])
+  @@index([userId, skillId, createdAt])
+}
+
+model UserSkillProgress {
+  userId String
+  skillId String
+  masteryScore Int
+  state String // insufficient | weak | developing | good | mastered
+  observationCount Int
+  distinctQuestions Int
+  lastAttemptAt DateTime?
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+  @@id([userId, skillId])
+}
+
+model DiagnosticSession {
+  id String @id @default(cuid())
+  userId String
+  status String @default("active")
+  questionIds String[]
+  currentIndex Int @default(0)
+  revision Int @default(0)
+  draftAnswers Json @default("{}")
+  result Json?
+  startedAt DateTime @default(now())
+  completedAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers DiagnosticAnswer[]
+  @@index([userId, startedAt])
+}
+
+model DiagnosticAnswer {
+  id String @id @default(cuid())
+  sessionId String
+  questionId String
+  submissionId String
+  submissionHash String
+  stepResults Json
+  isCorrect Boolean
+  score Int
+  createdAt DateTime @default(now())
+  session DiagnosticSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+  observations SkillObservation[]
+  @@unique([sessionId, questionId])
+  @@unique([sessionId, submissionId])
 }
 
 model DailyGoal {

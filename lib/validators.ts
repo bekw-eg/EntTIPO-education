@@ -7,7 +7,11 @@ export const createSessionSchema = z.object({
   mode: z.enum(["mixed", "weak_topics", "specific_topic", "review_mistakes"]),
   totalCount: z.number().int().min(1).max(100),
   topicId: z.string().optional(),
-});
+  skillId: z.string().optional(),
+  questionId: z.string().optional(),
+}).refine((data) => !data.questionId || !!data.skillId, "A requested question needs a skill").refine(
+  (data) => data.mode !== "specific_topic" || !!data.topicId, "Select a topic"
+);
 
 export type CreateSessionInput = z.infer<typeof createSessionSchema>;
 

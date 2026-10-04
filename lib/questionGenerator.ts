@@ -4,6 +4,8 @@
  * step-by-step solutions, multiple-choice options, hints, and explanations across all 15 topics.
  */
 
+import { PRACTICE_EXERCISES, SkillId } from "./skillCatalog";
+
 export interface GeneratedStepOption {
   text: string;
   isCorrect: boolean;
@@ -17,6 +19,7 @@ export interface GeneratedStep {
   expectedAnswer: string;
   hint: string;
   options: GeneratedStepOption[];
+  skillIds?: string[];
 }
 
 export interface GeneratedQuestion {
@@ -24,6 +27,7 @@ export interface GeneratedQuestion {
   subtopicId?: string;
   skillTag?: string;
   weakSkill?: string;
+  skillIds?: string[];
   title: string;
   questionText: string;
   latex?: string;
@@ -55,6 +59,7 @@ export function generateRootsAndPowers(index = 1): GeneratedQuestion {
   return {
     topicId: "t1",
     skillTag: "roots_and_powers",
+    skillIds: ["power_properties"],
     weakSkill: "свойства_степеней",
     title: `Упрощение выражений со степенями #${index}`,
     questionText: `Вычислите значение числового выражения применив свойства степеней:`,
@@ -68,6 +73,7 @@ export function generateRootsAndPowers(index = 1): GeneratedQuestion {
         order: 1,
         type: "multiple_choice",
         prompt: "Какое базовое свойство степеней применяется для умножения?",
+        skillIds: ["power_properties"],
         expectedAnswer: "a^m * a^n = a^(m+n)",
         hint: "При одинаковом основании показатели складываются.",
         options: [
@@ -589,6 +595,9 @@ export function generateQuestionsBatch(countPerTopic = 15): GeneratedQuestion[] 
  * Mapping from micro-skill tags to dedicated algorithmic generators.
  */
 export const SKILL_GENERATOR_MAP: Record<string, (index?: number) => GeneratedQuestion> = {
+  power_properties: generateRootsAndPowers,
+  chain_rule: (index = 1) => generateCatalogPractice("chain_rule", index),
+  bracket_signs: (index = 1) => generateCatalogPractice("bracket_signs", index),
   roots_and_powers: generateRootsAndPowers,
   свойства_степеней: generateRootsAndPowers,
   polynomials_expansion: generatePolynomials,
@@ -627,14 +636,17 @@ export function generateQuestionForSkill(
     return directGen(index);
   }
 
-  // Substring / keyword matching
-  for (const [key, gen] of Object.entries(SKILL_GENERATOR_MAP)) {
-    if (normalized.includes(key) || key.includes(normalized)) {
-      return gen(index);
-    }
-  }
-
   return null;
+}
+
+function generateCatalogPractice(skillId: SkillId, index: number): GeneratedQuestion {
+  const pool = PRACTICE_EXERCISES.filter((q) => q.steps.every((s) => s.skillIds.includes(skillId)));
+  const q = pool[Math.abs(index) % pool.length];
+  return { topicId: q.topicId, skillTag: skillId, skillIds: [skillId], weakSkill: q.title,
+    title: q.title, questionText: q.questionText, explanation: q.explanation, difficulty: q.difficulty,
+    correctAnswer: q.steps.at(-1)!.expectedAnswer, answerType: "expression",
+    steps: q.steps.map((s, i) => ({ order: i + 1, type: "expression_input", prompt: s.prompt,
+      expectedAnswer: s.expectedAnswer, hint: s.hint, options: [], skillIds: s.skillIds })) };
 }
 
 /**

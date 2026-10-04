@@ -5,6 +5,7 @@ import { createSessionSchema } from "@/lib/validators";
 import { selectQuestionsForSession } from "@/lib/adaptive";
 import { summarizeAttempts } from "@/lib/practiceStats";
 import { ZodError } from "zod";
+import { PracticeError } from "@/lib/practiceStorage";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,8 @@ export async function POST(request: NextRequest) {
       count: validatedData.totalCount,
       mode: validatedData.mode,
       topicId: validatedData.topicId,
+      skillId: validatedData.skillId,
+      questionId: validatedData.questionId,
     });
 
     if (!questionIds || questionIds.length === 0) {
@@ -50,6 +53,7 @@ export async function POST(request: NextRequest) {
       questionIds,
     });
   } catch (error) {
+    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
     if (error instanceof ZodError || error instanceof SyntaxError) {
       return NextResponse.json({ error: "Invalid session settings" }, { status: 400 });
     }
