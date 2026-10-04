@@ -11,6 +11,14 @@ export const createSessionSchema = z.object({
 
 export type CreateSessionInput = z.infer<typeof createSessionSchema>;
 
+export const practiceStateSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("save"), revision: z.number().int().nonnegative(),
+    currentIndex: z.number().int().nonnegative(),
+    answers: z.record(z.string().max(2000)).refine((answers) => Object.keys(answers).length <= 50),
+  }),
+  z.object({ action: z.enum(["retry", "next"]), revision: z.number().int().nonnegative() }),
+]);
+
 // ─── Attempt ──────────────────────────────────────────────────────────────────
 
 export const stepAnswerSchema = z.object({

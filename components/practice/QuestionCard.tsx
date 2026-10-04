@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Question, AiAction } from "@/types";
+import { PracticeQuestion, AiAction } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { GeometryViewer, GeometryConfig } from "@/components/ui/GeometryViewer";
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
@@ -26,7 +26,7 @@ function tryParseGeometry(text: string): GeometryConfig | null {
 }
 
 interface QuestionCardProps {
-  question: Question;
+  question: PracticeQuestion;
   stepAnswers: Record<string, string>;
   onStepAnswer: (stepId: string, answer: string) => void;
   onSubmit: () => void;
@@ -34,7 +34,9 @@ interface QuestionCardProps {
   totalCount: number;
   isLoading: boolean;
   onOpenAi?: (action?: AiAction) => void;
-  onRevealHint?: () => Promise<void>;
+  onRevealHint?: () => Promise<Record<string, string>>;
+  answersLocked?: boolean;
+  startedAt?: number;
 }
 
 export default function QuestionCard({
@@ -47,12 +49,14 @@ export default function QuestionCard({
   isLoading,
   onOpenAi,
   onRevealHint,
+  answersLocked = false,
+  startedAt,
 }: QuestionCardProps) {
   const { t, getTopicName } = useLanguage();
   const [elapsed, setElapsed] = useState(0);
   const [localAiOpen, setLocalAiOpen] = useState(false);
   const [localInitialAction, setLocalInitialAction] = useState<AiAction | undefined>(undefined);
-  const [revealedHints, setRevealedHints] = useState<Set<string>>(new Set());
+  const [revealedHints, setRevealedHints] = useState<Record<string, string>>({});
   const [isRevealingHint, setIsRevealingHint] = useState(false);
   const revealingRef = React.useRef(false);
 
@@ -61,8 +65,8 @@ export default function QuestionCard({
     revealingRef.current = true;
     setIsRevealingHint(true);
     try {
-      await onRevealHint?.();
-      setRevealedHints((prev) => new Set([...prev, stepId]));
+      const hints = await onRevealHint?.();
+      if (hints?.[stepId]) setRevealedHints((prev) => ({ ...prev, [stepId]: hints[stepId] }));
     } catch {
       toast.error(t.session.hintError);
     } finally {
@@ -81,11 +85,13 @@ export default function QuestionCard({
   };
 
   useEffect(() => {
-    setElapsed(0);
-    setRevealedHints(new Set());
-    const timer = setInterval(() => setElapsed((e) => e + 1), 1000);
+    const start = startedAt ?? Date.now();
+    const tick = () => setElapsed(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    tick();
+    setRevealedHints(Object.fromEntries(question.steps.filter((step) => step.hint).map((step) => [step.id, step.hint!])));
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [question.id]);
+  }, [question.id, startedAt]);
 
   const formatTime = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -243,12 +249,12 @@ export default function QuestionCard({
                     )}
                   </div>
 
-                  {step.hint && revealedHints.has(step.id) ? (
+                  {revealedHints[step.id] ? (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 p-2 rounded-lg">
                       <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      <span>{step.hint}</span>
+                      <span>{revealedHints[step.id]}</span>
                     </div>
-                  ) : step.hint ? (
+                  ) : step.hasHint ? (
                     <Button type="button" variant="ghost" size="sm"
                       disabled={isLoading || isRevealingHint}
                       onClick={() => revealHint(step.id)}>
@@ -267,7 +273,7 @@ export default function QuestionCard({
                           <button
                             key={opt.id}
                             type="button"
-                            disabled={isLoading}
+                            disabled={isLoading || answersLocked}
                             onClick={() => onStepAnswer(step.id, opt.text)}
                             className={`p-3 text-left rounded-lg text-sm border transition-all ${
                               isSelected
@@ -291,7 +297,8 @@ export default function QuestionCard({
                       <Input
                         type="text"
                         value={currentVal}
-                        disabled={isLoading}
+                        disabled={isLoading || answersLocked}
+                        maxLength={2000}
                         onChange={(e) => onStepAnswer(step.id, e.target.value)}
                         placeholder={t.session.inputNumberPlaceholder}
                         className="font-mono text-sm"
@@ -305,7 +312,8 @@ export default function QuestionCard({
                       <Input
                         type="text"
                         value={currentVal}
-                        disabled={isLoading}
+                        disabled={isLoading || answersLocked}
+                        maxLength={2000}
                         onChange={(e) => onStepAnswer(step.id, e.target.value)}
                         placeholder={t.session.inputExpressionPlaceholder}
                         className="font-mono text-sm"

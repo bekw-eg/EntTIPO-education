@@ -26,12 +26,17 @@ export async function recordHintUsage(userId: string, sessionId: string, questio
     if (session.topicId && question.topicId !== session.topicId) {
       throw new PracticeError("Question does not match the session topic", 400);
     }
+    if (!session.questionIds.includes(questionId)) {
+      throw new PracticeError("Question is not part of this session", 400);
+    }
     if (!session.hintedQuestionIds.includes(questionId)) {
       await tx.practiceSession.update({
         where: { id: sessionId, userId },
         data: { hintedQuestionIds: { push: questionId } },
       });
     }
-    return { usedHint: true };
+    const hints = await tx.questionStep.findMany({ where: { questionId, hint: { not: null } },
+      select: { id: true, hint: true } });
+    return { usedHint: true, hints: Object.fromEntries(hints.map((step) => [step.id, step.hint])) };
   }, { maxWait: 10000, timeout: 10000 });
 }

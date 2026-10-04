@@ -104,6 +104,11 @@ model PracticeSession {
   startedAt      DateTime  @default(now())
   completedAt    DateTime?
   hintedQuestionIds String[] @default([])
+  questionIds    String[]  @default([])
+  currentIndex   Int       @default(0)
+  draftAnswers   Json      @default("{}")
+  revision       Int       @default(0)
+  currentAttemptId String?
 
   user     User          @relation(fields: [userId], references: [id])
   attempts UserAttempt[]

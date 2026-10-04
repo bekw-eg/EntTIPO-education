@@ -69,10 +69,13 @@ export async function POST(request: NextRequest) {
 
     const session = await prisma.practiceSession.findFirst({
       where: { id: data.sessionId, userId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, questionIds: true },
     });
     if (!session) {
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
+    }
+    if (!session.questionIds.includes(data.questionId)) {
+      throw new PracticeError("Question is not part of this session", 400);
     }
 
     const question = await prisma.question.findUnique({
@@ -149,6 +152,7 @@ export async function POST(request: NextRequest) {
       if (ownedSession.topicId && ownedSession.topicId !== question.topicId) {
         throw new PracticeError("Question does not match the session topic", 400);
       }
+      if (!ownedSession.questionIds.includes(question.id)) throw new PracticeError("Question is not part of this session", 400);
       const sessionAttempts = await tx.userAttempt.findMany({
         where: { userId, sessionId: data.sessionId },
         select: { questionId: true, isCorrect: true },
@@ -272,7 +276,11 @@ export async function POST(request: NextRequest) {
       };
       await tx.practiceSession.update({
         where: { id: data.sessionId, userId },
-        data: { completedCount: sessionStats.completedCount, correctCount: sessionStats.correctCount },
+        data: { completedCount: sessionStats.completedCount, correctCount: sessionStats.correctCount,
+          ...(ownedSession.questionIds[ownedSession.currentIndex] === question.id ? {
+            currentAttemptId: attempt.id, draftAnswers: Object.fromEntries(answerMap), revision: { increment: 1 },
+          } : {}),
+        },
       });
 
       // Update DailyGoal
@@ -304,6 +312,7 @@ export async function POST(request: NextRequest) {
         score,
         stepResults,
         explanation: question.explanation,
+        correctAnswer: question.correctAnswer,
         errorType,
         usedHint,
         attemptNumber: attempt.attemptNumber,

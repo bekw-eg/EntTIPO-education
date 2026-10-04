@@ -14,13 +14,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { AttemptResult, Question, AiAction } from "@/types";
+import { AttemptResult, PracticeQuestion, AiAction } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 
 interface ResultAnalysisProps {
   result: AttemptResult;
-  question: Question;
+  question: PracticeQuestion;
+  isLoading?: boolean;
   onRetry: () => void;
   onNext: () => void;
   onOpenAi?: (action?: AiAction) => void;
@@ -32,6 +33,7 @@ export default function ResultAnalysis({
   onRetry,
   onNext,
   onOpenAi,
+  isLoading = false,
 }: ResultAnalysisProps) {
   const { t, getErrorLabel } = useLanguage();
   const [showExplanation, setShowExplanation] = useState(false);
@@ -179,7 +181,7 @@ export default function ResultAnalysis({
 
           {(showExplanation || isFull) && (
             <p className="text-sm text-foreground/90 whitespace-pre-line pt-2 border-t mt-2">
-              {question.explanation}
+              {result.explanation}
             </p>
           )}
         </div>
@@ -201,6 +203,7 @@ export default function ResultAnalysis({
               <Button
                 variant="outline"
                 onClick={onRetry}
+                disabled={isLoading}
                 className="w-full sm:w-auto"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
@@ -208,7 +211,7 @@ export default function ResultAnalysis({
               </Button>
             </>
           )}
-          <Button onClick={onNext} className="w-full sm:w-auto px-6 font-semibold">
+          <Button onClick={onNext} disabled={isLoading} className="w-full sm:w-auto px-6 font-semibold">
             {t.result.nextTask}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>

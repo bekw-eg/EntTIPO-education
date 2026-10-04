@@ -52,7 +52,8 @@ async function main() {
   const b = await register("B");
   // Directly create sessions with a known capacity; question selection is a separate concern.
   async function session(userId: string, totalCount = 2) {
-    return prisma.practiceSession.create({ data: { userId, mode: "specific_topic", topicId: fixture.id, totalCount } });
+    return prisma.practiceSession.create({ data: { userId, mode: "specific_topic", topicId: fixture.id, totalCount,
+      questionIds: fixture.questions.slice(0, totalCount).map((question) => question.id) } });
   }
   const sa = await session(a.id);
   const sb = await session(b.id);
@@ -111,7 +112,7 @@ async function main() {
   assert.equal(stats.data.correctCount, 2);
   assert.equal(stats.data.attemptCount, 5);
   assert.equal(stats.data.correctAttemptCount, 3);
-  assert.equal((await post(payload(sa.id, q3, true))).status, 409, "Session capacity limits distinct tasks");
+  assert.equal((await post(payload(sa.id, q3, true))).status, 400, "Only selected questions belong to the session");
   assert.equal((await post(payload(sa.id, otherTopic.questions[0] as typeof q1, true))).status, 400);
   const goals = await prisma.dailyGoal.findMany({ where: { userId: a.id } });
   assert.equal(goals.length, 1);

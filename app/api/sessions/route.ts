@@ -4,6 +4,7 @@ import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { createSessionSchema } from "@/lib/validators";
 import { selectQuestionsForSession } from "@/lib/adaptive";
 import { summarizeAttempts } from "@/lib/practiceStats";
+import { ZodError } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
         totalCount: questionIds.length,
         completedCount: 0,
         correctCount: 0,
+        questionIds,
       },
     });
 
@@ -48,6 +50,9 @@ export async function POST(request: NextRequest) {
       questionIds,
     });
   } catch (error) {
+    if (error instanceof ZodError || error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Invalid session settings" }, { status: 400 });
+    }
     console.error("Error in POST /api/sessions:", error);
     return NextResponse.json(
       { error: "Internal server error" },
@@ -61,10 +66,12 @@ export async function GET(request: Request) {
     const userId = getCurrentUserId(request);
     if (!userId) return unauthorizedResponse();
     const sessions = await prisma.practiceSession.findMany({
-      where: { userId },
+      where: { userId, ...(new URL(request.url).searchParams.get("status") === "active" ? { status: "active" } : {}) },
       orderBy: { startedAt: "desc" },
       take: 10,
-      include: { attempts: { select: { questionId: true, isCorrect: true } } },
+      select: { id: true, userId: true, mode: true, topicId: true, status: true,
+        totalCount: true, currentIndex: true, startedAt: true, completedAt: true,
+        attempts: { select: { questionId: true, isCorrect: true } } },
     });
 
     return NextResponse.json(sessions.map(({ attempts, ...session }) => ({

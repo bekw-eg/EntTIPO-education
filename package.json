@@ -11,6 +11,8 @@
     "test:auth": "tsx scripts/test_account_isolation.ts",
     "test:progress:unit": "tsx scripts/test_progress_unit.ts",
     "test:progress": "tsx scripts/test_practice_progress.ts",
+    "test:session:unit": "tsx scripts/test_practice_storage.ts",
+    "test:session": "tsx scripts/test_practice_persistence.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",

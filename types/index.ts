@@ -90,6 +90,15 @@ export interface Question {
   usedHint?: boolean;
 }
 
+/** Public exercise data. Solutions are supplied only by a checked attempt. */
+export type PracticeQuestion = Omit<Question, "correctAnswer" | "explanation" | "steps"> & {
+  steps: (Omit<QuestionStep, "expectedAnswer" | "hint" | "options"> & {
+    hasHint: boolean;
+    hint?: string | null;
+    options: Omit<QuestionOption, "isCorrect">[];
+  })[];
+};
+
 // ─── Practice Session ────────────────────────────────────────────────────────
 
 export type SessionMode =
@@ -351,6 +360,7 @@ export interface AttemptResult {
   score: number;
   stepResults: StepResult[];
   explanation: string;
+  correctAnswer?: string;
   errorType?: ErrorType;
   usedHint: boolean;
   attemptNumber: number;
@@ -364,6 +374,17 @@ export interface SessionStats {
   attemptCount: number;
   correctAttemptCount: number;
   mode: string;
+}
+
+export interface PracticeSnapshot extends SessionStats {
+  id: string;
+  status: SessionStatus;
+  questionIds: string[];
+  currentIndex: number;
+  revision: number;
+  draftAnswers: Record<string, string>;
+  question: PracticeQuestion | null;
+  result: AttemptResult | null;
 }
 
 // ─── Statistics ───────────────────────────────────────────────────────────────

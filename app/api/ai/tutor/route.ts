@@ -48,23 +48,29 @@ export async function POST(request: NextRequest) {
 
     if (data.sessionId) {
       const session = await prisma.practiceSession.findFirst({
-        where: { id: data.sessionId, userId }, select: { id: true, status: true },
+        where: { id: data.sessionId, userId }, select: { id: true, status: true, questionIds: true },
       });
       if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
       if (session.status !== "active") return NextResponse.json({ error: "Session is already completed" }, { status: 409 });
+      if (data.questionId && !session.questionIds.includes(data.questionId)) {
+        return NextResponse.json({ error: "Question is not part of this session" }, { status: 400 });
+      }
     }
 
     // An attempt supplied by the client must belong to this account and question.
     if (data.attemptId) {
       const attempt = await prisma.userAttempt.findFirst({
         where: { id: data.attemptId, userId },
-        select: { questionId: true },
+        select: { questionId: true, sessionId: true },
       });
       if (!attempt) {
         return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
       }
       if (data.questionId && data.questionId !== attempt.questionId) {
         return NextResponse.json({ error: "Attempt does not match the question" }, { status: 400 });
+      }
+      if (data.sessionId && data.sessionId !== attempt.sessionId) {
+        return NextResponse.json({ error: "Attempt does not match the session" }, { status: 400 });
       }
       data.questionId = attempt.questionId;
     }

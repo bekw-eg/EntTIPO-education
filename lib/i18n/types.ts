@@ -77,6 +77,8 @@ export interface TranslationSchema {
     startPracticeBtn: string;
     preparingTasks: string;
     selectTopicToast: string;
+    unfinished: string;
+    resume: string;
     modes: {
       mixed: { title: string; desc: string };
       weak_topics: { title: string; desc: string };
@@ -97,6 +99,14 @@ export interface TranslationSchema {
     checking: string;
     emptyListToast: string;
     loadingTask: string;
+    loadError: string;
+    reload: string;
+    saving: string;
+    saved: string;
+    saveError: string;
+    stateChanged: string;
+    pendingSubmission: string;
+    submitError: string;
     inputNumberPlaceholder: string;
     inputExpressionPlaceholder: string;
     powerHint: string;

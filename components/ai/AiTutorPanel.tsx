@@ -27,14 +27,14 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MathDisplay } from "@/components/ui/MathDisplay";
 import { AiMessageRenderer } from "./AiMessageRenderer";
-import { Question, AiAction, AiErrorAnalysis, AiSimilarQuestion } from "@/types";
+import { Question, PracticeQuestion, AiAction, AiErrorAnalysis, AiSimilarQuestion } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { toast } from "sonner";
 
 export interface AiTutorPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  question?: Question | null;
+  question?: Question | PracticeQuestion | null;
   stepAnswers?: Record<string, string>;
   hasAttempted?: boolean;
   initialAction?: AiAction;

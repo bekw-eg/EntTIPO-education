@@ -20,7 +20,8 @@ export default async function TopicDetailPage({ params }: TopicDetailPageProps) 
       subtopics: true,
       questions: {
         take: 3,
-        include: { steps: true },
+        select: { id: true, title: true, difficulty: true, latex: true, questionText: true,
+          steps: { select: { id: true } } },
         orderBy: { difficulty: "asc" },
       },
       progress: {
