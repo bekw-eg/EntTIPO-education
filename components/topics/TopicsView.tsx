@@ -41,6 +41,10 @@ export function TopicsView({ topics }: TopicsViewProps) {
       />
 
       <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+        <p className="text-sm text-muted-foreground">
+          {locale === "kk" ? "Тақырыптар тізімі емтиханды толық қамтуды растамайды." : locale === "en" ? "The topic list does not confirm complete exam coverage." : "Список тем не подтверждает полное покрытие экзамена."}{" "}
+          <Link href="/exam-coverage" className="underline">{locale === "kk" ? "Қамтуды тексеру" : locale === "en" ? "Check coverage" : "Проверить покрытие"}</Link>
+        </p>
         {/* Progress summary banner */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card className="bg-emerald-500/5 border-emerald-500/20">

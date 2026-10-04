@@ -11,7 +11,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       back: "Назад",
       profile: "Профиль",
       user: "Пользователь",
-      ent2025: "ЕНТ ТиПО 2025",
+      ent2025: "ЕНТ ТиПО · учебная практика",
       mathPrep: "Подготовка к математике",
     },
     nav: {
@@ -160,9 +160,9 @@ export const translations: Record<Locale, TranslationSchema> = {
       attemptAccuracy: "Верных попыток",
     },
     topics: {
-      catalogTitle: "Темы ЕНТ по математике",
+      catalogTitle: "Учебные темы математики",
       catalogSubtitle:
-        "15 ключевых тем программы ТиПО с теорией и целевой практикой",
+        "Учебные темы с теорией и практикой; соответствие экзамену проверяется отдельно",
       mastered: "Освоено (85%+)",
       inProgress: "В процессе (40–84%)",
       needsAttention: "Требуют внимания (<40%)",
@@ -229,7 +229,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       masteryRatingTitle: "Мастерство по темам ЕНТ",
       masteryRatingDesc: "Рейтинг освоения от 0% (слабая) до 100% (освоенная)",
       noTopicData: "Нет данных по темам",
-      allTopicsTitle: "Все темы ЕНТ (15 разделов)",
+      allTopicsTitle: "Темы с данными обучения",
       practiceBtn: "Практика",
     },
     masteryLevels: {
@@ -299,7 +299,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       back: "Артқа",
       profile: "Профиль",
       user: "Қолданушы",
-      ent2025: "ТжКБ ҰБТ 2025",
+      ent2025: "ТжКБ ҰБТ · оқу практикасы",
       mathPrep: "Математикаға дайындық",
     },
     nav: {
@@ -449,9 +449,9 @@ export const translations: Record<Locale, TranslationSchema> = {
       attemptAccuracy: "Дұрыс әрекеттер",
     },
     topics: {
-      catalogTitle: "Математикадан ҰБТ тақырыптары",
+      catalogTitle: "Математиканың оқу тақырыптары",
       catalogSubtitle:
-        "ТжКБ бағдарламасының теориясы мен практикасы бар 15 негізгі тақырыбы",
+        "Теориясы мен практикасы бар оқу тақырыптары; емтиханды қамту бөлек тексеріледі",
       mastered: "Меңгерілген (85%+)",
       inProgress: "Даму үстінде (40–84%)",
       needsAttention: "Назар аудару керек (<40%)",
@@ -519,7 +519,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       masteryRatingTitle: "ҰБТ тақырыптары бойынша шеберлік",
       masteryRatingDesc: "0% (әлсіз) бастап 100% (меңгерілген) дейінгі рейтинг",
       noTopicData: "Тақырыптар бойынша деректер жоқ",
-      allTopicsTitle: "Барлық ҰБТ тақырыптары (15 бөлім)",
+      allTopicsTitle: "Оқу деректері бар тақырыптар",
       practiceBtn: "Практика",
     },
     masteryLevels: {
@@ -589,7 +589,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       back: "Back",
       profile: "Profile",
       user: "User",
-      ent2025: "ENT TIPO 2025",
+      ent2025: "ENT TIPO · learning practice",
       mathPrep: "Math Exam Preparation",
     },
     nav: {
@@ -738,9 +738,9 @@ export const translations: Record<Locale, TranslationSchema> = {
       attemptAccuracy: "Correct attempts",
     },
     topics: {
-      catalogTitle: "ENT Math Topics",
+      catalogTitle: "Math Learning Topics",
       catalogSubtitle:
-        "15 key topics of the TVET curriculum with theory and targeted practice",
+        "Learning topics with theory and practice; exam coverage is checked separately",
       mastered: "Mastered (85%+)",
       inProgress: "In progress (40–84%)",
       needsAttention: "Needs attention (<40%)",
@@ -807,7 +807,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       masteryRatingTitle: "Mastery Across ENT Topics",
       masteryRatingDesc: "Rating from 0% (weak) to 100% (mastered)",
       noTopicData: "No data on topics",
-      allTopicsTitle: "All ENT Topics (15 chapters)",
+      allTopicsTitle: "Topics with learning data",
       practiceBtn: "Practice",
     },
     masteryLevels: {

@@ -29,6 +29,7 @@ export function Sidebar() {
     { name: t.nav.practice, href: "/practice", icon: BookOpen },
     { name: locale === "kk" ? "Диагностика" : "Диагностика навыков", href: "/diagnostics", icon: GraduationCap },
     { name: t.nav.topics, href: "/topics", icon: Library },
+    { name: locale === "kk" ? "Емтиханды қамту" : "Покрытие экзамена", href: "/exam-coverage", icon: GraduationCap },
     { name: "Геометрия", href: "/geometry", icon: Compass },
     { name: t.nav.mistakes, href: "/mistakes", icon: AlertCircle },
     { name: t.nav.statistics, href: "/statistics", icon: BarChart3 },

@@ -138,7 +138,7 @@ export default function StatisticsPage() {
                   {t.statistics.masteredCountLabel}
                 </p>
                 <p className="text-2xl font-bold">
-                  {topicProgress.filter((item: any) => item.masteryScore >= 85).length} / {topicProgress.length || 15}
+                  {topicProgress.filter((item: any) => item.masteryScore >= 85).length} / {topicProgress.length}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
                   {t.statistics.masteredRule}
