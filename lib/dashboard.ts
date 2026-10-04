@@ -49,7 +49,9 @@ export async function getDashboardData(userId: string): Promise<DashboardStats> 
         where: { userId },
         orderBy: { createdAt: "desc" },
         take: 5,
-        include: { question: { include: { topic: true } } },
+        select: { id: true, userId: true, questionId: true, sessionId: true, isCorrect: true, isPartial: true,
+          score: true, usedHint: true, timeSpent: true, attemptNumber: true, createdAt: true,
+          question: { select: { id: true, title: true, titleKk: true, topic: true } } },
       }),
     ]);
 

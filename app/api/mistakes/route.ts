@@ -4,6 +4,8 @@ import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { readUserSkills } from "@/lib/skillProgress";
 import { localDay } from "@/lib/learningPolicy";
 import { Prisma } from "@prisma/client";
+import { assertNoActiveExam } from "@/lib/exam/guard";
+import { PracticeError } from "@/lib/practiceStorage";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     const userId = getCurrentUserId(request);
     if (!userId) return unauthorizedResponse();
+    await assertNoActiveExam(prisma, userId);
     const { searchParams } = new URL(request.url);
 
     const topicId = searchParams.get("topicId");
@@ -126,6 +129,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("Error in GET /api/mistakes:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

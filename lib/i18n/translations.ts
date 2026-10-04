@@ -995,6 +995,11 @@ export const errorTypeTranslations: Record<
     kk: "Концептуалды қате",
     en: "Concept error",
   },
+  unclassified: {
+    ru: "Причина ошибки не определена",
+    kk: "Қатенің себебі анықталмаған",
+    en: "Cause of error undetermined",
+  },
   incorrect_method: {
     ru: "Неверный метод",
     kk: "Қате әдіс",

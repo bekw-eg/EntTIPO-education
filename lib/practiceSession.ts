@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { PracticeError } from "./practiceStorage";
 import { summarizeAttempts } from "./practiceStats";
+import { assertNoActiveExam } from "./exam/guard";
 
 // Whitelist both exercise and option fields: never send an answer key with a task.
 export const practiceQuestionSelect = {
@@ -25,6 +26,7 @@ export function publicPracticeQuestion(question: SelectedQuestion, usedHint = fa
 }
 
 export async function readPracticeSnapshot(tx: Prisma.TransactionClient, sessionId: string, userId: string) {
+  await assertNoActiveExam(tx, userId);
   const session = await tx.practiceSession.findFirst({ where: { id: sessionId, userId } });
   if (!session) throw new PracticeError("Session not found", 404);
   const attempts = await tx.userAttempt.findMany({

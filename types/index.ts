@@ -221,6 +221,7 @@ export function getMasteryLabel(score: number): string {
 // ─── Mistakes ────────────────────────────────────────────────────────────────
 
 export type ErrorType =
+  | "unclassified"
   | "wrong_formula"
   | "calculation_error"
   | "sign_error"
@@ -230,6 +231,7 @@ export type ErrorType =
   | "incorrect_method";
 
 export const ERROR_TYPE_LABELS: Record<ErrorType, string> = {
+  unclassified: "Причина ошибки не определена",
   wrong_formula: "Неверная формула",
   calculation_error: "Ошибка вычисления",
   sign_error: "Ошибка знака",

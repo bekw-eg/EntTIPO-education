@@ -32,6 +32,9 @@ def check(name, computed, options):
 
 
 texts = {
+    "integral_linearity": ["x⁴−3x²+2x+C", "4x⁴−6x²+2x+C", "x⁴−3x²+2+C", "12x²−6+C"],
+    "ode_separable_initial": ["y=3e^(2x)", "y=3e^(x²)", "y=e^(x²)+2", "y=3x²"],
+    "ode_repeated_initial": ["y=e^(2x)", "y=(1+2x)e^(2x)", "y=(1−2x)e^(2x)", "y=e^(−2x)"],
     "rational_center": ["(1; 2)", "(−1; 2)", "(1; 3)", "(2; 1)"],
     "rational_range": ["Все действительные числа", "Все действительные, кроме −1", "Все действительные, кроме 3", "Только положительные числа"],
     "inverse_arcsin": ["1/4", "1/2", "3/4", "1"],
@@ -63,6 +66,17 @@ texts = {
     "cone_volume_height": ["100π см³", "325π/3 см³", "300π см³", "65π см³"],
     "cone_frustum": ["20π см³", "48π см³", "28π см³", "12π см³"],
 }
+# Test complete functions against the differential equation and all initial conditions.
+C = s.symbols("C")
+check("integral_linearity", s.integrate(4*x**3-6*x+2, x)+C,
+      [x**4-3*x**2+2*x+C, 4*x**4-6*x**2+2*x+C, x**4-3*x**2+2+C, 12*x**2-6+C])
+ode1_options = [3*s.exp(2*x), 3*s.exp(x**2), s.exp(x**2)+2, 3*x**2]
+ode1_valid = [s.simplify(s.diff(f,x)-2*x*f) == 0 and f.subs(x,0) == 3 for f in ode1_options]
+check("ode_separable_initial", True, ode1_valid)
+ode2_options = [s.exp(2*x), (1+2*x)*s.exp(2*x), (1-2*x)*s.exp(2*x), s.exp(-2*x)]
+ode2_valid = [s.simplify(s.diff(f,x,2)-4*s.diff(f,x)+4*f) == 0
+              and f.subs(x,0) == 1 and s.diff(f,x).subs(x,0) == 0 for f in ode2_options]
+check("ode_repeated_initial", True, ode2_valid)
 f = (2*x+3)/(x-1)
 check("rational_center", (s.solve(x-1, x)[0], s.limit(f, x, s.oo)), [(1,2),(-1,2),(1,3),(2,1)])
 check("rational_range", s.calculus.util.function_range((3*x-2)/(x+1), x, s.S.Reals),
@@ -111,4 +125,4 @@ check("cylinder_volume", pi*(s.Rational(6,2))**2*4, [144*pi,12*pi,36*pi,24*pi])
 check("cone_volume_height", pi*5**2*s.sqrt(13**2-5**2)/3, [100*pi,s.Rational(325,3)*pi,300*pi,65*pi])
 check("cone_frustum", pi*s.Rational(3,3)*(4**2+4*2+2**2), [20*pi,48*pi,28*pi,12*pi])
 assert not by_id, ("Exercises without independent oracle", list(by_id))
-print("PASS: all 30 authored tasks, reference answers, four distinct mathematical choices, domains and boundary conditions verified with SymPy.")
+print(f"PASS: all {len(questions)} authored tasks, reference answers, four distinct mathematical choices, domains and boundary conditions verified with SymPy.")

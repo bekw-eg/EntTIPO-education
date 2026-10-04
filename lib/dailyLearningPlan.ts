@@ -4,6 +4,8 @@ import { lockAccount, PracticeError } from "./practiceStorage";
 import { readUserSkills } from "./skillProgress";
 import { addDays, dayBounds, dayStart, localDay, rankPlanSkills, studentTimeZone } from "./learningPolicy";
 import { similarQuestions, startLearningCheck } from "./learningChecks";
+import type { PaperQuestion } from "./exam/mode";
+import { assertNoActiveExam } from "./exam/guard";
 
 type Plan = DailyLearningPlan & { actions: LearningPlanAction[] };
 const actionsInclude = { actions: { orderBy: { position: "asc" as const } } };
@@ -44,6 +46,9 @@ async function syncPlan(tx: Prisma.TransactionClient, plan: Plan, now: Date) {
 
 async function buildActions(tx: Prisma.TransactionClient, plan: DailyLearningPlan, now: Date, position = 0) {
   const userId = plan.userId;
+  const sourceExam = plan.examId ? await tx.examSession.findFirst({ where: { id: plan.examId, userId, status: "completed" } }) : null;
+  const examGaps = (sourceExam?.result as { gaps?: { skillIds: string[] }[] } | null)?.gaps ?? [];
+  const examPaper = sourceExam?.paper as unknown as PaperQuestion[] | undefined;
   const [skills, observations, mistakes, reviews, todayAttempts] = await Promise.all([
     readUserSkills(tx, userId),
     tx.skillObservation.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, include: { diagnosticAnswer: { select: { sessionId: true } } } }),
@@ -52,13 +57,13 @@ async function buildActions(tx: Prisma.TransactionClient, plan: DailyLearningPla
     tx.userAttempt.findMany({ where: { userId, createdAt: { gte: dayBounds(now, plan.timeZone).gte, lt: dayBounds(now, plan.timeZone).lt } },
       include: { question: { include: { skills: true } } }, orderBy: [{ createdAt: "desc" }, { id: "asc" }] }),
   ]);
-  if (!observations.length) {
+  if (!observations.length && !examGaps.length) {
     await tx.learningPlanAction.create({ data: { planId: plan.id, position, kind: "diagnostic", reasons: ["new_account"] } });
     return;
   }
   // Adding a catalog skill is not evidence that the learner needs spaced review.
-  // Rank assessed/practised skills; new exam skills enter after their first observation.
-  const assessed = new Set([...observations.map((o) => o.skillId), ...mistakes.map((m) => m.skillId), ...reviews.map((r) => r.skillId)]);
+  // Rank observed skills and explicit exam gaps. A skip can request preparation without fabricating mastery evidence.
+  const assessed = new Set([...observations.map((o) => o.skillId), ...mistakes.map((m) => m.skillId), ...reviews.map((r) => r.skillId), ...examGaps.flatMap((g) => g.skillIds)]);
   const signals = skills.filter((s) => assessed.has(s.id)).map((s) => {
     const recent = observations.filter((o) => o.skillId === s.id && now.getTime() - o.createdAt.getTime() <= 14 * 86400000);
     const review = reviews.find((r) => r.skillId === s.id);
@@ -66,6 +71,7 @@ async function buildActions(tx: Prisma.TransactionClient, plan: DailyLearningPla
       due: !!review && localDay(now, review.timeZone) >= review.dueDay,
       recentMistakes: mistakes.filter((m) => m.skillId === s.id && now.getTime() - m.createdAt.getTime() <= 14 * 86400000).length,
       diagnosticFailures: recent.filter((o) => o.diagnosticAnswer?.sessionId === plan.diagnosticId && !o.isCorrect).length,
+      examGaps: examGaps.filter((g) => g.skillIds.includes(s.id)).length,
       hints: recent.filter((o) => o.usedHint).length,
       daysSincePractice: s.lastAttemptAt ? Math.max(0, Math.floor((now.getTime() - s.lastAttemptAt.getTime()) / 86400000)) : 30 };
   });
@@ -75,7 +81,7 @@ async function buildActions(tx: Prisma.TransactionClient, plan: DailyLearningPla
     return;
   }
   const mistake = mistakes.find((m) => m.skillId === selected.id);
-  const recentDifficulty = observations.find((o) => o.skillId === selected.id)?.difficulty ?? 1;
+  const recentDifficulty = observations.find((o) => o.skillId === selected.id)?.difficulty ?? examPaper?.find((q) => q.skillIds.includes(selected.id))?.difficulty ?? 1;
   const difficulty = mistake?.question.difficulty ?? Math.min(5, recentDifficulty + Number(selected.reasons.includes("maintenance")));
   const candidates = await tx.question.findMany({ where: { purpose: "practice", skills: { some: { skillId: selected.id } },
     difficulty: { gte: Math.max(1, difficulty - 1), lte: Math.min(5, difficulty + 1) } },
@@ -102,6 +108,7 @@ async function ensurePlan(tx: Prisma.TransactionClient, userId: string, now: Dat
   const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { timeZone: true } });
   const timeZone = studentTimeZone(user.timeZone), day = localDay(now, timeZone);
   const diagnostic = await tx.diagnosticSession.findFirst({ where: { userId, status: "completed" }, orderBy: { completedAt: "desc" } });
+  const exam = await tx.examSession.findFirst({ where: { userId, status: "completed" }, orderBy: { completedAt: "desc" } });
   let plan = await tx.dailyLearningPlan.findUnique({ where: { userId_day: { userId, day } }, include: actionsInclude });
   if (plan) {
     if (plan.status !== "active") {
@@ -111,20 +118,24 @@ async function ensurePlan(tx: Prisma.TransactionClient, userId: string, now: Dat
     plan = await syncPlan(tx, plan, now);
     const visible = plan.actions.filter((a) => a.status !== "superseded");
     const diagnosticOnly = visible.length > 0 && visible.every((a) => a.kind === "diagnostic");
-    if (diagnostic && diagnostic.id !== plan.diagnosticId && (recalculate || diagnosticOnly)) {
+    const newDiagnostic = !!diagnostic && diagnostic.id !== plan.diagnosticId;
+    const newExam = !!exam && exam.id !== plan.examId;
+    const started = visible.some((a) => a.kind !== "diagnostic" && (a.completedAt || a.sessionId));
+    if ((newDiagnostic && (recalculate || diagnosticOnly)) || (newExam && !started)) {
       if (visible.some((a) => a.kind !== "diagnostic" && (a.completedAt || a.sessionId))) {
         throw new PracticeError("Started plans are preserved; new diagnostic results apply tomorrow", 409);
       }
       await tx.learningPlanAction.updateMany({ where: { planId: plan.id, kind: { not: "diagnostic" }, status: { not: "superseded" } }, data: { status: "superseded" } });
-      await tx.learningPlanAction.updateMany({ where: { planId: plan.id, kind: "diagnostic", completedAt: null }, data: { status: "completed", completedAt: diagnostic.completedAt } });
-      plan = await tx.dailyLearningPlan.update({ where: { id: plan.id }, data: { diagnosticId: diagnostic.id }, include: actionsInclude });
+      if (diagnostic) await tx.learningPlanAction.updateMany({ where: { planId: plan.id, kind: "diagnostic", completedAt: null }, data: { status: "completed", completedAt: diagnostic.completedAt } });
+      else await tx.learningPlanAction.updateMany({ where: { planId: plan.id, kind: "diagnostic" }, data: { status: "superseded" } });
+      plan = await tx.dailyLearningPlan.update({ where: { id: plan.id }, data: { diagnosticId: diagnostic?.id, examId: exam?.id }, include: actionsInclude });
       await buildActions(tx, plan, now, plan.actions.length);
-    } else if (recalculate) throw new PracticeError("No new completed diagnostic is available", 409);
+    } else if (recalculate) throw new PracticeError("No new assessment is available, or today's plan has already started", 409);
   } else {
     const previous = await tx.dailyLearningPlan.findFirst({ where: { userId, status: "active" }, orderBy: { day: "desc" }, include: actionsInclude });
     const synced = previous ? await syncPlan(tx, previous, now) : null;
     await tx.dailyLearningPlan.updateMany({ where: { userId, status: "active" }, data: { status: "archived" } });
-    plan = await tx.dailyLearningPlan.create({ data: { userId, day, timeZone, diagnosticId: diagnostic?.id }, include: actionsInclude });
+    plan = await tx.dailyLearningPlan.create({ data: { userId, day, timeZone, diagnosticId: diagnostic?.id, examId: exam?.id }, include: actionsInclude });
     const pending = synced?.actions.filter((a) => !a.completedAt && a.status !== "superseded") ?? [];
     const hasTraining = pending.some((a) => a.sessionId && (a.kind === "practice" || a.kind === "check"));
     if (hasTraining) {
@@ -141,6 +152,7 @@ async function ensurePlan(tx: Prisma.TransactionClient, userId: string, now: Dat
 
 async function planView(tx: Prisma.TransactionClient, plan: Plan) {
   const latest = await tx.diagnosticSession.findFirst({ where: { userId: plan.userId, status: "completed" }, orderBy: { completedAt: "desc" }, select: { id: true } });
+  const latestExam = await tx.examSession.findFirst({ where: { userId: plan.userId, status: "completed" }, orderBy: { completedAt: "desc" }, select: { id: true } });
   const actions = await Promise.all(plan.actions.filter((a) => a.status !== "superseded").map(async (action) => {
     const skill = action.skillId ? await tx.skill.findUnique({ where: { id: action.skillId } }) : null;
     const review = action.skillId ? await tx.skillReview.findUnique({ where: { userId_skillId: { userId: plan.userId, skillId: action.skillId } } }) : null;
@@ -153,13 +165,14 @@ async function planView(tx: Prisma.TransactionClient, plan: Plan) {
     return { ...action, skill, mistake, check, nextReviewDay: review?.dueDay ?? null,
       completedQuestionCount: action.completedAt && action.kind === "practice" ? action.questionIds.length : new Set(practiceAttempts.map((a) => a.questionId)).size };
   }));
-  return { ...plan, actions, canRecalculate: !!latest && latest.id !== plan.diagnosticId
+  return { ...plan, actions, canRecalculate: (!!latest && latest.id !== plan.diagnosticId || !!latestExam && latestExam.id !== plan.examId)
     && actions.every((a) => a.kind === "diagnostic" || (!a.completedAt && !a.sessionId)) };
 }
 
 export async function getDailyLearningPlan(userId: string, now = new Date(), recalculate = false) {
   return prisma.$transaction(async (tx) => {
     await lockAccount(tx, userId);
+    await assertNoActiveExam(tx, userId);
     return planView(tx, await ensurePlan(tx, userId, now, recalculate));
   }, { maxWait: 10000, timeout: 20000 });
 }
@@ -167,6 +180,7 @@ export async function getDailyLearningPlan(userId: string, now = new Date(), rec
 export async function runPlanAction(userId: string, actionId: string, operation: "start" | "complete_rule") {
   return prisma.$transaction(async (tx) => {
     await lockAccount(tx, userId);
+    await assertNoActiveExam(tx, userId);
     const action = await tx.learningPlanAction.findFirst({ where: { id: actionId, plan: { userId }, status: { not: "superseded" } }, include: { plan: true } });
     if (!action) throw new PracticeError("Plan action not found", 404);
     if (operation === "complete_rule") {

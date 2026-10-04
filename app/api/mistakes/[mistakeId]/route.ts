@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { z, ZodError } from "zod";
 import { lockAccount, PracticeError } from "@/lib/practiceStorage";
+import { assertNoActiveExam } from "@/lib/exam/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export async function PATCH(
     const body = z.object({ isReviewed: z.boolean() }).strict().parse(await request.json());
     const mistake = await prisma.$transaction(async (tx) => {
       await lockAccount(tx, userId);
+      await assertNoActiveExam(tx, userId);
       const existing = await tx.mistake.findFirst({ where: { id: mistakeId, userId } });
       if (!existing) throw new PracticeError("Mistake not found", 404);
       if (existing.isReviewed === body.isReviewed) return existing;

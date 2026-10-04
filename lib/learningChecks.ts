@@ -6,8 +6,9 @@ export async function similarQuestions(tx: Prisma.TransactionClient, userId: str
   targetDifficulty: number, excluded: string[] = []) {
   const hinted = await tx.practiceSession.findMany({ where: { userId, NOT: { hintedQuestionIds: { isEmpty: true } } },
     select: { hintedQuestionIds: true } });
+  const exposedExams = await tx.examSession.findMany({ where: { userId, status: "completed" }, select: { questionIds: true } });
   const candidates = await tx.question.findMany({ where: {
-    purpose: { in: ["practice", "verification"] }, id: { notIn: [...excluded, ...hinted.flatMap((s) => s.hintedQuestionIds)] },
+    purpose: { in: ["practice", "verification"] }, id: { notIn: [...excluded, ...hinted.flatMap((s) => s.hintedQuestionIds), ...exposedExams.flatMap((s) => s.questionIds)] },
     difficulty: { gte: Math.max(1, targetDifficulty - 1), lte: Math.min(5, targetDifficulty + 1) },
     skills: { some: { skillId } }, steps: { some: { skills: { some: { skillId } } } },
     attempts: { none: { userId } }, questionHelp: { none: { userId } }, mistakes: { none: { userId } },
@@ -73,8 +74,9 @@ export async function recordLearningAttempt(tx: Prisma.TransactionClient, attemp
     const priorAttempts = await tx.userAttempt.count({ where: { userId: attempt.userId, questionId: attempt.questionId, id: { not: attempt.id } } });
     const helped = await tx.questionHelp.findUnique({ where: { userId_questionId: { userId: attempt.userId, questionId: attempt.questionId } } });
     const hinted = await tx.practiceSession.count({ where: { userId: attempt.userId, hintedQuestionIds: { has: attempt.questionId } } });
+    const exposedExam = await tx.examSession.count({ where: { userId: attempt.userId, status: "completed", questionIds: { has: attempt.questionId } } });
     const passed = independentCheck({ isCorrect: attempt.isCorrect, usedHint: attempt.usedHint, priorAttempts,
-      priorHelp: !!helped || hinted > 0, questionId: attempt.questionId, originalQuestionId: check.mistake?.questionId,
+      priorHelp: !!helped || hinted > 0 || exposedExam > 0, questionId: attempt.questionId, originalQuestionId: check.mistake?.questionId,
       testsSkill: question.steps.some((s) => s.skills.some((link) => link.skillId === check.skillId)),
       difficulty: question.difficulty, targetDifficulty: check.targetDifficulty });
     await tx.learningCheck.update({ where: { id: check.id }, data: { status: passed ? "passed" : "failed",

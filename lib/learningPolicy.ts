@@ -41,17 +41,19 @@ export function nextReview(now: Date, timeZone: string, previousIndex: number, s
 
 export interface PlanSignal {
   id: string; state: string; masteryScore: number; due: boolean; recentMistakes: number;
-  diagnosticFailures: number; hints: number; daysSincePractice: number;
+  diagnosticFailures: number; examGaps?: number; hints: number; daysSincePractice: number;
 }
 export function rankPlanSkills(signals: PlanSignal[]) {
   return signals.map((s) => {
     const reasons = [
       ...(s.due ? ["due"] : []), ...(s.recentMistakes ? ["recent_error"] : []),
       ...(s.state === "weak" ? ["weak"] : []), ...(s.diagnosticFailures ? ["diagnostic_gap"] : []),
+      ...(s.examGaps ? ["exam_gap"] : []),
       ...(s.hints ? ["hints"] : []), ...(s.daysSincePractice >= 7 ? ["spaced"] : []),
     ];
     const weight = Number(s.due) * 200 + Math.min(s.recentMistakes, 3) * 30 + Number(s.state === "weak") * 80
       + Math.min(s.diagnosticFailures, 3) * 20 + Math.min(s.hints, 3) * 12
+      + Math.min(s.examGaps ?? 0, 3) * 20
       + Math.min(s.daysSincePractice, 30) + (100 - s.masteryScore) / 10;
     return { ...s, reasons: reasons.length ? reasons : ["maintenance"], weight };
   }).sort((a, b) => b.weight - a.weight || a.id.localeCompare(b.id));
