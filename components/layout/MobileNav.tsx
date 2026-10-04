@@ -8,12 +8,12 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
 
   const navItems = [
     { name: t.nav.home, href: "/", icon: LayoutDashboard },
     { name: t.nav.practice, href: "/practice", icon: BookOpen },
-    { name: "Экзамен", href: "/exam", icon: GraduationCap },
+    { name: locale === 'kk' ? 'Емтихан' : locale === 'en' ? 'Exam' : 'Экзамен', href: "/exam", icon: GraduationCap },
     { name: "Диагностика", href: "/diagnostics", icon: AlertCircle },
     { name: t.nav.topics, href: "/topics", icon: Library },
     { name: "3D", href: "/geometry", icon: Compass },

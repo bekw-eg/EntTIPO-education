@@ -52,7 +52,7 @@ async function main() {
     self: { location: { origin: "https://ent.example" }, skipWaiting() {}, clients: { claim() {} },
       addEventListener(name: string, handler: (event: any) => void) { handlers[name] = handler; } },
     caches: {
-      async keys() { return ["ent-tipo-v1.0.0", "ent-tipo-static-v2", "unrelated-cache"]; },
+      async keys() { return ["ent-tipo-v1.0.0", "ent-tipo-static-v2", "ent-tipo-static-v3", "unrelated-cache"]; },
       async delete(key: string) { deleted.push(key); },
       async open() { return { async put(request: any) { written.push(request.url); }, async addAll() {} }; },
       async match(request: any) {
@@ -70,7 +70,7 @@ async function main() {
   let activation: Promise<unknown> | undefined;
   handlers.activate({ waitUntil(value: Promise<unknown>) { activation = value; } });
   await activation;
-  assert.deepEqual(deleted, ["ent-tipo-v1.0.0"]);
+  assert.deepEqual(deleted, ["ent-tipo-v1.0.0", "ent-tipo-static-v2"]);
   async function requestWorker(path: string, mode = "cors") {
     let response: Promise<Response> | undefined;
     handlers.fetch({ request: { url: `https://ent.example${path}`, method: "GET", mode },

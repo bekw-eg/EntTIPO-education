@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { practiceQuestionSelect, publicPracticeQuestion } from "@/lib/practiceSession";
@@ -13,7 +14,7 @@ export async function GET(
 ) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     const { sessionId } = await context.params;
     const result = await prisma.$transaction(async (tx) => {
       await lockAccount(tx, userId);
@@ -35,11 +36,11 @@ export async function GET(
       if (!question) throw new PracticeError("Question not found", 404);
       return publicPracticeQuestion(question, session.hintedQuestionIds.includes(question.id));
     });
-    return NextResponse.json(result);
+    return localizedJson(request, result);
   } catch (error) {
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof PracticeError) return localizedJson(request, { error: error.message }, { status: error.status });
     console.error("Error in GET /api/sessions/[sessionId]/next-question:", error);
-    return NextResponse.json(
+    return localizedJson(request,
       { error: "Internal server error" },
       { status: 500 }
     );

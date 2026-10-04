@@ -1,4 +1,7 @@
 "use client";
+import { uiText, errorText } from "@/lib/i18n/messages";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+
 
 import React, { useState } from "react";
 import { Header } from "@/components/layout/Header";
@@ -13,6 +16,7 @@ import { useAccount } from "@/components/providers/AccountProvider";
 import { navigateAfterAuth } from "@/lib/client-auth";
 
 export default function LoginPage() {
+  const { locale } = useLanguage();
   const { demoEnabled } = useAccount();
   const [activeTab, setActiveTab] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
@@ -31,13 +35,13 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Ошибка входа");
+        toast.error(errorText(data.error, locale));
       } else {
-        toast.success(`Добро пожаловать, ${data.user.name}!`);
+        toast.success(uiText(`Добро пожаловать, ${data.user.name}!`, locale));
         await navigateAfterAuth("/");
       }
     } catch {
-      toast.error("Не удалось связаться с сервером");
+      toast.error(uiText("Не удалось связаться с сервером", locale));
     } finally {
       setLoading(false);
     }
@@ -54,13 +58,13 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Ошибка регистрации");
+        toast.error(errorText(data.error, locale));
       } else {
-        toast.success("Аккаунт успешно создан!");
+        toast.success(uiText("Аккаунт успешно создан!", locale));
         await navigateAfterAuth("/");
       }
     } catch {
-      toast.error("Ошибка при создании аккаунта");
+      toast.error(uiText("Ошибка при создании аккаунта", locale));
     } finally {
       setLoading(false);
     }
@@ -72,12 +76,12 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/demo", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Не удалось открыть демоверсию");
+        toast.error(errorText(data.error, locale));
       } else {
         await navigateAfterAuth("/");
       }
     } catch {
-      toast.error("Не удалось связаться с сервером");
+      toast.error(uiText("Не удалось связаться с сервером", locale));
     } finally {
       setLoading(false);
     }
@@ -85,7 +89,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title="Вход и профиль" subtitle="Персональный кабинет ученика ЕНТ ТиПО" />
+      <Header title={uiText("Вход и профиль", locale)} subtitle={uiText("Персональный кабинет ученика ЕНТ ТиПО", locale)} />
 
       <main className="flex-1 flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-lg border">
@@ -94,11 +98,10 @@ export default function LoginPage() {
               <GraduationCap className="w-7 h-7" />
             </div>
             <CardTitle className="text-2xl font-bold tracking-tight">
-              {activeTab === "login" ? "Авторизация" : "Новый профиль"}
+              {activeTab === "login" ? uiText("Авторизация", locale) : uiText("Новый профиль", locale)}
             </CardTitle>
             <CardDescription className="text-xs">
-              Сохраняйте серию тренировок (Streak), статистику и персональный разбор ошибок.
-            </CardDescription>
+              {uiText(" Сохраняйте серию тренировок (Streak), статистику и персональный разбор ошибок. ", locale)}</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
@@ -108,8 +111,8 @@ export default function LoginPage() {
               className="w-full"
             >
               <TabsList className="grid grid-cols-2 w-full mb-4">
-                <TabsTrigger value="login">Вход</TabsTrigger>
-                <TabsTrigger value="register">Регистрация</TabsTrigger>
+                <TabsTrigger value="login">{uiText("Вход", locale)}</TabsTrigger>
+                <TabsTrigger value="register">{uiText("Регистрация", locale)}</TabsTrigger>
               </TabsList>
 
               <TabsContent value="login">
@@ -126,7 +129,7 @@ export default function LoginPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="page-login-password">Пароль</Label>
+                    <Label htmlFor="page-login-password">{uiText("Пароль", locale)}</Label>
                     <Input
                       id="page-login-password"
                       type="password"
@@ -138,7 +141,7 @@ export default function LoginPage() {
                   </div>
 
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Вход..." : "Войти в кабинет"}
+                    {loading ? uiText("Вход...", locale) : uiText("Войти в кабинет", locale)}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </form>
@@ -147,11 +150,11 @@ export default function LoginPage() {
               <TabsContent value="register">
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="page-reg-name">Имя и фамилия</Label>
+                    <Label htmlFor="page-reg-name">{uiText("Имя и фамилия", locale)}</Label>
                     <Input
                       id="page-reg-name"
                       required
-                      placeholder="Арман Ахметов"
+                      placeholder={uiText("Арман Ахметов", locale)}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                     />
@@ -168,20 +171,20 @@ export default function LoginPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="page-reg-password">Пароль</Label>
+                    <Label htmlFor="page-reg-password">{uiText("Пароль", locale)}</Label>
                     <Input
                       id="page-reg-password"
                       type="password"
                       required
                       minLength={4}
-                      placeholder="Минимум 4 символа"
+                      placeholder={uiText("Минимум 4 символа", locale)}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </div>
 
                   <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Создание..." : "Зарегистрироваться"}
+                    {loading ? uiText("Создание...", locale) : uiText("Зарегистрироваться", locale)}
                     <ShieldCheck className="w-4 h-4 ml-2" />
                   </Button>
                 </form>
@@ -190,11 +193,9 @@ export default function LoginPage() {
             {demoEnabled && (
               <div className="border-t pt-4 space-y-2">
                 <Button variant="outline" className="w-full" disabled={loading} onClick={handleDemoLogin}>
-                  Попробовать демоверсию
-                </Button>
+                  {uiText(" Попробовать демоверсию ", locale)}</Button>
                 <p className="text-xs text-muted-foreground text-center">
-                  В демоверсии используются общие учебные данные. Для личного прогресса создайте аккаунт.
-                </p>
+                  {uiText(" В демоверсии используются общие учебные данные. Для личного прогресса создайте аккаунт. ", locale)}</p>
               </div>
             )}
           </CardContent>

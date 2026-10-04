@@ -53,8 +53,9 @@ export async function recordHintUsage(userId: string, sessionId: string, questio
     }
     await saveHelpEvidence(tx, userId, questionId);
     const hints = await tx.questionStep.findMany({ where: { questionId, hint: { not: null } },
-      select: { id: true, hint: true } });
-    return { usedHint: true, hints: Object.fromEntries(hints.map((step) => [step.id, step.hint])) };
+      select: { id: true, hint: true, hintKk: true } });
+    return { usedHint: true, hints: Object.fromEntries(hints.map((step) => [step.id, step.hint])),
+      hintsKk: Object.fromEntries(hints.map((step) => [step.id, step.hintKk])) };
   }, { maxWait: 10000, timeout: 10000 });
 }
 

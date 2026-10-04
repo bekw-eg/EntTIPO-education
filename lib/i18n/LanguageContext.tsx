@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Locale, TranslationSchema } from "./types";
 import { translations, topicNamesTranslations, errorTypeTranslations } from "./translations";
+import { translateContent } from './content';
 
 interface LanguageContextType {
   locale: Locale;
@@ -20,17 +21,20 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Read persisted locale from localStorage
-    const saved = localStorage.getItem("ent_tipo_locale") as Locale | null;
+    let saved: Locale | null = null;
+    try { saved = localStorage.getItem("ent_tipo_locale") as Locale | null; } catch { /* Use the default when browser storage is disabled. */ }
     if (saved && (saved === "ru" || saved === "kk" || saved === "en")) {
       setLocaleState(saved);
       document.documentElement.lang = saved;
+      document.cookie = `ent_tipo_locale=${saved}; Path=/; SameSite=Lax; Max-Age=31536000`;
     }
   }, []);
 
   const setLocale = (newLocale: Locale) => {
     setLocaleState(newLocale);
-    localStorage.setItem("ent_tipo_locale", newLocale);
+    try { localStorage.setItem("ent_tipo_locale", newLocale); } catch { /* Locale still changes when storage is disabled. */ }
     document.documentElement.lang = newLocale;
+    document.cookie = `ent_tipo_locale=${newLocale}; Path=/; SameSite=Lax; Max-Age=31536000`;
   };
 
   const t = translations[locale] || translations.ru;
@@ -41,7 +45,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (entry) {
       return entry[locale] || russianName;
     }
-    return russianName;
+    return locale === 'kk' ? translateContent(russianName) ?? 'Тақырып' : russianName;
   };
 
   const getErrorLabel = (errorType: string): string => {

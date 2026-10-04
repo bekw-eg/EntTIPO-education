@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import { ZoomIn, ZoomOut, RotateCcw, Layers, Eye, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from '@/lib/i18n/LanguageContext';
+import { uiText } from '@/lib/i18n/messages';
+import { translateContent } from '@/lib/i18n/content';
 
 export type GeometryFigureType =
   | "pyramid_4"
@@ -32,6 +35,7 @@ interface GeometryViewerProps {
 }
 
 export function GeometryViewer({ config, className = "" }: GeometryViewerProps) {
+  const { locale } = useLanguage();
   const [zoom, setZoom] = useState(1);
   const [showLabels, setShowLabels] = useState(true);
   const [activeHighlight, setActiveHighlight] = useState<string | undefined>(
@@ -55,7 +59,7 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
         <div className="flex items-center gap-2">
           <Compass className="w-3.5 h-3.5 text-primary" />
           <span className="font-semibold text-foreground/90">
-            {config.title || getFigureTitle(config.type)}
+            {locale === 'kk' ? translateContent(config.title || getFigureTitle(config.type)) ?? uiText(config.title || getFigureTitle(config.type), locale) : config.title || getFigureTitle(config.type)}
           </span>
           <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
             SVG 2D/3D
@@ -68,7 +72,7 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
             size="icon"
             onClick={() => setShowLabels(!showLabels)}
             className={`h-7 w-7 ${showLabels ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
-            title="Переключить подписи"
+            title={uiText('Переключить подписи', locale)}
           >
             <Eye className="w-3.5 h-3.5" />
           </Button>
@@ -77,7 +81,7 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
             size="icon"
             onClick={handleZoomOut}
             className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title="Уменьшить"
+            title={uiText('Уменьшить', locale)}
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </Button>
@@ -86,7 +90,7 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
             size="icon"
             onClick={handleZoomIn}
             className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title="Увеличить"
+            title={uiText('Увеличить', locale)}
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </Button>
@@ -95,7 +99,7 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
             size="icon"
             onClick={handleReset}
             className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title="Сброс"
+            title={uiText('Сброс', locale)}
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </Button>
@@ -120,7 +124,7 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
         {getAvailableParts(config.type).length > 0 && (
           <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-background/80 backdrop-blur px-2 py-1 rounded-md border text-[11px]">
             <Layers className="w-3 h-3 text-muted-foreground mr-1" />
-            <span className="text-muted-foreground mr-1">Выделить:</span>
+            <span className="text-muted-foreground mr-1">{uiText('Выделить:', locale)}</span>
             {getAvailableParts(config.type).map((part) => (
               <button
                 key={part.id}
@@ -133,7 +137,7 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
                     : "hover:bg-muted text-foreground/80"
                 }`}
               >
-                {part.name}
+                {uiText(part.name, locale)}
               </button>
             ))}
           </div>

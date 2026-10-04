@@ -690,7 +690,10 @@ async function main() {
   }
 }
 
-main()
+main().then(async () => {
+  const { seedKazakhContent } = await import('./kazakhSeed');
+  await seedKazakhContent(prisma);
+})
   .catch(e => {
     console.error(e)
     process.exit(1)

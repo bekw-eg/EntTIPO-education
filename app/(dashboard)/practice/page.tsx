@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import Link from "next/link";
 import { diagnosticText } from "@/lib/i18n/diagnostics";
+import { errorText } from '@/lib/i18n/messages';
 
 interface UnfinishedSession {
   id: string;
@@ -109,7 +110,7 @@ function PracticeSetupContent() {
       router.push(`/practice/session/${data.id}`);
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || "Error");
+      toast.error(errorText(error.message, locale));
       setIsLoading(false);
     }
   };

@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { submitAttemptSchema } from "@/lib/validators";
@@ -36,7 +37,7 @@ function determineErrorType(stepResults: StepResult[], question: any): ErrorType
 export async function POST(request: NextRequest) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     await assertNoActiveExam(prisma, userId);
     const body = await request.json();
     const data = submitAttemptSchema.parse(body);
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
       where: { userId_submissionId: { userId, submissionId: data.submissionId } },
       select: { submissionHash: true, submissionResult: true },
     });
-    if (previousSubmission) return NextResponse.json(await prisma.$transaction(async (tx) => {
+    if (previousSubmission) return localizedJson(request, await prisma.$transaction(async (tx) => {
       await lockAccount(tx, userId);
       await assertNoActiveExam(tx, userId);
       return replaySubmission(previousSubmission, submissionHash);
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
       select: { id: true, status: true, questionIds: true },
     });
     if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return localizedJson(request, { error: "Session not found" }, { status: 404 });
     }
     if (!session.questionIds.includes(data.questionId)) {
       throw new PracticeError("Question is not part of this session", 400);
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!question) {
-      return NextResponse.json({ error: "Question not found" }, { status: 404 });
+      return localizedJson(request, { error: "Question not found" }, { status: 404 });
     }
     if (question.purpose === "diagnostic") throw new PracticeError("Use the diagnostic endpoint for this question", 400);
 
@@ -315,6 +316,7 @@ export async function POST(request: NextRequest) {
         score,
         stepResults,
         explanation: question.explanation,
+        explanationKk: question.explanationKk,
         correctAnswer: question.correctAnswer,
         errorType,
         usedHint,
@@ -328,27 +330,27 @@ export async function POST(request: NextRequest) {
       return snapshot;
     }, { maxWait: 10000, timeout: 10000 });
 
-    return NextResponse.json(result);
+    return localizedJson(request, result);
   } catch (error) {
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof PracticeError) return localizedJson(request, { error: error.message }, { status: error.status });
     if (error instanceof ZodError || error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Invalid attempt payload" }, { status: 400 });
+      return localizedJson(request, { error: "Invalid attempt payload" }, { status: 400 });
     }
     console.error("Error in POST /api/attempts:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return localizedJson(request, { error: "Internal server error" }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     await assertNoActiveExam(prisma, userId);
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get("sessionId");
 
     if (!sessionId) {
-      return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
+      return localizedJson(request, { error: "sessionId is required" }, { status: 400 });
     }
 
     const attempts = await prisma.$transaction(async (tx) => {
@@ -370,10 +372,10 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    return NextResponse.json(attempts);
+    return localizedJson(request, attempts);
   } catch (error) {
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof PracticeError) return localizedJson(request, { error: error.message }, { status: error.status });
     console.error("Error in GET /api/attempts:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return localizedJson(request, { error: "Internal server error" }, { status: 500 });
   }
 }

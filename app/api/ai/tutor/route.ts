@@ -1,8 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { PracticeError, recordHintUsage, recordQuestionHelp } from "@/lib/practiceStorage";
 import { assertNoActiveExam } from "@/lib/exam/guard";
+import { contentText, answerText } from '@/lib/i18n/content';
+import { errorText } from '@/lib/i18n/messages';
 import {
   aiTutorRequestSchema,
   aiErrorAnalysisSchema,
@@ -31,31 +34,33 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
+  let lang: 'ru' | 'kk' | 'en' = 'ru';
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
-    await assertNoActiveExam(prisma, userId);
+    if (!userId) return unauthorizedResponse(request);
     const body = await request.json();
+    if (body.language === 'kk' || body.language === 'en') lang = body.language;
+    await assertNoActiveExam(prisma, userId);
     const parseResult = aiTutorRequestSchema.safeParse(body);
 
     if (!parseResult.success) {
-      return NextResponse.json(
+      return localizedJson(request,
         { error: "Invalid request payload", details: parseResult.error.format() },
         { status: 400 }
       );
     }
 
     const data = parseResult.data;
-    const lang = data.language || "ru";
+    lang = data.language || 'ru';
 
     if (data.sessionId) {
       const session = await prisma.practiceSession.findFirst({
         where: { id: data.sessionId, userId }, select: { id: true, status: true, questionIds: true },
       });
-      if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
-      if (session.status !== "active") return NextResponse.json({ error: "Session is already completed" }, { status: 409 });
+      if (!session) return localizedJson(request, { error: "Session not found" }, { status: 404 });
+      if (session.status !== "active") return localizedJson(request, { error: "Session is already completed" }, { status: 409 });
       if (data.questionId && !session.questionIds.includes(data.questionId)) {
-        return NextResponse.json({ error: "Question is not part of this session" }, { status: 400 });
+        return localizedJson(request, { error: "Question is not part of this session" }, { status: 400 });
       }
     }
 
@@ -66,23 +71,23 @@ export async function POST(request: NextRequest) {
         select: { questionId: true, sessionId: true },
       });
       if (!attempt) {
-        return NextResponse.json({ error: "Attempt not found" }, { status: 404 });
+        return localizedJson(request, { error: "Attempt not found" }, { status: 404 });
       }
       if (data.questionId && data.questionId !== attempt.questionId) {
-        return NextResponse.json({ error: "Attempt does not match the question" }, { status: 400 });
+        return localizedJson(request, { error: "Attempt does not match the question" }, { status: 400 });
       }
       if (data.sessionId && data.sessionId !== attempt.sessionId) {
-        return NextResponse.json({ error: "Attempt does not match the session" }, { status: 400 });
+        return localizedJson(request, { error: "Attempt does not match the session" }, { status: 400 });
       }
       data.questionId = attempt.questionId;
     }
 
     // 1. Rate Limiting Check
     if (data.questionId && await prisma.question.count({ where: { id: data.questionId, purpose: "diagnostic" } })) {
-      return NextResponse.json({ error: "AI help is disabled for entrance diagnostic tasks" }, { status: 403 });
+      return localizedJson(request, { error: "AI help is disabled for entrance diagnostic tasks" }, { status: 403 });
     }
     if (!checkRateLimit(userId)) {
-      return NextResponse.json(
+      return localizedJson(request,
         { error: RATE_LIMIT_MESSAGES[lang] || RATE_LIMIT_MESSAGES.ru },
         { status: 429 }
       );
@@ -149,18 +154,18 @@ export async function POST(request: NextRequest) {
 
     const questionContext: QuestionContext = {
       id: questionRecord?.id,
-      title: questionRecord?.title || "Математическая задача",
-      questionText: questionRecord?.questionText || "",
+      title: questionRecord ? contentText(questionRecord.title, questionRecord.titleKk, lang) : lang === 'kk' ? 'Математикалық есеп' : 'Математическая задача',
+      questionText: questionRecord ? contentText(questionRecord.questionText, questionRecord.questionTextKk, lang) : '',
       latex: questionRecord?.latex || null,
       difficulty: questionRecord?.difficulty || 1,
-      topicName: topicRecord?.name || "Математика",
-      subtopicName: questionRecord?.subtopic?.name || null,
-      correctAnswer: questionRecord?.correctAnswer || "",
+      topicName: contentText(topicRecord?.name || 'Математика', topicRecord?.nameKk, lang),
+      subtopicName: questionRecord?.subtopic ? contentText(questionRecord.subtopic.name, questionRecord.subtopic.nameKk, lang) : null,
+      correctAnswer: questionRecord ? answerText(questionRecord.correctAnswer, questionRecord.steps.at(-1), lang) : '',
       steps: questionRecord?.steps?.map((s: any) => ({
         order: s.order,
-        prompt: s.prompt,
-        expectedAnswer: s.expectedAnswer,
-        hint: s.hint,
+        prompt: contentText(s.prompt, s.promptKk, lang),
+        expectedAnswer: answerText(s.expectedAnswer, s, lang),
+        hint: s.hint ? contentText(s.hint, s.hintKk, lang) : null,
       })),
     };
 
@@ -179,9 +184,9 @@ export async function POST(request: NextRequest) {
       case "hint": {
         const level = data.hintLevel || 1;
         const prompt = buildHintPrompt(questionContext, userContext, level);
-        const text = await callGemini(prompt.system, prompt.user);
+        const text = await callGemini(prompt.system, prompt.user, { language: lang });
         if (data.sessionId && questionRecord) await recordHintUsage(userId, data.sessionId, questionRecord.id);
-        return NextResponse.json({
+        return localizedJson(request, {
           action: "hint",
           hintLevel: level,
           text,
@@ -190,8 +195,8 @@ export async function POST(request: NextRequest) {
 
       case "explain": {
         const prompt = buildExplainConditionPrompt(questionContext, userContext);
-        const text = await callGemini(prompt.system, prompt.user);
-        return NextResponse.json({
+        const text = await callGemini(prompt.system, prompt.user, { language: lang });
+        return localizedJson(request, {
           action: "explain",
           text,
         });
@@ -199,8 +204,8 @@ export async function POST(request: NextRequest) {
 
       case "why_formula": {
         const prompt = buildWhyFormulaPrompt(questionContext, userContext);
-        const text = await callGemini(prompt.system, prompt.user);
-        return NextResponse.json({
+        const text = await callGemini(prompt.system, prompt.user, { language: lang });
+        return localizedJson(request, {
           action: "why_formula",
           text,
         });
@@ -213,8 +218,8 @@ export async function POST(request: NextRequest) {
           userContext,
           data.userMessage
         );
-        const text = await callGemini(prompt.system, prompt.user);
-        return NextResponse.json({
+        const text = await callGemini(prompt.system, prompt.user, { language: lang });
+        return localizedJson(request, {
           action: data.action,
           text,
         });
@@ -228,8 +233,8 @@ export async function POST(request: NextRequest) {
 2. 2-3 ключевые формулы/правила, которые нужно знать наизусть.
 3. Типичная задача из ЕНТ и как к ней подступиться.
 Будь краток, лаконичен и структурирован.`;
-        const text = await callGemini(system, userPrompt);
-        return NextResponse.json({
+        const text = await callGemini(system, userPrompt, { language: lang });
+        return localizedJson(request, {
           action: "explain_topic",
           text,
         });
@@ -245,8 +250,8 @@ export async function POST(request: NextRequest) {
           topicName,
           userContext
         );
-        const text = await callGemini(prompt.system, prompt.user);
-        return NextResponse.json({
+        const text = await callGemini(prompt.system, prompt.user, { language: lang });
+        return localizedJson(request, {
           action: "explain_formula",
           text,
         });
@@ -254,7 +259,7 @@ export async function POST(request: NextRequest) {
 
       case "analyze_error": {
         const prompt = buildErrorAnalysisPrompt(questionContext, userContext);
-        const rawJson = await callGemini(prompt.system, prompt.user, {
+        const rawJson = await callGemini(prompt.system, prompt.user, { language: lang,
           jsonMode: true,
           temperature: 0.2,
         });
@@ -274,12 +279,11 @@ export async function POST(request: NextRequest) {
           : {
               errorType: "concept_error",
               weakSkill: "general_math",
-              reason: parsed.reason || "Ошибка в применении правила",
+              reason: lang === 'kk' ? 'Ережені қолдануды тексеру қажет.' : "Ошибка в применении правила",
               shortExplanation:
-                parsed.shortExplanation ||
-                questionRecord?.explanation ||
-                "Обратите внимание на последовательность действий.",
-              hint: parsed.hint || "Внимательно проверьте условие и промежуточные вычисления.",
+                contentText(questionRecord?.explanation, questionRecord?.explanationKk, lang) ||
+                (lang === 'kk' ? 'Амалдардың орындалу ретін тексеріңіз.' : "Обратите внимание на последовательность действий."),
+              hint: lang === 'kk' ? 'Шартты және аралық есептеулерді мұқият тексеріңіз.' : "Внимательно проверьте условие и промежуточные вычисления.",
               recommendedAction: "practice" as const,
               recommendedDifficulty: questionContext.difficulty,
             };
@@ -299,9 +303,8 @@ export async function POST(request: NextRequest) {
                   data: {
                     weakSkill: analysis.weakSkill,
                     errorType: analysis.errorType,
-                    explanation: analysis.shortExplanation,
-                    aiReason: analysis.reason,
-                    aiHint: analysis.hint,
+                    ...(lang === 'ru' ? { explanation: analysis.shortExplanation, aiReason: analysis.reason, aiHint: analysis.hint } : {}),
+                    aiAnalysisLocales: { ...(existingMistake.aiAnalysisLocales as Record<string, any>), [lang]: analysis },
                     userAnswer: data.userAnswer || existingMistake.userAnswer,
                     correctAnswer: questionRecord.correctAnswer,
                   },
@@ -319,6 +322,7 @@ export async function POST(request: NextRequest) {
                     explanation: analysis.shortExplanation,
                     aiReason: analysis.reason,
                     aiHint: analysis.hint,
+                    aiAnalysisLocales: { [lang]: analysis },
                     userAnswer: data.userAnswer,
                     correctAnswer: questionRecord.correctAnswer,
                     description: questionRecord.explanation,
@@ -338,6 +342,7 @@ export async function POST(request: NextRequest) {
                   explanation: analysis.shortExplanation,
                   aiReason: analysis.reason,
                   aiHint: analysis.hint,
+                  aiAnalysisLocales: { [lang]: analysis },
                   userAnswer: data.userAnswer,
                   correctAnswer: questionRecord.correctAnswer,
                   description: questionRecord.explanation,
@@ -349,7 +354,7 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        return NextResponse.json({
+        return localizedJson(request, {
           action: "analyze_error",
           structuredError: analysis,
           text: analysis.shortExplanation,
@@ -358,7 +363,7 @@ export async function POST(request: NextRequest) {
 
       case "similar_question": {
         const prompt = buildSimilarQuestionPrompt(questionContext, userContext);
-        const rawJson = await callGemini(prompt.system, prompt.user, {
+        const rawJson = await callGemini(prompt.system, prompt.user, { language: lang,
           jsonMode: true,
           temperature: 0.4,
         });
@@ -375,15 +380,15 @@ export async function POST(request: NextRequest) {
         const similarQuestion = validated.success
           ? validated.data
           : {
-              title: parsed.title || "Похожая тренировочная задача",
-              questionText: parsed.questionText || "Вычислите значение выражения",
+              title: lang === 'kk' ? 'Ұқсас жаттығу есебі' : "Похожая тренировочная задача",
+              questionText: lang === 'kk' ? 'Өрнектің мәнін есептеңіз' : "Вычислите значение выражения",
               latex: parsed.latex || questionContext.latex,
-              hint: parsed.hint || "Примените то же правило, что и в основной задаче",
+              hint: lang === 'kk' ? 'Негізгі есептегі ережені қолданыңыз' : "Примените то же правило, что и в основной задаче",
               expectedAnswer: parsed.expectedAnswer || "",
               explanation: parsed.explanation || "",
             };
 
-        return NextResponse.json({
+        return localizedJson(request, {
           action: "similar_question",
           similarQuestion,
         });
@@ -392,24 +397,22 @@ export async function POST(request: NextRequest) {
       case "chat": {
         const userMsg = data.userMessage || "Помоги разобраться с этой задачей.";
         const prompt = buildChatPrompt(questionContext, userContext, userMsg);
-        const text = await callGemini(prompt.system, prompt.user);
-        return NextResponse.json({
+        const text = await callGemini(prompt.system, prompt.user, { language: lang });
+        return localizedJson(request, {
           action: "chat",
           text,
         });
       }
 
       default:
-        return NextResponse.json({ error: "Unknown action" }, { status: 400 });
+        return localizedJson(request, { error: "Unknown action" }, { status: 400 });
     }
   } catch (error: any) {
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof PracticeError) return localizedJson(request, { error: errorText(error.message, lang) }, { status: error.status });
     console.error("AI Tutor endpoint error:", error);
-    const lang = "ru";
-    return NextResponse.json(
+    return localizedJson(request,
       {
         error: FALLBACK_MESSAGES[lang] || FALLBACK_MESSAGES.ru,
-        details: error?.message,
       },
       { status: 500 }
     );

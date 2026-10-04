@@ -18,6 +18,7 @@ import { TopicProgressBar } from "@/components/dashboard/TopicProgressBar";
 import { StreakCard } from "@/components/dashboard/StreakCard";
 import { DashboardStats } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { contentText } from '@/lib/i18n/content';
 import { DailyLearningPlanCard } from "./DailyLearningPlanCard";
 
 interface DashboardViewProps {
@@ -198,7 +199,7 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">
-                        {attempt.question?.title ?? t.dashboard.taskFallback}
+                         {contentText(attempt.question?.title, attempt.question?.titleKk, locale) || t.dashboard.taskFallback}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {getTopicName(attempt.question?.topic?.name)}

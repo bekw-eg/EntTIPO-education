@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { redirect } from "next/navigation";
 import { verifySessionToken, getSessionUserId, AUTH_COOKIE_NAME, DEMO_USER_ID, isDemoEnabled } from "./auth";
+import { localizedJson } from './i18n/http';
 
 /** Resolve only signed credentials; guests and invalid credentials have no user ID. */
 export function getCurrentUserId(request: Request): string | null {
@@ -21,8 +22,8 @@ export function getCurrentUserId(request: Request): string | null {
   return userId === DEMO_USER_ID && !isDemoEnabled() ? null : userId;
 }
 
-export function unauthorizedResponse() {
-  return NextResponse.json(
+export function unauthorizedResponse(request?: Request) {
+  return localizedJson(request,
     { error: "Для доступа к личным данным необходимо войти в аккаунт" },
     { status: 401, headers: { "Cache-Control": "private, no-store" } }
   );

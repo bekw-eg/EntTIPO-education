@@ -1,4 +1,7 @@
 "use client";
+import { uiText, errorText } from "@/lib/i18n/messages";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+
 
 import { useEffect, useState } from "react";
 import { Download, WifiOff } from "lucide-react";
@@ -6,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export function PwaRegister() {
+  const { locale } = useLanguage();
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
@@ -57,12 +61,12 @@ export function PwaRegister() {
     // 3. Online / Offline status monitoring
     const handleOnline = () => {
       setIsOffline(false);
-      toast.success("Подключение к сети восстановлено");
+      toast.success(uiText("Подключение к сети восстановлено", locale));
     };
 
     const handleOffline = () => {
       setIsOffline(true);
-      toast.warning("Нет подключения. Для загрузки личных данных восстановите сеть.", {
+      toast.warning(uiText("Нет подключения. Для загрузки личных данных восстановите сеть.", locale), {
         icon: <WifiOff className="w-4 h-4 text-amber-500" />,
       });
     };
@@ -87,7 +91,7 @@ export function PwaRegister() {
     const { outcome } = await installPrompt.userChoice;
     if (outcome === "accepted") {
       setIsInstallable(false);
-      toast.success("Приложение установлено на ваше устройство!");
+      toast.success(uiText("Приложение установлено на ваше устройство!", locale));
     }
     setInstallPrompt(null);
   };
@@ -102,7 +106,7 @@ export function PwaRegister() {
             className="shadow-lg bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-4 py-2 text-xs flex items-center gap-2 border border-primary/20"
           >
             <Download className="w-4 h-4" />
-            <span>Установить приложение</span>
+            <span>{uiText("Установить приложение", locale)}</span>
           </Button>
         </div>
       )}

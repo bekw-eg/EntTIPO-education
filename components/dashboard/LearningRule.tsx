@@ -1,4 +1,5 @@
 "use client";
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -19,7 +20,7 @@ export function LearningRule({ skill, actionId, completed }: { skill: Skill; act
       if (!response.ok) throw new Error(); router.push("/");
     } catch { toast.error(copy.error); } finally { setBusy(false); }
   }
-  return <div className="mx-auto max-w-3xl space-y-6 p-6"><Card>
+  return <div className="mx-auto max-w-3xl space-y-6 p-6"><div className="md:hidden flex justify-end"><LanguageSwitcher variant="compact" /></div><Card>
     <CardHeader><CardTitle>{kk ? skill.nameKk : skill.nameRu}</CardTitle><p className="text-muted-foreground">{kk ? skill.explanationKk : skill.explanationRu}</p></CardHeader>
     <CardContent className="space-y-6"><p className="rounded-xl border bg-primary/5 p-5 text-lg leading-relaxed">{kk ? skill.ruleKk : skill.ruleRu}</p>
       <p className="text-sm text-muted-foreground">{copy.checkHint}</p>

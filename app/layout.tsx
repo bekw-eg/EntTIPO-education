@@ -7,7 +7,7 @@ import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 import { Toaster } from "sonner";
 import { PwaRegister } from "@/components/providers/PwaRegister";
 
-const inter = Inter({ subsets: ["latin", "cyrillic"] });
+const inter = Inter({ subsets: ["latin", "cyrillic", "cyrillic-ext"] });
 
 export const metadata: Metadata = {
   title: {

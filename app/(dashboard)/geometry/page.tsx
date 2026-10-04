@@ -1,4 +1,7 @@
 "use client";
+import { uiText, errorText } from "@/lib/i18n/messages";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+
 
 import React, { useState } from "react";
 import { Header } from "@/components/layout/Header";
@@ -89,6 +92,7 @@ const FIGURES_CATALOG: FigureInfo[] = [
 ];
 
 export default function GeometryPage() {
+  const { locale } = useLanguage();
   const [activeCategory, setActiveCategory] = useState<"all" | "3d" | "2d">("all");
   const [selectedFigure, setSelectedFigure] = useState<FigureInfo>(FIGURES_CATALOG[0]);
 
@@ -100,8 +104,8 @@ export default function GeometryPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Header
-        title="Интерактивная геометрия и стереометрия"
-        subtitle="Чертежи, сечения, формулы объёмов и площадей для заданий ЕНТ"
+        title={uiText("Интерактивная геометрия и стереометрия", locale)}
+        subtitle={uiText("Чертежи, сечения, формулы объёмов и площадей для заданий ЕНТ", locale)}
       />
 
       <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full space-y-6">
@@ -114,22 +118,18 @@ export default function GeometryPage() {
             <TabsList>
               <TabsTrigger value="all" className="gap-2">
                 <Layers className="w-4 h-4" />
-                Все фигуры
-              </TabsTrigger>
+                {uiText(" Все фигуры ", locale)}</TabsTrigger>
               <TabsTrigger value="3d" className="gap-2">
                 <Box className="w-4 h-4" />
-                Стереометрия 3D
-              </TabsTrigger>
+                {uiText(" Стереометрия 3D ", locale)}</TabsTrigger>
               <TabsTrigger value="2d" className="gap-2">
                 <Triangle className="w-4 h-4" />
-                Планиметрия 2D
-              </TabsTrigger>
+                {uiText(" Планиметрия 2D ", locale)}</TabsTrigger>
             </TabsList>
           </Tabs>
 
           <span className="text-xs text-muted-foreground">
-            Интерактивный векторный SVG-рендеринг
-          </span>
+            {uiText(" Интерактивный векторный SVG-рендеринг ", locale)}</span>
         </div>
 
         {/* Main Content: Interactive Canvas + Figures List */}
@@ -141,10 +141,10 @@ export default function GeometryPage() {
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <Badge variant="secondary" className="mb-2">
-                      {selectedFigure.category === "3d" ? "Стереометрия" : "Планиметрия"}
+                      {selectedFigure.category === "3d" ? uiText("Стереометрия", locale) : uiText("Планиметрия", locale)}
                     </Badge>
                     <CardTitle className="text-xl sm:text-2xl font-bold">
-                      {selectedFigure.name}
+                       {uiText(selectedFigure.name, locale)}
                     </CardTitle>
                   </div>
                 </div>
@@ -165,26 +165,25 @@ export default function GeometryPage() {
                 <div className="space-y-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-2 text-primary font-semibold text-sm">
                     <BookOpen className="w-4 h-4" />
-                    <span>Ключевые формулы ЕНТ:</span>
+                    <span>{uiText("Ключевые формулы ЕНТ:", locale)}</span>
                   </div>
                   <div className="p-3 bg-card rounded-lg border text-center overflow-x-auto shadow-xs">
                     <MathDisplay math={selectedFigure.formula} block />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {selectedFigure.formulaDescription}
+                     {uiText(selectedFigure.formulaDescription, locale)}
                   </p>
                 </div>
 
                 {/* Properties list */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-foreground/90">
-                    Свойства и закономерности для экзамена:
-                  </h4>
+                    {uiText(" Свойства и закономерности для экзамена: ", locale)}</h4>
                   <ul className="space-y-1.5 text-xs sm:text-sm text-muted-foreground">
                     {selectedFigure.properties.map((prop, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
-                        <span>{prop}</span>
+                         <span>{uiText(prop, locale)}</span>
                       </li>
                     ))}
                   </ul>
@@ -196,8 +195,7 @@ export default function GeometryPage() {
           {/* Right: Quick Selection Catalog */}
           <div className="lg:col-span-4 space-y-3">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-1">
-              Каталог фигур
-            </h3>
+              {uiText(" Каталог фигур ", locale)}</h3>
             <div className="space-y-2">
               {filtered.map((fig) => {
                 const isSelected = selectedFigure.type === fig.type;
@@ -219,11 +217,11 @@ export default function GeometryPage() {
                           <Triangle className="w-4 h-4 text-emerald-500 shrink-0" />
                         )}
                         <span className="text-sm font-medium leading-tight truncate">
-                          {fig.name}
+                           {uiText(fig.name, locale)}
                         </span>
                       </div>
                       <span className="text-[11px] text-muted-foreground block line-clamp-1">
-                        {fig.formulaDescription}
+                         {uiText(fig.formulaDescription, locale)}
                       </span>
                     </div>
                     <Badge variant={isSelected ? "default" : "outline"} className="text-[10px] shrink-0">

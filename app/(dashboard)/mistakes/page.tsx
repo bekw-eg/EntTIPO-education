@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MathDisplay } from "@/components/ui/MathDisplay";
+import { MathText } from '@/components/ui/MathText';
 import {
   RotateCcw,
   CheckCircle2,
@@ -18,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { contentText, answerText } from '@/lib/i18n/content';
 import { errorTypeTranslations } from "@/lib/i18n/translations";
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 import { AiAction } from "@/types";
@@ -127,7 +129,7 @@ export default function MistakesPage() {
         );
       }
     } catch {
-      toast.error("Error updating mistake");
+      toast.error(copy.error);
     }
   };
 
@@ -177,7 +179,7 @@ export default function MistakesPage() {
               {weakSkills.slice(0, 5).map((skill, idx) => {
                 const errorLabel = getErrorLabel(skill.skillName);
                 const displayName =
-                  locale === "kk" ? skill.skillNameKk ?? skill.skillName : errorLabel !== skill.skillName ? errorLabel : skill.skillName;
+                  locale === "kk" ? skill.skillNameKk || getErrorLabel(skill.skillName) : errorLabel !== skill.skillName ? errorLabel : skill.skillName;
 
                 return (
                   <div
@@ -201,7 +203,7 @@ export default function MistakesPage() {
                         <span>
                           {t.ai.lastMistake}:{" "}
                           <strong className="text-foreground">
-                            {skill.lastQuestionTitle}
+                            {contentText(skill.lastQuestionTitle, skill.lastQuestionTitleKk, locale)}
                           </strong>
                         </span>
                         <span>•</span>
@@ -375,11 +377,9 @@ export default function MistakesPage() {
 
                     {/* Question text & formula */}
                     <div className="space-y-2">
-                      <h4 className="font-semibold text-base">{locale === "kk" ? q?.titleKk ?? q?.title : q?.title}</h4>
+                      <h4 className="font-semibold text-base">{contentText(q?.title, q?.titleKk, locale)}</h4>
                       {q?.questionText && (
-                        <p className="text-sm text-foreground/80 whitespace-pre-line">
-                          {locale === "kk" ? q.questionTextKk ?? q.questionText : q.questionText}
-                        </p>
+                        <MathText className="text-sm text-foreground/80" content={contentText(q.questionText, q.questionTextKk, locale).replace(/\[GEOMETRY:[\s\S]*?\]/g, '')} />
                       )}
                       {q?.latex && (
                         <div className="p-3 bg-muted/30 rounded-lg text-center overflow-x-auto text-sm border my-2">
@@ -403,7 +403,7 @@ export default function MistakesPage() {
                                 className="flex items-center justify-between text-xs py-1 border-b last:border-0"
                               >
                                 <span className="text-muted-foreground">
-                                  {step?.prompt ? `${t.session.step} ${sIdx + 1}: ${locale === "kk" ? step.promptKk ?? step.prompt : step.prompt}` : `${t.session.step} ${sIdx + 1}`}
+                                  {step?.prompt ? `${t.session.step} ${sIdx + 1}: ${contentText(step.prompt, step.promptKk, locale)}` : `${t.session.step} ${sIdx + 1}`}
                                 </span>
                                 <span
                                   className={`font-mono font-medium ${
@@ -412,7 +412,7 @@ export default function MistakesPage() {
                                       : "text-rose-600 dark:text-rose-400"
                                   }`}
                                 >
-                                  {sa.answer} {sa.isCorrect ? "✔" : "✘"}
+                                  {answerText(sa.answer, step, locale)} {sa.isCorrect ? "✔" : "✘"}
                                 </span>
                               </div>
                             );
@@ -427,9 +427,7 @@ export default function MistakesPage() {
                         <span className="font-semibold text-primary">
                           {t.mistakes.correctSolution}
                         </span>
-                        <p className="whitespace-pre-line leading-relaxed">
-                          {locale === "kk" ? q.explanationKk ?? q.explanation : q.explanation}
-                        </p>
+                        <MathText className="leading-relaxed" content={contentText(q.explanation, q.explanationKk, locale)} />
                       </div>
                     )}
 
@@ -437,7 +435,7 @@ export default function MistakesPage() {
                       <p className="text-muted-foreground">{copy.checkHint}</p>
                       {m.skill && <Link className="text-primary underline" href={`/learn/rules/${m.skillId}`}>{locale === "kk" ? m.skill.nameKk : m.skill.nameRu}</Link>}
                       {m.nextReviewDay && <p>{copy.next}: <strong>{m.nextReviewDay}</strong>{m.reviewDue && <span className="ml-2 text-amber-700 dark:text-amber-400">{copy.due}</span>}</p>}
-                      {m.confirmationAttempt && <p className="text-xs text-muted-foreground">{copy.checkedTask}: <Link className="text-primary underline" href={`/practice/session/${m.confirmationAttempt.sessionId}`}>{locale === "kk" ? m.confirmationAttempt.question.titleKk ?? m.confirmationAttempt.question.title : m.confirmationAttempt.question.title}</Link> · {formatDate(m.confirmationAttempt.createdAt)}</p>}
+                      {m.confirmationAttempt && <p className="text-xs text-muted-foreground">{copy.checkedTask}: <Link className="text-primary underline" href={`/practice/session/${m.confirmationAttempt.sessionId}`}>{contentText(m.confirmationAttempt.question.title, m.confirmationAttempt.question.titleKk, locale)}</Link> · {formatDate(m.confirmationAttempt.createdAt)}</p>}
                       {!m.skillId && <p className="text-amber-700 dark:text-amber-400">{copy.unmapped}</p>}
                       {m.checkUnavailable && <p role="status" className="text-amber-700 dark:text-amber-400">{copy.noSimilar}</p>}
                     </div>

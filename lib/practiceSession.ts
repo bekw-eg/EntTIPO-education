@@ -10,9 +10,9 @@ export const practiceQuestionSelect = {
   titleKk: true, questionTextKk: true,
   topic: true, subtopic: true,
   steps: { orderBy: { order: "asc" as const }, select: {
-    id: true, questionId: true, order: true, type: true, prompt: true, promptKk: true, hint: true,
+    id: true, questionId: true, order: true, type: true, prompt: true, promptKk: true, hint: true, hintKk: true,
     options: { orderBy: { order: "asc" as const }, select: {
-      id: true, stepId: true, text: true, order: true,
+      id: true, stepId: true, text: true, textKk: true, order: true,
     } },
   } },
 } satisfies Prisma.QuestionSelect;
@@ -20,8 +20,8 @@ export const practiceQuestionSelect = {
 type SelectedQuestion = Prisma.QuestionGetPayload<{ select: typeof practiceQuestionSelect }>;
 
 export function publicPracticeQuestion(question: SelectedQuestion, usedHint = false) {
-  return { ...question, usedHint, steps: question.steps.map(({ hint, ...step }) => ({
-    ...step, hasHint: !!hint, ...(usedHint && hint ? { hint } : {}),
+  return { ...question, usedHint, steps: question.steps.map(({ hint, hintKk, ...step }) => ({
+    ...step, hasHint: !!hint, ...(usedHint && hint ? { hint, hintKk } : {}),
   })) };
 }
 
@@ -47,7 +47,7 @@ export async function readPracticeSnapshot(tx: Prisma.TransactionClient, session
       result = attempt.submissionResult ?? {
         attemptId: attempt.id, isCorrect: attempt.isCorrect, isPartial: attempt.isPartial,
         score: attempt.score, usedHint: attempt.usedHint, attemptNumber: attempt.attemptNumber,
-        explanation: attempt.question.explanation, correctAnswer: attempt.question.correctAnswer,
+        explanation: attempt.question.explanation, explanationKk: attempt.question.explanationKk, correctAnswer: attempt.question.correctAnswer,
         stepResults: attempt.stepAnswers.map((answer) => ({
           stepId: answer.stepId, stepOrder: answer.step.order, userAnswer: answer.answer,
           isCorrect: answer.isCorrect, expectedAnswer: answer.step.expectedAnswer,
@@ -55,6 +55,10 @@ export async function readPracticeSnapshot(tx: Prisma.TransactionClient, session
         sessionStats: { ...summarizeAttempts(attempts), totalCount: session.totalCount, mode: session.mode },
       };
     }
+  }
+  if (result && typeof result === 'object' && !Array.isArray(result) && questionId) {
+    const translation = await tx.question.findUnique({ where: { id: questionId }, select: { explanationKk: true } });
+    result = { ...result, explanationKk: translation?.explanationKk ?? null };
   }
   return {
     id: session.id, status: session.status, mode: session.mode,

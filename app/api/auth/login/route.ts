@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyPassword, createSessionToken, AUTH_COOKIE_NAME, DEMO_USER_ID } from "@/lib/auth";
 
@@ -8,7 +9,7 @@ export async function POST(req: NextRequest) {
     const { email, password } = body;
 
     if (typeof email !== "string" || typeof password !== "string" || !email.trim() || !password) {
-      return NextResponse.json(
+      return localizedJson(req,
         { error: "Введите email и пароль" },
         { status: 400 }
       );
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user || user.id === DEMO_USER_ID || !user.password) {
-      return NextResponse.json(
+      return localizedJson(req,
         { error: "Неверный email или пароль" },
         { status: 401 }
       );
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
     const isValid = verifyPassword(password, user.password);
 
     if (!isValid) {
-      return NextResponse.json(
+      return localizedJson(req,
         { error: "Неверный email или пароль" },
         { status: 401 }
       );
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     const token = createSessionToken(user.id);
 
-    const res = NextResponse.json({
+    const res = localizedJson(req, {
       success: true,
       user: {
         id: user.id,
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err) {
     console.error("Login error:", err);
-    return NextResponse.json(
+    return localizedJson(req,
       { error: "Ошибка сервера при входе" },
       { status: 500 }
     );

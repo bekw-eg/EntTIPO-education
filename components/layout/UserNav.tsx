@@ -1,4 +1,7 @@
 "use client";
+import { uiText, errorText } from "@/lib/i18n/messages";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+
 
 import React, { useState } from "react";
 import {
@@ -26,6 +29,7 @@ import { useAccount } from "@/components/providers/AccountProvider";
 import { navigateAfterAuth } from "@/lib/client-auth";
 
 export function UserNav() {
+  const { locale } = useLanguage();
   const { user: currentUser } = useAccount();
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
@@ -47,14 +51,14 @@ export function UserNav() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Ошибка входа");
+        toast.error(errorText(data.error, locale));
       } else {
-        toast.success(`Добро пожаловать, ${data.user.name}!`);
+        toast.success(uiText(`Добро пожаловать, ${data.user.name}!`, locale));
         setIsAuthOpen(false);
         await navigateAfterAuth("/");
       }
     } catch (err) {
-      toast.error("Не удалось подключиться к серверу");
+      toast.error(uiText("Не удалось подключиться к серверу", locale));
     } finally {
       setLoading(false);
     }
@@ -71,14 +75,14 @@ export function UserNav() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || "Ошибка регистрации");
+        toast.error(errorText(data.error, locale));
       } else {
-        toast.success("Регистрация успешна!");
+        toast.success(uiText("Регистрация успешна!", locale));
         setIsAuthOpen(false);
         await navigateAfterAuth("/");
       }
     } catch (err) {
-      toast.error("Ошибка при регистрации");
+      toast.error(uiText("Ошибка при регистрации", locale));
     } finally {
       setLoading(false);
     }
@@ -88,10 +92,10 @@ export function UserNav() {
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (!res.ok) throw new Error("Logout failed");
-      toast.info("Вы вышли из профиля");
+      toast.info(uiText("Вы вышли из профиля", locale));
       await navigateAfterAuth("/login");
     } catch {
-      toast.error("Не удалось выйти из аккаунта");
+      toast.error(uiText("Не удалось выйти из аккаунта", locale));
     }
   };
 
@@ -110,7 +114,7 @@ export function UserNav() {
               {userInitial}
             </div>
             <span className="hidden sm:inline-block text-xs font-semibold max-w-[100px] truncate">
-              {currentUser?.name || "Ученик"}
+              {currentUser?.name || uiText("Ученик", locale)}
             </span>
           </Button>
         </DropdownMenuTrigger>
@@ -119,10 +123,10 @@ export function UserNav() {
           <DropdownMenuLabel className="font-normal p-2">
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-semibold leading-none truncate">
-                {currentUser?.isDemo ? "Демонстрационный профиль" : currentUser?.name || "Гость"}
+                {currentUser?.isDemo ? uiText("Демонстрационный профиль", locale) : currentUser?.name || uiText("Гость", locale)}
               </p>
               <p className="text-xs text-muted-foreground leading-none truncate mt-0.5">
-                {currentUser?.isDemo ? "Общие демонстрационные данные" : currentUser?.email || "Войдите, чтобы сохранять прогресс"}
+                {currentUser?.isDemo ? uiText("Общие демонстрационные данные", locale) : currentUser?.email || uiText("Войдите, чтобы сохранять прогресс", locale)}
               </p>
             </div>
           </DropdownMenuLabel>
@@ -137,7 +141,7 @@ export function UserNav() {
             className="text-xs cursor-pointer gap-2"
           >
             <LogIn className="w-3.5 h-3.5" />
-            <span>Войти в аккаунт</span>
+            <span>{uiText("Войти в аккаунт", locale)}</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem
@@ -148,7 +152,7 @@ export function UserNav() {
             className="text-xs cursor-pointer gap-2"
           >
             <UserPlus className="w-3.5 h-3.5" />
-            <span>Новый ученик (Регистрация)</span>
+            <span>{uiText("Новый ученик (Регистрация)", locale)}</span>
           </DropdownMenuItem>
 
           {currentUser && (
@@ -159,7 +163,7 @@ export function UserNav() {
                 className="text-xs cursor-pointer gap-2 text-destructive focus:text-destructive"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Выйти</span>
+                <span>{uiText("Выйти", locale)}</span>
               </DropdownMenuItem>
             </>
           )}
@@ -171,11 +175,10 @@ export function UserNav() {
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
-              {authTab === "login" ? "Вход в ENT TIPO" : "Регистрация ученика"}
+              {authTab === "login" ? uiText("Вход в ENT TIPO", locale) : uiText("Регистрация ученика", locale)}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              Личный прогресс, история ошибок и персональный рейтинг ЕНТ.
-            </DialogDescription>
+              {uiText(" Личный прогресс, история ошибок и персональный рейтинг ЕНТ. ", locale)}</DialogDescription>
           </DialogHeader>
 
           <Tabs
@@ -184,8 +187,8 @@ export function UserNav() {
             className="w-full"
           >
             <TabsList className="grid grid-cols-2 w-full mb-4">
-              <TabsTrigger value="login">Вход</TabsTrigger>
-              <TabsTrigger value="register">Регистрация</TabsTrigger>
+              <TabsTrigger value="login">{uiText("Вход", locale)}</TabsTrigger>
+              <TabsTrigger value="register">{uiText("Регистрация", locale)}</TabsTrigger>
             </TabsList>
 
             {/* Login Tab */}
@@ -206,8 +209,7 @@ export function UserNav() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="login-password" className="text-xs">
-                    Пароль
-                  </Label>
+                    {uiText(" Пароль ", locale)}</Label>
                   <Input
                     id="login-password"
                     type="password"
@@ -219,7 +221,7 @@ export function UserNav() {
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Вход..." : "Войти"}
+                  {loading ? uiText("Вход...", locale) : uiText("Войти", locale)}
                 </Button>
               </form>
             </TabsContent>
@@ -229,12 +231,11 @@ export function UserNav() {
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="reg-name" className="text-xs">
-                    Имя и фамилия
-                  </Label>
+                    {uiText(" Имя и фамилия ", locale)}</Label>
                   <Input
                     id="reg-name"
                     required
-                    placeholder="Алихан Нурланов"
+                    placeholder={uiText("Алихан Нурланов", locale)}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
@@ -254,8 +255,7 @@ export function UserNav() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="reg-password" className="text-xs">
-                    Пароль (от 4 символов)
-                  </Label>
+                    {uiText(" Пароль (от 4 символов) ", locale)}</Label>
                   <Input
                     id="reg-password"
                     type="password"
@@ -268,7 +268,7 @@ export function UserNav() {
                 </div>
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Создание..." : "Зарегистрироваться"}
+                  {loading ? uiText("Создание...", locale) : uiText("Зарегистрироваться", locale)}
                 </Button>
               </form>
             </TabsContent>

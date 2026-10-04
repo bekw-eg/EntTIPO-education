@@ -3,7 +3,7 @@
  * Caches public static assets; personal pages and API responses stay on the network.
  */
 
-const CACHE_NAME = "ent-tipo-static-v2";
+const CACHE_NAME = "ent-tipo-static-v3";
 const PRECACHE_ASSETS = [
   "/manifest.json",
   "/icon.svg",

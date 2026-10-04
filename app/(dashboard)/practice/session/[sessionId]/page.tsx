@@ -1,4 +1,5 @@
 "use client";
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ import { useAccount } from "@/components/providers/AccountProvider";
 import { toast } from "sonner";
 import { PracticeSnapshot, AiAction } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { errorText } from '@/lib/i18n/messages';
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 import { createSubmissionId } from "@/lib/client-submission";
 import { PracticeDraft, clearPracticeDraft, readPracticeDraft, sameAnswers, writePracticeDraft } from "@/lib/client-practice";
@@ -20,7 +22,7 @@ function PracticeSessionContent() {
   const params = useParams();
   const router = useRouter();
   const { user } = useAccount();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const sessionId = params.sessionId as string;
   const userId = user?.id;
   const [snapshot, setSnapshot] = useState<PracticeSnapshot | null>(null);
@@ -212,7 +214,7 @@ function PracticeSessionContent() {
       }
       await loadSession(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t.session.submitError);
+      toast.error(errorText(error instanceof Error ? error.message : t.session.submitError, locale));
     } finally { busyRef.current = false; setIsLoading(false); }
   };
 
@@ -235,6 +237,7 @@ function PracticeSessionContent() {
   const question = snapshot?.question;
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
+      <div className="md:hidden flex justify-end"><LanguageSwitcher variant="compact" /></div>
       {phase === "loading" && <div className="p-12 text-center space-y-3">
         <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
         <p className="text-sm text-muted-foreground">{t.session.loadingTask}</p>
