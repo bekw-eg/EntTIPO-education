@@ -21,12 +21,12 @@ async function main() {
   const report = await response.json();
   assert.equal(report.totals.databaseQuestions, await prisma.question.count());
   assert.equal(report.profile.documentYear, 2023);
-  assert.equal(report.points.find((p: any) => p.code === "15").status, "uncovered");
+  assert.ok(report.points.find((p: any) => p.code === "15").examEligible > 0);
   assert.equal(report.readiness.multipleVariants.canGenerate, false);
   assert.equal((await fetch(`${base}/api/exam-coverage?profile=nonexistent`, { headers: { cookie } })).status, 404);
   const page = await fetch(`${base}/exam-coverage?profile=${TIPO_MATH.id}`, { headers: { cookie } });
   assert.equal(page.status, 200); const html = await page.text();
-  for (const text of ["Не покрыто", "Формат отсутствует", "2023", "120 минут", "Официальные источники", "внутренняя квота"]) assert.ok(html.includes(text), text);
+  for (const text of ["Мало разнообразия", "Без прямого покрытия", "2023", "120 минут", "Официальные источники", "внутренняя квота"]) assert.ok(html.includes(text), text);
   const q = await prisma.question.findUniqueOrThrow({ where: { id: EXAM_EXERCISES[0].id }, include: { skills: true, steps: { include: { options: true } } } });
   const started = await fetch(`${base}/api/sessions`, { method: "POST", headers: { cookie, "Content-Type": "application/json" },
     body: JSON.stringify({ mode: "mixed", totalCount: 1, questionId: q.id, skillId: q.skills[0].skillId }) });

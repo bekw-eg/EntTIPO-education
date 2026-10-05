@@ -29,6 +29,7 @@ model User {
   learningChecks LearningCheck[]
   skillReviews SkillReview[]
   questionHelp QuestionHelp[]
+  exams ExamSession[]
 }
 
 model Topic {
@@ -202,9 +203,10 @@ model Mistake {
   userId        String
   questionId    String
   attemptId     String?
+  examSessionId String?
   topicId       String
   subtopicId    String?
-  errorType     String    // wrong_formula | calculation_error | sign_error | algebra_error | domain_error | concept_error | incorrect_method
+  errorType     String    // wrong_formula | calculation_error | sign_error | algebra_error | domain_error | concept_error | incorrect_method | unclassified
   weakSkill     String?
   skillId       String?
   stepId        String?
@@ -223,6 +225,7 @@ model Mistake {
   user     User         @relation(fields: [userId], references: [id])
   question Question     @relation(fields: [questionId], references: [id])
   attempt  UserAttempt? @relation(fields: [attemptId], references: [id])
+  examSession ExamSession? @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
   topic    Topic        @relation(fields: [topicId], references: [id])
   skill    Skill?       @relation(fields: [skillId], references: [id], onDelete: SetNull)
   step     QuestionStep? @relation("MistakeStep", fields: [stepId], references: [id], onDelete: SetNull)
@@ -260,6 +263,7 @@ model DailyLearningPlan {
   timeZone String
   status String @default("active") // active | archived
   diagnosticId String? // source snapshot; later diagnostics don't rewrite started work
+  examId String? // latest completed exam used to select this plan
   createdAt DateTime @default(now())
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   actions LearningPlanAction[]
@@ -358,6 +362,7 @@ model SkillObservation {
   questionId String
   attemptId String?
   diagnosticAnswerId String?
+  examSessionId String?
   score Int
   isCorrect Boolean
   isPartial Boolean
@@ -369,8 +374,10 @@ model SkillObservation {
   skill Skill @relation(fields: [skillId], references: [id])
   attempt UserAttempt? @relation(fields: [attemptId], references: [id], onDelete: Cascade)
   diagnosticAnswer DiagnosticAnswer? @relation(fields: [diagnosticAnswerId], references: [id], onDelete: Cascade)
+  examSession ExamSession? @relation(fields: [examSessionId], references: [id], onDelete: Cascade)
   @@unique([attemptId, skillId])
   @@unique([diagnosticAnswerId, skillId])
+  @@unique([examSessionId, questionId, skillId])
   @@index([userId, skillId, createdAt])
 }
 
@@ -421,6 +428,38 @@ model DiagnosticAnswer {
   observations SkillObservation[]
   @@unique([sessionId, questionId])
   @@unique([sessionId, submissionId])
+}
+
+// Private immutable paper includes answer keys; public API must use an explicit whitelist.
+model ExamSession {
+  id String @id @default(cuid())
+  userId String
+  startRequestId String
+  startHash String
+  profileId String
+  profileVersion String
+  language String
+  profileSnapshot Json
+  paper Json
+  questionIds String[]
+  answers Json @default("{}")
+  flaggedQuestionIds String[] @default([])
+  currentIndex Int @default(0)
+  revision Int @default(0)
+  lastSaveId String?
+  lastSaveHash String?
+  status String @default("active")
+  startedAt DateTime
+  deadlineAt DateTime
+  durationMinutes Int
+  completedAt DateTime?
+  completionReason String?
+  result Json?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  observations SkillObservation[]
+  mistakes Mistake[]
+  @@unique([userId, startRequestId])
+  @@index([userId, status])
 }
 
 model DailyGoal {

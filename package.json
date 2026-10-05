@@ -24,6 +24,8 @@
     "test:exam:math": "tsx scripts/test_exam_math.ts",
     "test:exam:http": "tsx scripts/test_exam_http.ts",
     "test:exam": "tsx scripts/test_exam_coverage.ts",
+    "test:exam-mode:unit": "tsx scripts/test_exam_mode_unit.ts",
+    "test:exam-mode": "tsx scripts/test_exam_mode.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",

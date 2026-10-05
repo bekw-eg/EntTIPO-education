@@ -1,0 +1,58 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { TIPO_MATH } from "../lib/exam/profile";
+import { EXAM_EXERCISES, exerciseQuestion } from "../lib/exam/bank";
+import { auditCoverage } from "../lib/exam/coverage";
+import { assessExamReadiness } from "../lib/exam/readiness";
+import { startExamSchema, saveExamSchema, gradeExamQuestion, publicExamQuestion, remainingSeconds, type PaperQuestion } from "../lib/exam/mode";
+import { backupExamSave, recoverExamSave, examDisplaySeconds } from "../lib/client-exam";
+import { rankPlanSkills } from "../lib/learningPolicy";
+import { EXAM_RULES } from "../lib/exam/rules";
+
+const report = auditCoverage(TIPO_MATH, EXAM_EXERCISES.map(exerciseQuestion));
+assert.ok(TIPO_MATH.points.every((p) => EXAM_RULES[p.code]?.length > 40));
+const signal = { id: "maintenance", state: "insufficient", masteryScore: 0, due: false, recentMistakes: 0, diagnosticFailures: 0, hints: 0, daysSincePractice: 30 };
+const ranked = rankPlanSkills([signal, { ...signal, id: "exam_skipped", examGaps: 1 }]);
+assert.equal(ranked[0].id, "exam_skipped"); assert.ok(ranked[0].reasons.includes("exam_gap"));
+const candidates = report.questions.filter((q) => q.eligible).map((q) => ({ id: q.id, pointCode: q.pointCode!, band: q.band!, family: q.family!, contentHash: q.contentHash }));
+for (let i = 0; i < 80; i++) {
+  const reordered = candidates.slice(i % candidates.length).concat(candidates.slice(0, i % candidates.length));
+  const result = assessExamReadiness(TIPO_MATH, reordered, 1, true);
+  assert.equal(result.canGenerate, true);
+  const selected = result.selectedQuestionIds.map((id) => candidates.find((c) => c.id === id)!);
+  assert.equal(selected.length, 20);
+  assert.equal(new Set(selected.map((q) => q.pointCode)).size, 20);
+  assert.equal(new Set(selected.map((q) => q.contentHash)).size, 20);
+  for (const band of ["A", "B", "C"] as const) assert.equal(selected.filter((q) => q.band === band).length, TIPO_MATH.official.difficultyCounts[band]);
+}
+for (const point of TIPO_MATH.points) assert.equal(assessExamReadiness(TIPO_MATH, candidates.filter((q) => q.pointCode !== point.code), 1, true).canGenerate, false);
+assert.equal(assessExamReadiness(TIPO_MATH, candidates.filter((q) => q.band !== "C"), 1, true).canGenerate, false);
+const paper: PaperQuestion = { id: "q", pointCode: "01", band: "B", family: "f", contentHash: "hash", topicId: "t15", topicName: "Тема", skillIds: ["skill"], skillNames: ["Навык"], title: "title", questionText: "text", latex: null, options: ["a", "b", "c", "d"], correctIndex: 2, explanation: "private", difficulty: 2, previouslyExposed: false };
+assert.equal(gradeExamQuestion(TIPO_MATH, paper, 2).points, 1);
+assert.equal(gradeExamQuestion(TIPO_MATH, paper, 0).points, 0);
+assert.equal(gradeExamQuestion(TIPO_MATH, paper, undefined).points, 0);
+assert.equal(gradeExamQuestion(TIPO_MATH, paper, undefined).skipped, true);
+assert.throws(() => gradeExamQuestion(TIPO_MATH, paper, 4), /Invalid/);
+assert.throws(() => gradeExamQuestion({ ...TIPO_MATH, official: { ...TIPO_MATH.official, format: "multiple_select" as never } }, paper, 2), /Unsupported/);
+assert.throws(() => gradeExamQuestion(TIPO_MATH, { ...paper, options: ["a"] }, 0), /Unsupported/);
+assert.ok(!JSON.stringify(publicExamQuestion(paper)).includes("correctIndex"));
+assert.ok(!JSON.stringify(publicExamQuestion(paper)).includes("explanation"));
+const start = { requestId: randomUUID(), profileId: TIPO_MATH.id, profileVersion: TIPO_MATH.version, language: "ru", durationMinutes: 40 };
+assert.equal(startExamSchema.safeParse(start).success, true);
+for (const change of [{ deadlineAt: "2099-01-01" }, { durationMinutes: 999 }, { language: "kk" }]) assert.equal(startExamSchema.safeParse({ ...start, ...change }).success, false);
+const pending = { requestId: randomUUID(), revision: 0, currentIndex: 3, answers: { q: 2 }, flaggedQuestionIds: ["q"] };
+assert.equal(saveExamSchema.safeParse(pending).success, true);
+for (const change of [{ startedAt: "2099-01-01" }, { remainingSeconds: 999999 }, { answers: { q: [1, 2] } }, { answers: { q: "c" } }]) assert.equal(saveExamSchema.safeParse({ ...pending, ...change }).success, false);
+const storage = new Map<string, string>();
+Object.defineProperty(globalThis, "localStorage", { value: { getItem: (k: string) => storage.get(k) ?? null, setItem: (k: string, v: string) => storage.set(k, v), removeItem: (k: string) => storage.delete(k) }, configurable: true });
+backupExamSave("a", "exam", pending);
+assert.deepEqual(recoverExamSave("a", "exam"), pending);
+assert.equal(recoverExamSave("b", "exam"), null);
+backupExamSave("a", "exam", null); assert.equal(recoverExamSave("a", "exam"), null);
+assert.equal(examDisplaySeconds(100, 5000, 15000), 90);
+assert.equal(examDisplaySeconds(100, 5000, 9999999), 0);
+assert.equal(remainingSeconds(new Date(60000), new Date(10000)), 50);
+assert.equal(remainingSeconds(new Date(60000), new Date(70000)), 0);
+const dateNow = Date.now;
+try { Date.now = () => -99999999; assert.equal(examDisplaySeconds(100, 5000, 15000), 90); } finally { Date.now = dateNow; }
+console.log("PASS: constrained complete paper, shortages, official 1/0 grading and skips, unsupported formats rejected, private keys, strict clocks, account-scoped retries, monotonic timer.");

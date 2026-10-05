@@ -13,6 +13,7 @@ import { summarizeAttempts } from "@/lib/practiceStats";
 import { explainSkillError, recordPracticeSkills } from "@/lib/skillProgress";
 import { recordLearningAttempt } from "@/lib/learningChecks";
 import { dayBounds, studentTimeZone } from "@/lib/learningPolicy";
+import { assertNoActiveExam } from "@/lib/exam/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = getCurrentUserId(request);
     if (!userId) return unauthorizedResponse();
+    await assertNoActiveExam(prisma, userId);
     const body = await request.json();
     const data = submitAttemptSchema.parse(body);
     const submissionHash = createHash("sha256").update(JSON.stringify({
@@ -49,7 +51,11 @@ export async function POST(request: NextRequest) {
       where: { userId_submissionId: { userId, submissionId: data.submissionId } },
       select: { submissionHash: true, submissionResult: true },
     });
-    if (previousSubmission) return NextResponse.json(replaySubmission(previousSubmission, submissionHash));
+    if (previousSubmission) return NextResponse.json(await prisma.$transaction(async (tx) => {
+      await lockAccount(tx, userId);
+      await assertNoActiveExam(tx, userId);
+      return replaySubmission(previousSubmission, submissionHash);
+    }));
 
     const session = await prisma.practiceSession.findFirst({
       where: { id: data.sessionId, userId },
@@ -127,6 +133,7 @@ export async function POST(request: NextRequest) {
 
     const result = await prisma.$transaction(async (tx) => {
       await lockAccount(tx, userId);
+      await assertNoActiveExam(tx, userId);
       // A concurrent copy of this request may already have committed while grading ran.
       const duplicate = await tx.userAttempt.findUnique({
         where: { userId_submissionId: { userId, submissionId: data.submissionId } },
@@ -149,7 +156,8 @@ export async function POST(request: NextRequest) {
         throw new PracticeError("All questions in this session have already been answered", 409);
       }
       const priorHelp = await tx.questionHelp.findUnique({ where: { userId_questionId: { userId, questionId: question.id } } });
-      const usedHint = data.usedHint || ownedSession.hintedQuestionIds.includes(question.id) || !!priorHelp;
+      const exposedExam = await tx.examSession.count({ where: { userId, status: "completed", questionIds: { has: question.id } } });
+      const usedHint = data.usedHint || ownedSession.hintedQuestionIds.includes(question.id) || !!priorHelp || exposedExam > 0;
       const latestAttempt = await tx.userAttempt.findFirst({
         where: { userId }, orderBy: { createdAt: "desc" }, select: { createdAt: true },
       });
@@ -335,6 +343,7 @@ export async function GET(request: NextRequest) {
   try {
     const userId = getCurrentUserId(request);
     if (!userId) return unauthorizedResponse();
+    await assertNoActiveExam(prisma, userId);
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get("sessionId");
 
@@ -342,25 +351,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
     }
 
-    const session = await prisma.practiceSession.findFirst({
-      where: { id: sessionId, userId },
-      select: { id: true },
-    });
-    if (!session) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
-    }
+    const attempts = await prisma.$transaction(async (tx) => {
+      await lockAccount(tx, userId);
+      await assertNoActiveExam(tx, userId);
+      const session = await tx.practiceSession.findFirst({
+        where: { id: sessionId, userId },
+        select: { id: true },
+      });
+      if (!session) throw new PracticeError("Session not found", 404);
 
-    const attempts = await prisma.userAttempt.findMany({
-      where: { userId, sessionId },
-      include: {
-        question: { include: { topic: true } },
-        stepAnswers: true,
-      },
-      orderBy: { createdAt: "asc" },
+      return tx.userAttempt.findMany({
+        where: { userId, sessionId },
+        include: {
+          question: { include: { topic: true } },
+          stepAnswers: true,
+        },
+        orderBy: { createdAt: "asc" },
+      });
     });
 
     return NextResponse.json(attempts);
   } catch (error) {
+    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
     console.error("Error in GET /api/attempts:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

@@ -27,12 +27,12 @@ async function main() {
   assert.equal(await prisma.questionOption.count(), options);
   const after = await prisma.question.findMany({ include: { skills: true, steps: { include: { options: true } } } });
   for (const q of after) if (fingerprints.has(q.id)) assert.equal(questionFingerprint(q), fingerprints.get(q.id), "Existing content was overwritten");
-  assert.equal(await prisma.question.count({ where: { id: { in: EXAM_EXERCISES.map((q) => q.id) } } }), 30);
+  assert.equal(await prisma.question.count({ where: { id: { in: EXAM_EXERCISES.map((q) => q.id) } } }), EXAM_EXERCISES.length);
   const report = await readCoverage(prisma, TIPO_MATH);
   assert.equal(report.totals.databaseQuestions, once);
   assert.equal(report.totals.direct + report.totals.supporting + report.totals.outside + report.totals.needsReview, once);
   assert.equal(report.questions.length, once);
-  assert.equal(report.questions.filter((q) => q.id.startsWith("exam_v1_") && q.eligible).length, 30);
+  assert.equal(report.questions.filter((q) => q.id.startsWith("exam_v1_") && q.eligible).length, EXAM_EXERCISES.length);
   assert.equal(report.questions.filter((q) => q.id.startsWith("exam_v1_") && q.missingSkills.length > 0).length, 0);
   assert.equal(report.readiness.multipleVariants.canGenerate, false);
   // An unknown DB task is included in live totals but never silently approved by its topic.

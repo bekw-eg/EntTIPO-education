@@ -3,6 +3,7 @@ import { EXAM_EXERCISES, exerciseQuestion } from "../lib/exam/bank";
 import { TIPO_MATH } from "../lib/exam/profile";
 import { CONTENT_REVIEWS, validateReviewReferences } from "../lib/exam/reviews";
 import { questionFingerprint } from "../lib/exam/fingerprint";
+import { EXAM_RULES } from "../lib/exam/rules";
 
 /** Additive, serialized, stable IDs. Preserve every existing question and its attempt history. */
 export async function seedExamBank(prisma: PrismaClient) {
@@ -14,10 +15,10 @@ export async function seedExamBank(prisma: PrismaClient) {
         description: "Учебные задания по подтверждённым пунктам спецификации ЕНТ ТиПО B057; покрытие показано в отдельном отчёте." } });
     }
     for (const p of TIPO_MATH.points) {
-      for (const id of p.skills) await tx.skill.upsert({ where: { id }, update: {}, create: {
+      for (const id of p.skills) await tx.skill.upsert({ where: { id }, update: { ruleRu: EXAM_RULES[p.code] }, create: {
         id, topicId: p.topicId, nameRu: p.title, nameKk: p.title,
         explanationRu: `Пункт ${p.code}: ${p.title}.`, explanationKk: `НЦТ: ${p.code}. ${p.title}.`,
-        ruleRu: "Сверьте область определения, выбранный метод и полный ответ. Содержание и примеры проверяются в отчёте покрытия.",
+        ruleRu: EXAM_RULES[p.code],
         ruleKk: "Анықталу облысын, шешу әдісін және толық жауапты тексеріңіз. Тапсырмалардың қамтылуы есепте көрсетілген.",
       } });
     }

@@ -44,13 +44,16 @@ export function assessExamReadiness(profile: ExamProfile, candidates: ExamCandid
     matched++;
   }
   const required = profile.official.questionCount * variants;
+  const selectedQuestionIds = families.flatMap((family) => bands.flatMap((band) =>
+    (edges.get(`band:${band}`)?.get(`family:${family}`) ?? 0) > 0
+      ? [unique.find((q) => q.family === family && q.band === band)!.id] : []));
   const difficulty = bands.map((band) => ({ band, required: profile.official.difficultyCounts[band] * variants,
     availableFamilies: new Set(unique.filter((q) => q.band === band).map((q) => q.family)).size,
     missingInPlan: edges.get(`band:${band}`)!.get("sink")! }));
   const points = balanced ? profile.points.map((p) => ({ pointCode: p.code, required: variants,
     availableFamilies: new Set(unique.filter((q) => q.pointCode === p.code).map((q) => q.family)).size,
     missingInPlan: edges.get("source")!.get(`point:${p.code}`)! })) : [];
-  return { variants, balanced, canGenerate: matched === required, required, matched, shortage: required - matched,
+  return { variants, balanced, canGenerate: matched === required, required, matched, shortage: required - matched, selectedQuestionIds,
     independentFamilies: families.length, difficulty, points,
     constraints: balanced ? "Квоты A/B/C НЦТ + внутренняя квота: один на каждый пункт; семейства не повторяются между вариантами." :
       "Квоты формата и A/B/C НЦТ; без тематических квот. Семейства не повторяются между вариантами — внутренняя политика." };

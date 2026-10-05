@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { nextReview, studentTimeZone } from "./learningPolicy";
+import { assertNoActiveExam } from "./exam/guard";
 
 async function saveHelpEvidence(tx: Prisma.TransactionClient, userId: string, questionId: string) {
   const existing = await tx.questionHelp.findUnique({ where: { userId_questionId: { userId, questionId } } });
@@ -32,6 +33,7 @@ export async function lockAccount(tx: Prisma.TransactionClient, userId: string) 
 export async function recordHintUsage(userId: string, sessionId: string, questionId: string) {
   return prisma.$transaction(async (tx) => {
     await lockAccount(tx, userId);
+    await assertNoActiveExam(tx, userId);
     const session = await tx.practiceSession.findFirst({ where: { id: sessionId, userId } });
     if (!session) throw new PracticeError("Session not found", 404);
     if (session.status !== "active") throw new PracticeError("Session is already completed", 409);
@@ -59,6 +61,7 @@ export async function recordHintUsage(userId: string, sessionId: string, questio
 export async function recordQuestionHelp(userId: string, questionId: string) {
   return prisma.$transaction(async (tx) => {
     await lockAccount(tx, userId);
+    await assertNoActiveExam(tx, userId);
     await saveHelpEvidence(tx, userId, questionId);
     const sessions = await tx.practiceSession.findMany({ where: { userId, status: "active", questionIds: { has: questionId } } });
     for (const session of sessions) if (!session.hintedQuestionIds.includes(questionId)) {

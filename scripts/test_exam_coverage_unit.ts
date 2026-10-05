@@ -22,15 +22,18 @@ assert.throws(() => validateReviewReferences([{ ...CONTENT_REVIEWS.find((r) => r
 const bank = EXAM_EXERCISES.map(exerciseQuestion);
 bank.forEach((q) => assert.equal(examFormat(q), "single_choice_4", q.id));
 const report = auditCoverage(TIPO_MATH, bank);
-assert.equal(report.totals.databaseQuestions, 30);
-assert.equal(report.totals.direct, 30);
-assert.equal(report.totals.eligible, 30);
-assert.equal(report.points.reduce((n, p) => n + p.direct, 0), 30);
+assert.equal(report.totals.databaseQuestions, EXAM_EXERCISES.length);
+assert.equal(report.totals.direct, EXAM_EXERCISES.length);
+assert.equal(report.totals.eligible, EXAM_EXERCISES.length);
+assert.equal(report.points.reduce((n, p) => n + p.direct, 0), EXAM_EXERCISES.length);
 assert.equal(report.readiness.oneVariant.canGenerate, true);
 assert.equal(report.readiness.multipleVariants.canGenerate, false);
-assert.equal(report.readiness.balancedVariant.canGenerate, false);
-assert.equal(report.points.find((p) => p.code === "15")!.status, "uncovered");
-assert.equal(report.sections.find((s) => s.section.startsWith("09."))!.status, "uncovered");
+assert.equal(report.readiness.balancedVariant.canGenerate, true);
+const originalBank = bank.filter((q) => !["12", "15", "16"].some((p) => q.skills.some((s) => TIPO_MATH.points.find((point) => point.code === p)!.skills.includes(s.skillId))));
+const originalReport = auditCoverage(TIPO_MATH, originalBank);
+assert.equal(originalReport.readiness.balancedVariant.canGenerate, false);
+assert.equal(originalReport.points.find((p) => p.code === "15")!.status, "uncovered");
+assert.equal(originalReport.sections.find((s) => s.section.startsWith("09."))!.status, "uncovered");
 // A covered section becomes genuinely uncovered when its tasks are absent.
 const absent = auditCoverage(TIPO_MATH, bank.filter((q) => q.topicId !== "exam_surfaces"));
 for (const code of ["17", "18"]) {
@@ -50,7 +53,7 @@ const badChoices = structuredClone(bank[0]); badChoices.steps[0].options[1] = { 
 assert.equal(examFormat(badChoices), "invalid_choice");
 const copies = auditCoverage(TIPO_MATH, [bank[0], { ...bank[0], id: "copy" }]);
 assert.equal(copies.totals.databaseQuestions, 2); assert.equal(copies.totals.uniqueEligible, 1);
-assert.equal(copies.points.find((p) => p.code === "01")!.families, 1); assert.equal(copies.duplicateGroups.length, 1);
+assert.equal(copies.points.find((p) => p.code === EXAM_EXERCISES[0].pointCode)!.families, 1); assert.equal(copies.duplicateGroups.length, 1);
 assert.throws(() => auditCoverage(TIPO_MATH, [bank[0], bank[0]]), /Duplicate question IDs/);
 
 // Greedy selection could spend every flexible A/B family on A and leave B short.

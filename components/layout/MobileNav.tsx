@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, Library, AlertCircle, BarChart3, Compass } from "lucide-react";
+import { LayoutDashboard, BookOpen, Library, AlertCircle, BarChart3, Compass, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -13,6 +13,7 @@ export function MobileNav() {
   const navItems = [
     { name: t.nav.home, href: "/", icon: LayoutDashboard },
     { name: t.nav.practice, href: "/practice", icon: BookOpen },
+    { name: "Экзамен", href: "/exam", icon: GraduationCap },
     { name: "Диагностика", href: "/diagnostics", icon: AlertCircle },
     { name: t.nav.topics, href: "/topics", icon: Library },
     { name: "3D", href: "/geometry", icon: Compass },

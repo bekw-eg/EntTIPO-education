@@ -5,15 +5,24 @@ import { questionFingerprint } from "./fingerprint";
 export interface ExamExercise {
   id: string; pointCode: string; band: DifficultyBand; family: string;
   text: string; options: [string, string, string, string]; correctIndex: number; explanation: string;
-  scope: string;
+  scope: string; reviewedAt?: string;
 }
 function task(id: string, pointCode: string, band: DifficultyBand, family: string, text: string,
-  options: ExamExercise["options"], correctIndex: number, explanation: string, scope: string): ExamExercise {
-  return { id: `exam_v1_${id}`, pointCode, band, family, text, options, correctIndex, explanation, scope };
+  options: ExamExercise["options"], correctIndex: number, explanation: string, scope: string, reviewedAt?: string): ExamExercise {
+  return { id: `exam_v1_${id}`, pointCode, band, family, text, options, correctIndex, explanation, scope, ...(reviewedAt ? { reviewedAt } : {}) };
 }
 
 /** Authored exercises, not official NTC questions. Each family represents a different reasoning task. */
 export const EXAM_EXERCISES: ExamExercise[] = [
+  task("integral_linearity", "12", "B", "integral_linearity", "Найдите общий вид первообразных для f(x)=4x³−6x+2 на действительной оси.",
+    ["x⁴−3x²+2x+C", "4x⁴−6x²+2x+C", "x⁴−3x²+2+C", "12x²−6+C"], 0,
+    "Интегрируем сумму по слагаемым: ∫4x³ dx=x⁴, ∫(−6x) dx=−3x², ∫2 dx=2x. Все первообразные отличаются константой C; производная результата равна f(x).", "Линейность неопределённого интеграла и константа.", "2026-10-05"),
+  task("ode_separable_initial", "15", "C", "ode_separation_initial", "Решите задачу Коши y′=2xy, y(0)=3. Выберите функцию, удовлетворяющую уравнению на всей действительной оси.",
+    ["y=3e^(2x)", "y=3e^(x²)", "y=e^(x²)+2", "y=3x²"], 1,
+    "Ненулевое решение: dy/y=2x dx, ln|y|=x²+C, y=Ce^(x²). Из y(0)=3 следует C=3. Проверка: y′=6xe^(x²)=2xy. Нулевое решение не удовлетворяет начальному условию.", "Разделение переменных, начальное условие, проверка полного решения.", "2026-10-05"),
+  task("ode_repeated_initial", "16", "C", "ode_repeated_root_initial", "Решите y″−4y′+4y=0 при y(0)=1 и y′(0)=0.",
+    ["y=e^(2x)", "y=(1+2x)e^(2x)", "y=(1−2x)e^(2x)", "y=e^(−2x)"], 2,
+    "Характеристическое уравнение (k−2)²=0 имеет двукратный корень 2. y=(C₁+C₂x)e^(2x). Из y(0)=1 получаем C₁=1, из y′(0)=C₂+2C₁=0 получаем C₂=−2. Подстановка подтверждает уравнение и оба условия.", "Общее решение при двукратном корне и два начальных условия.", "2026-10-05"),
   task("rational_center", "01", "B", "rational_asymptotes", "Для f(x)=(2x+3)/(x−1) найдите точку пересечения асимптот.",
     ["(1; 2)", "(−1; 2)", "(1; 3)", "(2; 1)"], 0,
     "f(x)=2+5/(x−1). Асимптоты x=1 и y=2 пересекаются в (1; 2).", "Асимптоты и сдвиг графика; не все свойства функции."),
@@ -119,5 +128,5 @@ export function exerciseReview(q: ExamExercise): ContentReview {
   const question = exerciseQuestion(q);
   return { questionId: q.id, contentHash: questionFingerprint(question), profileId: TIPO_MATH.id, profileVersion: TIPO_MATH.version,
     pointCode: q.pointCode, quality: "direct", rationale: `${q.scope} Уровень ${q.band} назначен внутренней содержательной проверкой; эмпирическая калибровка не проведена.`,
-    family: q.family, band: q.band, reviewedAt: TIPO_MATH.checkedAt, skillIds: question.skills.map((s) => s.skillId) };
+    family: q.family, band: q.band, reviewedAt: q.reviewedAt ?? TIPO_MATH.checkedAt, skillIds: question.skills.map((s) => s.skillId) };
 }

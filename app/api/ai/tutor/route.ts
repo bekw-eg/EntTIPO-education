@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { PracticeError, recordHintUsage, recordQuestionHelp } from "@/lib/practiceStorage";
+import { assertNoActiveExam } from "@/lib/exam/guard";
 import {
   aiTutorRequestSchema,
   aiErrorAnalysisSchema,
@@ -33,6 +34,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = getCurrentUserId(request);
     if (!userId) return unauthorizedResponse();
+    await assertNoActiveExam(prisma, userId);
     const body = await request.json();
     const parseResult = aiTutorRequestSchema.safeParse(body);
 

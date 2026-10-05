@@ -58,7 +58,8 @@ export default async function CoveragePage({ searchParams }: { searchParams: Pro
         <p className="text-sm text-muted-foreground">{r.constraints}</p>
         <p className="text-sm">{r.difficulty.map((d) => `${d.band}: требуется ${d.required}, семейств ${d.availableFamilies}`).join(" · ")}</p>
       </div>)}
-      <p className="text-sm text-muted-foreground">Это проверка доступности для будущего генератора, не готовый экзамен. Возможность подбора по формату и сложности не доказывает полноту тематического покрытия.</p>
+      <p className="text-sm text-muted-foreground">Экзаменационный режим использует квоты A/B/C и внутренний баланс тем. Возможность подбора не доказывает исчерпывающее покрытие каждого пункта.</p>
+      <Link className="inline-block text-primary underline" href="/exam">Перейти к экзамену по подтверждённому профилю</Link>
     </section>
     <section><h2 className="text-lg font-semibold mb-3">Пункты спецификации</h2>
       <p className="text-sm text-muted-foreground mb-3">«Есть разнообразие» означает наличие минимум {profile.platformPolicy.minFamiliesPerPoint} семейств решения. Это внутренний порог, а не подтверждение исчерпывающего покрытия пункта НЦТ. Нажмите строку задач, чтобы проверить состав и границы соответствия.</p>

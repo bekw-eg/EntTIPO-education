@@ -27,6 +27,7 @@ export function Sidebar() {
   const navItems = [
     { name: t.nav.home, href: "/", icon: LayoutDashboard },
     { name: t.nav.practice, href: "/practice", icon: BookOpen },
+    { name: locale === "kk" ? "Емтихан" : "Экзамен", href: "/exam", icon: GraduationCap },
     { name: locale === "kk" ? "Диагностика" : "Диагностика навыков", href: "/diagnostics", icon: GraduationCap },
     { name: t.nav.topics, href: "/topics", icon: Library },
     { name: locale === "kk" ? "Емтиханды қамту" : "Покрытие экзамена", href: "/exam-coverage", icon: GraduationCap },
