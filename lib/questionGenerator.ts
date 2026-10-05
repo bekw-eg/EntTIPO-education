@@ -312,7 +312,7 @@ export function generateTangent(index = 1): GeneratedQuestion {
           { text: `y = ${slope}x ${intercept < 0 ? `- ${Math.abs(intercept)}` : `+ ${intercept}`}`, isCorrect: true, order: 1 },
           { text: `y = ${slope}x + ${fx0}`, isCorrect: false, order: 2 },
           { text: `y = ${slope + 1}x - ${x0}`, isCorrect: false, order: 3 },
-          { text: `y = ${fx0}x + ${slope}`, isCorrect: false, order: 4 },
+          { text: `y = -${slope}x - ${Math.abs(intercept)}`, isCorrect: false, order: 4 },
         ],
       },
     ],
@@ -401,7 +401,7 @@ export function generateLogarithms(index = 1): GeneratedQuestion {
           { text: `${power}`, isCorrect: true, order: 1 },
           { text: `${power + 1}`, isCorrect: false, order: 2 },
           { text: `${power - 1}`, isCorrect: false, order: 3 },
-          { text: `${arg / base}`, isCorrect: false, order: 4 },
+          { text: `${power + 2}`, isCorrect: false, order: 4 },
         ],
       },
     ],
@@ -448,7 +448,7 @@ export function generateTrigonometry(index = 1): GeneratedQuestion {
           { text: item.sin, isCorrect: true, order: 1 },
           { text: item.sin === "1/2" ? "\\sqrt{2}/2" : "1/2", isCorrect: false, order: 2 },
           { text: "0", isCorrect: false, order: 3 },
-          { text: "1", isCorrect: false, order: 4 },
+          { text: "-1", isCorrect: false, order: 4 },
         ],
       },
     ],
@@ -496,7 +496,7 @@ export function generateDiffEq2(index = 1): GeneratedQuestion {
         options: [
           { text: `k_1 = ${k1}, k_2 = ${k2}`, isCorrect: true, order: 1 },
           { text: `k_1 = ${-k1}, k_2 = ${-k2}`, isCorrect: false, order: 2 },
-          { text: `k_1 = ${k1 + 1}, k_2 = ${k2 - 1}`, isCorrect: false, order: 3 },
+          { text: `k_1 = ${k1 + 1}, k_2 = ${k2 + 1}`, isCorrect: false, order: 3 },
           { text: `k_1 = 0, k_2 = ${q}`, isCorrect: false, order: 4 },
         ],
       },
@@ -509,7 +509,8 @@ export function generateStereometry(index = 1): GeneratedQuestion {
   const a = randInt(4, 10) * 2; // четное число для удобного деления пополам
   const H = randInt(6, 15);
   const baseArea = a * a;
-  const volume = Math.round((1 / 3) * baseArea * H);
+  const numerator = baseArea * H;
+  const volume = numerator % 3 === 0 ? `${numerator / 3}` : `${numerator}/3`;
 
   const geomConfig = {
     type: "pyramid_4",
@@ -519,7 +520,7 @@ export function generateStereometry(index = 1): GeneratedQuestion {
   };
 
   return {
-    topicId: "t1", // or related
+    topicId: "exam_volumes",
     skillTag: "stereometry_volume",
     weakSkill: "стереометрия_объемы",
     title: `Стереометрия: Объём правильной пирамиды #${index}`,
@@ -668,6 +669,6 @@ export function getAvailableSkills(): {
     { skillTag: "logarithm_properties", weakSkill: "свойства_логарифмов", topicId: "t9", title: "Логарифмические функции" },
     { skillTag: "trigonometry_values", weakSkill: "тригонометрические_функции", topicId: "t11", title: "Тригонометрия" },
     { skillTag: "second_order_diffeq", weakSkill: "дифференциальные_уравнения", topicId: "t14", title: "ДУ второго порядка" },
-    { skillTag: "stereometry_volume", weakSkill: "стереометрия_объемы", topicId: "t1", title: "Стереометрия" },
+    { skillTag: "stereometry_volume", weakSkill: "стереометрия_объемы", topicId: "exam_volumes", title: "Стереометрия" },
   ];
 }

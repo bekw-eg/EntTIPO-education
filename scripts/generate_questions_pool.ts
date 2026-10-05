@@ -12,6 +12,7 @@ import {
   generateStereometry,
   GeneratedQuestion,
 } from "../lib/questionGenerator";
+import { questionFingerprint } from "../lib/exam/fingerprint";
 
 const prisma = new PrismaClient();
 
@@ -26,7 +27,7 @@ async function main() {
 
   // Generate questions for each generator
   const generatorsByTopic: Record<string, ((idx: number) => GeneratedQuestion)[]> = {
-    t1: [generateRootsAndPowers, generateStereometry],
+    t1: [generateRootsAndPowers],
     t2: [generatePolynomials],
     t3: [generateComplexNumbers],
     t4: [generateDerivative],
@@ -35,22 +36,18 @@ async function main() {
     t9: [generateLogarithms],
     t11: [generateTrigonometry],
     t14: [generateDiffEq2],
+    exam_volumes: [generateStereometry],
   };
 
   const allQuestionsToInsert: GeneratedQuestion[] = [];
 
   // Generate 15-20 variations per topic
   for (const topicId of topicIds) {
-    const topicGenerators = generatorsByTopic[topicId] || [
-      generateRootsAndPowers,
-      generatePolynomials,
-      generateDerivative,
-    ];
+    const topicGenerators = generatorsByTopic[topicId] || [];
 
     for (let i = 1; i <= 14; i++) {
       for (const gen of topicGenerators) {
         const q = gen(i);
-        q.topicId = topicId; // bind to this topic
         allQuestionsToInsert.push(q);
       }
     }
@@ -58,11 +55,17 @@ async function main() {
 
   console.log(`Generated ${allQuestionsToInsert.length} questions in memory.`);
 
+  // Exact content duplicates are skipped even if older rows have random IDs.
+  const existing = await prisma.question.findMany({ include: { skills: true, steps: { include: { options: true } } } });
+  const hashes = new Set(existing.map(questionFingerprint));
   let insertedCount = 0;
   for (const q of allQuestionsToInsert) {
+    const hash = questionFingerprint({ ...q, id: "", latex: q.latex ?? null, purpose: "practice", skills: [] });
+    if (hashes.has(hash)) continue;
     try {
-      await prisma.question.create({
-        data: {
+      await prisma.question.upsert({
+        where: { id: `pool_${hash}` }, update: {}, create: {
+          id: `pool_${hash}`,
           topicId: q.topicId,
           title: q.title,
           questionText: q.questionText,
@@ -91,6 +94,7 @@ async function main() {
           },
         },
       });
+      hashes.add(hash);
       insertedCount++;
     } catch (err) {
       console.error("Failed to insert question:", err);

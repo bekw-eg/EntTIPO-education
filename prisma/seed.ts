@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { seedSkills } from './skillSeed'
+import { seedExamBank } from './examSeed'
 
 const prisma = new PrismaClient()
 
@@ -635,6 +636,7 @@ async function main() {
   }
 
   await seedSkills(prisma)
+  await seedExamBank(prisma)
 
   // 5. Create DailyGoal
   await prisma.dailyGoal.upsert({

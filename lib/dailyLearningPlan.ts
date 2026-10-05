@@ -56,7 +56,10 @@ async function buildActions(tx: Prisma.TransactionClient, plan: DailyLearningPla
     await tx.learningPlanAction.create({ data: { planId: plan.id, position, kind: "diagnostic", reasons: ["new_account"] } });
     return;
   }
-  const signals = skills.map((s) => {
+  // Adding a catalog skill is not evidence that the learner needs spaced review.
+  // Rank assessed/practised skills; new exam skills enter after their first observation.
+  const assessed = new Set([...observations.map((o) => o.skillId), ...mistakes.map((m) => m.skillId), ...reviews.map((r) => r.skillId)]);
+  const signals = skills.filter((s) => assessed.has(s.id)).map((s) => {
     const recent = observations.filter((o) => o.skillId === s.id && now.getTime() - o.createdAt.getTime() <= 14 * 86400000);
     const review = reviews.find((r) => r.skillId === s.id);
     return { id: s.id, state: s.state, masteryScore: s.masteryScore,
