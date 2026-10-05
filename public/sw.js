@@ -3,7 +3,8 @@
  * Caches public static assets; personal pages and API responses stay on the network.
  */
 
-const CACHE_NAME = "ent-tipo-static-v3";
+const CACHE_NAME = "ent-tipo-static-v4";
+const OFFLINE_CACHE = "ent-tipo-static-offline-v1";
 const PRECACHE_ASSETS = [
   "/manifest.json",
   "/icon.svg",
@@ -28,7 +29,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key.startsWith("ent-tipo-") && key !== CACHE_NAME) {
+          if (key.startsWith("ent-tipo-") && key !== CACHE_NAME && key !== OFFLINE_CACHE) {
             return caches.delete(key);
           }
         })
@@ -43,13 +44,11 @@ self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Ignore non-GET requests, chrome-extension, and localhost development
+  // Ignore mutations and cross-origin requests. Production localhost supports offline tests.
   if (
     request.method !== "GET" ||
     url.origin !== self.location.origin ||
-    url.protocol.startsWith("chrome-extension") ||
-    url.hostname === "localhost" ||
-    url.hostname === "127.0.0.1"
+    url.protocol.startsWith("chrome-extension")
   ) {
     return;
   }
@@ -57,6 +56,20 @@ self.addEventListener("fetch", (event) => {
   // Never read or write a shared cache for account data, including auth endpoints.
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(fetch(request, { cache: "no-store" }));
+    return;
+  }
+
+  // Only this public, account-free shell and verified public assets support offline practice.
+  // Package contents and drafts remain exclusively in account-scoped IndexedDB.
+  if (url.pathname === "/offline-practice.html" || url.pathname.startsWith("/offline-assets/")) {
+    event.respondWith((async () => {
+      const cache = await caches.open(OFFLINE_CACHE);
+      const cached = await cache.match(url.pathname);
+      // Versioned asset URLs are immutable and contain no personal information.
+      if (url.pathname.startsWith("/offline-assets/") && cached) return cached;
+      try { return await fetch(request, { cache: "no-store" }); }
+      catch { return cached || new Response("Offline resource missing", { status: 503 }); }
+    })());
     return;
   }
 

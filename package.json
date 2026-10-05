@@ -36,7 +36,13 @@
     "content:audit": "tsx scripts/audit_kazakh_content.ts",
     "test:kazakh:unit": "tsx scripts/test_kazakh_content_unit.ts",
     "test:kazakh": "tsx scripts/test_kazakh_content.ts",
-    "test:kazakh:ai": "tsx scripts/test_kazakh_ai.ts"
+    "test:kazakh:ai": "tsx scripts/test_kazakh_ai.ts",
+    "offline:build": "tsx scripts/build_offline.ts",
+    "prebuild": "npm run offline:build",
+    "predev": "npm run offline:build",
+    "test:offline:unit": "tsx scripts/test_offline_unit.ts",
+    "test:offline:http": "tsx scripts/test_offline_http.ts",
+    "test:offline:browser": "tsx scripts/test_offline_browser.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -75,13 +81,16 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/katex": "^0.16.7",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.6.1",
+    "esbuild": "^0.28.2",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.1.7",
+    "fake-indexeddb": "^6.2.5",
     "prisma": "^5.22.0",
     "tailwindcss": "^3.4.15",
     "tsx": "^4.19.2",

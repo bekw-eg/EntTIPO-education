@@ -59,9 +59,10 @@
     <div class="icon">📶</div>
     <h1>Нет подключения к сети</h1>
     <p>
-      Подключитесь к интернету, чтобы продолжить тренировку и загрузить данные своего аккаунта.
+      Скачанные материалы доступны в офлайн-практике. Для остальных личных страниц требуется интернет.
     </p>
     <button class="btn" onclick="window.location.reload()">Повторить попытку</button>
+    <p><a href="/offline-practice.html" id="practice-link">Открыть скачанные тренировки</a></p>
   </div>
   <script>
     try {
@@ -70,13 +71,15 @@
         document.documentElement.lang = 'kk';
         document.title = 'Желісіз режим — ENT TIPO';
         document.querySelector('h1').textContent = 'Желіге қосылу жоқ';
-        document.querySelector('p').textContent = 'Жаттығуды жалғастырып, аккаунт деректерін жүктеу үшін интернетке қосылыңыз.';
+        document.querySelector('p').textContent = 'Жүктелген материалдар желісіз жаттығуда қолжетімді. Басқа жеке беттер үшін интернет қажет.';
+        document.querySelector('#practice-link').textContent = 'Жүктелген жаттығуларды ашу';
         document.querySelector('button').textContent = 'Қайталап көру';
       } else if (locale === 'en') {
         document.documentElement.lang = 'en';
         document.title = 'Offline — ENT TIPO';
         document.querySelector('h1').textContent = 'No network connection';
-        document.querySelector('p').textContent = 'Connect to the internet to continue your practice and load your account data.';
+        document.querySelector('p').textContent = 'Downloaded materials are available in offline practice. Other personal pages require internet.';
+        document.querySelector('#practice-link').textContent = 'Open downloaded practice';
         document.querySelector('button').textContent = 'Try again';
       }
     } catch { /* Offline recovery also works with blocked local storage. */ }

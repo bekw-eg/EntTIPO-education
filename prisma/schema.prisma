@@ -30,6 +30,7 @@ model User {
   skillReviews SkillReview[]
   questionHelp QuestionHelp[]
   exams ExamSession[]
+  offlinePackages OfflinePackage[]
 }
 
 model Topic {
@@ -143,6 +144,22 @@ model PracticeSession {
   attempts UserAttempt[]
   planActions LearningPlanAction[]
   learningCheck LearningCheck?
+  offlinePackage OfflinePackage?
+}
+
+// Explicit assisted-practice export. Personal payloads never enter the shared SW cache.
+model OfflinePackage {
+  id String @id
+  userId String
+  sessionId String @unique
+  language String
+  contentVersion String
+  selectionHash String
+  content Json
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session PracticeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
 }
 
 model UserAttempt {

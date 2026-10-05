@@ -71,7 +71,7 @@ export async function GET(request: Request) {
     const userId = getCurrentUserId(request);
     if (!userId) return unauthorizedResponse(request);
     const sessions = await prisma.practiceSession.findMany({
-      where: { userId, ...(new URL(request.url).searchParams.get("status") === "active" ? { status: "active" } : {}) },
+      where: { userId, mode: { not: "offline_practice" }, ...(new URL(request.url).searchParams.get("status") === "active" ? { status: "active" } : {}) },
       orderBy: { startedAt: "desc" },
       take: 10,
       select: { id: true, userId: true, mode: true, topicId: true, status: true,

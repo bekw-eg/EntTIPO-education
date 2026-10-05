@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { setActiveAccount, offlineLocked } from "@/lib/offline/store";
 
 export interface AccountProfile {
   id: string;
@@ -31,6 +32,23 @@ export function AccountProvider({ user, demoEnabled, children }: {
   useEffect(() => {
     if (requiresLogin) router.replace("/login");
   }, [requiresLogin, router]);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Server-provided authenticated profile; no credentials are persisted to IndexedDB.
+    if (!user) { void setActiveAccount(null).catch(() => {}); return; }
+    try { if (localStorage.getItem("enttipo_offline_locked")) return; } catch { return; }
+    void offlineLocked().then(async locked => {
+      if (locked || cancelled) return null;
+      return fetch("/api/auth/me", { cache: "no-store" });
+    }).then(async response => {
+      if (!response) return;
+      if (!response.ok) return;
+      const me = await response.json();
+      if (!cancelled && me.user?.id === user.id) await setActiveAccount({ userId: user.id, name: user.name });
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.id, user?.name]);
 
   useEffect(() => {
     const handleAccountChange = (event: StorageEvent) => {

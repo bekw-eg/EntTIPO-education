@@ -15,16 +15,10 @@ export function PwaRegister() {
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
-    // 1. Service Worker: only register in production.
-    // On localhost or in development, proactively unregister any active SW and clear cache
-    // to prevent CSS caching conflicts and HMR deadlocks.
+    // Production (including localhost) supports offline practice.
+    // Development disables the worker for HMR, retaining explicitly downloaded public assets.
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      const isLocalhost =
-        window.location.hostname === "localhost" ||
-        window.location.hostname === "127.0.0.1" ||
-        window.location.hostname.endsWith(".local");
-
-      if (process.env.NODE_ENV === "development" || isLocalhost) {
+      if (process.env.NODE_ENV === "development") {
         navigator.serviceWorker.getRegistrations().then((registrations) => {
           for (const reg of registrations) {
             reg.unregister();
@@ -33,7 +27,7 @@ export function PwaRegister() {
         if ("caches" in window) {
           caches.keys().then((keys) => {
             for (const key of keys) {
-              caches.delete(key);
+              if (key.startsWith("ent-tipo-") && key !== "ent-tipo-static-offline-v1") caches.delete(key);
             }
           });
         }

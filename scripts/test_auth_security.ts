@@ -70,7 +70,7 @@ async function main() {
   let activation: Promise<unknown> | undefined;
   handlers.activate({ waitUntil(value: Promise<unknown>) { activation = value; } });
   await activation;
-  assert.deepEqual(deleted, ["ent-tipo-v1.0.0", "ent-tipo-static-v2"]);
+  assert.deepEqual(deleted, ["ent-tipo-v1.0.0", "ent-tipo-static-v2", "ent-tipo-static-v3"]);
   async function requestWorker(path: string, mode = "cors") {
     let response: Promise<Response> | undefined;
     handlers.fetch({ request: { url: `https://ent.example${path}`, method: "GET", mode },
