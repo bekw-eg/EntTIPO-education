@@ -18,6 +18,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ s
       await lockAccount(tx, userId);
       const session = await tx.practiceSession.findFirst({ where: { id: sessionId, userId } });
       if (!session) throw new PracticeError("Session not found", 404);
+      if (session.mode === "offline_practice") throw new PracticeError("Use offline synchronization for this training", 409);
       if (session.status !== "active") throw new PracticeError("Session is already completed", 409);
       if (session.revision !== data.revision) throw new PracticeError("Session changed; reload its latest state", 409);
       const questionId = session.questionIds[session.currentIndex];

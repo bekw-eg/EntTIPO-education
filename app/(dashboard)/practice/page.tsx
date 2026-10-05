@@ -126,6 +126,11 @@ function PracticeSetupContent() {
         </p>
       </div>
 
+      <a href="/offline-practice.html" className="block rounded-xl border p-4 hover:bg-muted/50">
+        <span className="font-semibold">{locale === "kk" ? "Желісіз жаттығу" : "Офлайн-практика"}</span>
+        <p className="mt-1 text-sm text-muted-foreground">{locale === "kk" ? "Материалдар мен тапсырмаларды жүктеп, интернетсіз оқыңыз." : "Скачайте материалы и задания, занимайтесь без интернета и синхронизируйте ответы позже."}</p>
+      </a>
+
       <Link href="/diagnostics" className="block rounded-xl border p-4 hover:bg-muted/50">
         <span className="font-semibold">{diagnosticText[locale === "kk" ? "kk" : "ru"].title}</span>
         <p className="mt-1 text-sm text-muted-foreground">{diagnosticText[locale === "kk" ? "kk" : "ru"].intro}</p>

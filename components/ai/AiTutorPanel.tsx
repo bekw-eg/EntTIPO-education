@@ -154,6 +154,12 @@ export function AiTutorPanel({
   const [inputMessage, setInputMessage] = useState("");
   const [currentHintLevel, setCurrentHintLevel] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const update = () => setOffline(!navigator.onLine);
+    update(); window.addEventListener("online", update); window.addEventListener("offline", update);
+    return () => { window.removeEventListener("online", update); window.removeEventListener("offline", update); };
+  }, []);
 
   // Audio TTS & Voice input states
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
@@ -411,6 +417,10 @@ export function AiTutorPanel({
   };
 
   const handleAction = async (action: AiAction, customLevel?: number, userMsg?: string) => {
+    if (!navigator.onLine) {
+      toast.info(locale === "kk" ? "AI көмекшісі желісіз қолжетімсіз. Жүктелген материалдарды пайдаланыңыз." : "AI-помощник недоступен без сети. Используйте скачанные материалы.");
+      return;
+    }
     setIsLoading(true);
     const targetHintLevel = customLevel ?? (action === "hint" ? currentHintLevel : undefined);
 
@@ -533,6 +543,9 @@ export function AiTutorPanel({
       aria-label={t.ai.tutorTitle}
       className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] bg-background border-l shadow-2xl flex flex-col transition-all duration-300 animate-in slide-in-from-right"
     >
+      {offline && <p role="status" className="p-4 bg-amber-50 text-amber-900 text-sm">
+        {locale === "kk" ? "AI көмекшісі желісіз қолжетімсіз. Жүктелген материалдарды пайдаланыңыз." : "AI-помощник недоступен без сети. Используйте скачанные материалы."}
+      </p>}
       {/* Top Header */}
       <header className="p-4 border-b flex items-center justify-between bg-card/80 backdrop-blur-sm">
         <div className="flex items-center gap-3">

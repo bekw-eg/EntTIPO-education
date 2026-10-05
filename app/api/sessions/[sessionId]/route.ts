@@ -42,6 +42,7 @@ export async function PATCH(
       await lockAccount(tx, userId);
       const owned = await tx.practiceSession.findFirst({ where: { id: sessionId, userId } });
       if (!owned) throw new PracticeError("Session not found", 404);
+      if (owned.mode === "offline_practice") throw new PracticeError("Use offline synchronization for this training", 409);
       const attempts = await tx.userAttempt.findMany({
         where: { userId, sessionId }, select: { questionId: true, isCorrect: true },
       });
