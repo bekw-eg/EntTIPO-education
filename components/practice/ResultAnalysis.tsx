@@ -17,6 +17,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AttemptResult, PracticeQuestion, AiAction } from "@/types";
 import { learningText } from "@/lib/i18n/learning";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { contentText, answerText } from '@/lib/i18n/content';
+import { MathText } from '@/components/ui/MathText';
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 
 interface ResultAnalysisProps {
@@ -142,20 +144,20 @@ export default function ResultAnalysis({
                       <span className="font-bold mr-1">
                         {t.result.stepItem} {sr.stepOrder}:
                       </span>
-                      {(locale === "kk" ? step?.promptKk ?? step?.prompt : step?.prompt) || "..."}
+                      {contentText(step?.prompt, step?.promptKk, locale) || '...'}
                     </p>
                     <div className="text-xs flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
                       <span>
                         {t.result.yourAnswer}{" "}
                         <strong className="font-mono text-foreground">
-                          {sr.userAnswer || "—"}
+                          {sr.userAnswer ? answerText(sr.userAnswer, step, locale) : '—'}
                         </strong>
                       </span>
                       {!sr.isCorrect && (
                         <span className="text-rose-600 dark:text-rose-400">
                           {t.result.correctAnswer}{" "}
                           <strong className="font-mono">
-                            {sr.expectedAnswer}
+                            {answerText(sr.expectedAnswer, step, locale)}
                           </strong>
                         </span>
                       )}
@@ -189,9 +191,9 @@ export default function ResultAnalysis({
           </div>
 
           {(showExplanation || isFull) && (
-            <p className="text-sm text-foreground/90 whitespace-pre-line pt-2 border-t mt-2">
-              {result.explanation}
-            </p>
+            <div className="text-sm text-foreground/90 whitespace-pre-line pt-2 border-t mt-2">
+              <MathText content={contentText(result.explanation, result.explanationKk, locale)} />
+            </div>
           )}
         </div>
 

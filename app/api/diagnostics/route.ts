@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { localizedJson, requestLocale } from "@/lib/i18n/http";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { startDiagnostic } from "@/lib/diagnostics";
@@ -8,23 +8,23 @@ import { z, ZodError } from "zod";
 export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const userId = getCurrentUserId(request);
-  if (!userId) return unauthorizedResponse();
+  if (!userId) return unauthorizedResponse(request);
   try {
     const text = await request.text();
     const data = z.object({ restartFromId: z.string().min(1).optional() }).strict().parse(text ? JSON.parse(text) : {});
-    return NextResponse.json(await startDiagnostic(userId, data.restartFromId));
+    return localizedJson(request, await startDiagnostic(userId, data.restartFromId, requestLocale(request) === 'kk' ? 'kk' : 'ru'));
   }
   catch (error) {
-    if (error instanceof ZodError || error instanceof SyntaxError) return NextResponse.json({ error: "Invalid diagnostic start" }, { status: 400 });
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof ZodError || error instanceof SyntaxError) return localizedJson(request, { error: "Invalid diagnostic start" }, { status: 400 });
+    if (error instanceof PracticeError) return localizedJson(request, { error: error.message }, { status: error.status });
     console.error("Could not start diagnostic", error);
-    return NextResponse.json({ error: "Could not start diagnostic" }, { status: 500 });
+    return localizedJson(request, { error: "Could not start diagnostic" }, { status: 500 });
   }
 }
 export async function GET(request: Request) {
   const userId = getCurrentUserId(request);
-  if (!userId) return unauthorizedResponse();
+  if (!userId) return unauthorizedResponse(request);
   const sessions = await prisma.diagnosticSession.findMany({ where: { userId }, orderBy: { startedAt: "desc" },
     select: { id: true, status: true, currentIndex: true, startedAt: true, completedAt: true } });
-  return NextResponse.json(sessions);
+  return localizedJson(request, sessions);
 }

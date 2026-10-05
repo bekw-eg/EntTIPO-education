@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { z, ZodError } from "zod";
@@ -13,7 +14,7 @@ export async function PATCH(
 ) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     const { mistakeId } = await context.params;
     const body = z.object({ isReviewed: z.boolean() }).strict().parse(await request.json());
     const mistake = await prisma.$transaction(async (tx) => {
@@ -26,12 +27,12 @@ export async function PATCH(
         reviewedAt: body.isReviewed ? new Date() : null } });
     });
 
-    return NextResponse.json(mistake);
+    return localizedJson(request, mistake);
   } catch (error) {
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
-    if (error instanceof ZodError || error instanceof SyntaxError) return NextResponse.json({ error: "Only a viewing flag may be changed manually" }, { status: 400 });
+    if (error instanceof PracticeError) return localizedJson(request, { error: error.message }, { status: error.status });
+    if (error instanceof ZodError || error instanceof SyntaxError) return localizedJson(request, { error: "Only a viewing flag may be changed manually" }, { status: 400 });
     console.error("Error in PATCH /api/mistakes/[mistakeId]:", error);
-    return NextResponse.json(
+    return localizedJson(request,
       { error: "Internal server error" },
       { status: 500 }
     );

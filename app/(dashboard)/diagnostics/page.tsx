@@ -1,4 +1,5 @@
 "use client";
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -169,6 +170,7 @@ export default function DiagnosticsPage() {
     finally { busyRef.current = false; setBusy(false); }
   };
   return <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
+    <div className="md:hidden flex justify-end"><LanguageSwitcher variant="compact" /></div>
     <h1 className="text-2xl sm:text-3xl font-bold">{copy.title}</h1>
     {loading ? <p role="status">…</p> : error ? <div role="alert" className="space-y-3"><p>{copy.error}</p><Button onClick={() => { void load(); }}>{copy.reload}</Button></div> : <>
       {!snapshot && <div className="space-y-4"><p className="text-muted-foreground">{copy.intro}</p><Button disabled={busy} onClick={() => { void start(); }}>{copy.start}</Button></div>}

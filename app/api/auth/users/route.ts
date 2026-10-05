@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 
 export async function GET(request: Request) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     const users = await prisma.user.findMany({
       where: { id: userId },
       select: {
@@ -19,8 +19,8 @@ export async function GET(request: Request) {
       take: 1,
     });
 
-    return NextResponse.json({ users });
+    return localizedJson(request, { users });
   } catch (err) {
-    return NextResponse.json({ users: [] }, { status: 500 });
+    return localizedJson(request, { users: [] }, { status: 500 });
   }
 }

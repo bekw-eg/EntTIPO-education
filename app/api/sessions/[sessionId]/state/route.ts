@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { practiceStateSchema } from "@/lib/validators";
@@ -7,10 +8,10 @@ import { readPracticeSnapshot } from "@/lib/practiceSession";
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ sessionId: string }> }) {
   const userId = getCurrentUserId(request);
-  if (!userId) return unauthorizedResponse();
+  if (!userId) return unauthorizedResponse(request);
   try {
     const parsed = practiceStateSchema.safeParse(await request.json());
-    if (!parsed.success) return NextResponse.json({ error: "Invalid practice state" }, { status: 400 });
+    if (!parsed.success) return localizedJson(request, { error: "Invalid practice state" }, { status: 400 });
     const data = parsed.data;
     const { sessionId } = await context.params;
     const result = await prisma.$transaction(async (tx) => {
@@ -47,11 +48,11 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ s
       } });
       return readPracticeSnapshot(tx, sessionId, userId);
     }, { maxWait: 10000, timeout: 10000 });
-    return NextResponse.json(result);
+    return localizedJson(request, result);
   } catch (error) {
-    if (error instanceof SyntaxError) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof SyntaxError) return localizedJson(request, { error: "Invalid JSON" }, { status: 400 });
+    if (error instanceof PracticeError) return localizedJson(request, { error: error.message }, { status: error.status });
     console.error("Could not update practice state:", error);
-    return NextResponse.json({ error: "Could not save practice state" }, { status: 500 });
+    return localizedJson(request, { error: "Could not save practice state" }, { status: 500 });
   }
 }

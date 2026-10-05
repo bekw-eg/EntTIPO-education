@@ -63,5 +63,23 @@
     </p>
     <button class="btn" onclick="window.location.reload()">Повторить попытку</button>
   </div>
+  <script>
+    try {
+      const locale = localStorage.getItem('ent_tipo_locale');
+      if (locale === 'kk') {
+        document.documentElement.lang = 'kk';
+        document.title = 'Желісіз режим — ENT TIPO';
+        document.querySelector('h1').textContent = 'Желіге қосылу жоқ';
+        document.querySelector('p').textContent = 'Жаттығуды жалғастырып, аккаунт деректерін жүктеу үшін интернетке қосылыңыз.';
+        document.querySelector('button').textContent = 'Қайталап көру';
+      } else if (locale === 'en') {
+        document.documentElement.lang = 'en';
+        document.title = 'Offline — ENT TIPO';
+        document.querySelector('h1').textContent = 'No network connection';
+        document.querySelector('p').textContent = 'Connect to the internet to continue your practice and load your account data.';
+        document.querySelector('button').textContent = 'Try again';
+      }
+    } catch { /* Offline recovery also works with blocked local storage. */ }
+  </script>
 </body>
 </html>

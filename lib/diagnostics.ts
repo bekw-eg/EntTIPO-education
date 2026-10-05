@@ -10,6 +10,7 @@ import { calculateSkillProgress, skillOutcomes } from "./skillMastery";
 import { stepAnswerSchema } from "./validators";
 import { validateExpression, validateNumber } from "../services/sympy";
 import type { StepResult } from "../types";
+import { missingQuestionTranslations } from './i18n/content';
 
 export const diagnosticSubmissionSchema = z.object({
   submissionId: z.string().uuid(), questionId: z.string(), revision: z.number().int().nonnegative(),
@@ -27,14 +28,14 @@ export async function readDiagnosticSnapshot(tx: Prisma.TransactionClient, sessi
   return { id: session.id, status: session.status, questionIds: session.questionIds, currentIndex: session.currentIndex,
     totalCount: session.questionIds.length, completedCount: answers.length, revision: session.revision,
     draftAnswers: session.draftAnswers, startedAt: session.startedAt, completedAt: session.completedAt,
-    question: question ? { ...publicPracticeQuestion(question), steps: question.steps.map(({ hint: _hint, ...step }) => ({ ...step, hasHint: false })) } : null,
+    question: question ? { ...publicPracticeQuestion(question), steps: question.steps.map(({ hint: _hint, hintKk: _hintKk, ...step }) => ({ ...step, hasHint: false })) } : null,
     // Submitted answers are recoverable, but correctness and answer keys stay private until completion.
     answers: answers.map((a) => ({ questionId: a.questionId, stepAnswers: (a.stepResults as unknown as StepResult[]).map((s) => ({ stepId: s.stepId, answer: s.userAnswer })) })),
     result: session.status === "completed" ? session.result : null,
   };
 }
 
-export async function startDiagnostic(userId: string, restartFromId?: string) {
+export async function startDiagnostic(userId: string, restartFromId?: string, language: 'ru' | 'kk' = 'ru') {
   return prisma.$transaction(async (tx) => {
     await lockAccount(tx, userId);
     if (restartFromId) {
@@ -48,6 +49,11 @@ export async function startDiagnostic(userId: string, restartFromId?: string) {
     if (existing && (!restartFromId || existing.status === "active")) return readDiagnosticSnapshot(tx, existing.id, userId);
     const count = await tx.question.count({ where: { id: { in: DIAGNOSTIC_QUESTION_IDS }, purpose: "diagnostic" } });
     if (count !== DIAGNOSTIC_QUESTION_IDS.length) throw new PracticeError("Diagnostic bank is unavailable; apply the skill data upgrade", 503);
+    if (language === 'kk') {
+      const bank = await tx.question.findMany({ where: { id: { in: DIAGNOSTIC_QUESTION_IDS } },
+        include: { steps: { include: { options: true }, orderBy: { order: 'asc' } } } });
+      if (bank.some((q) => missingQuestionTranslations(q).length)) throw new PracticeError('Diagnostic Kazakh translations are incomplete', 503);
+    }
     const session = await tx.diagnosticSession.create({ data: { userId, questionIds: DIAGNOSTIC_QUESTION_IDS, restartFromId } });
     return readDiagnosticSnapshot(tx, session.id, userId);
   }, { maxWait: 10000, timeout: 10000 });

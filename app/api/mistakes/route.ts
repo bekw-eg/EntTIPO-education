@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { readUserSkills } from "@/lib/skillProgress";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     await assertNoActiveExam(prisma, userId);
     const { searchParams } = new URL(request.url);
 
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
         question: {
           include: {
             topic: true,
-            steps: { orderBy: { order: "asc" } },
+            steps: { orderBy: { order: "asc" }, include: { options: { orderBy: { order: 'asc' } } } },
           },
         },
         attempt: {
@@ -83,6 +84,7 @@ export async function GET(request: NextRequest) {
         count: number;
         lastMistakeAt: Date;
         lastQuestionTitle: string;
+        lastQuestionTitleKk: string | null;
         lastExplanation?: string | null;
         masteryScore: number | null;
       }
@@ -107,6 +109,7 @@ export async function GET(request: NextRequest) {
           count: 1,
           lastMistakeAt: m.createdAt,
           lastQuestionTitle: m.question?.title || "Задание",
+          lastQuestionTitleKk: m.question?.titleKk ?? null,
           lastExplanation: m.explanation || m.description,
           masteryScore: skill.state === "insufficient" ? null : skill.masteryScore,
         });
@@ -117,7 +120,7 @@ export async function GET(request: NextRequest) {
       (a, b) => b.count - a.count
     );
 
-    return NextResponse.json({
+    return localizedJson(request, {
       mistakes: mistakes.map((m) => ({ ...m, nextReviewDay: reviews.find((r) => r.skillId === m.skillId)?.dueDay ?? null,
         reviewDue: !!m.skillId && dueSkillIds.includes(m.skillId) })),
       weakSkills,
@@ -129,8 +132,8 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof PracticeError) return localizedJson(request, { error: error.message }, { status: error.status });
     console.error("Error in GET /api/mistakes:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return localizedJson(request, { error: "Internal server error" }, { status: 500 });
   }
 }

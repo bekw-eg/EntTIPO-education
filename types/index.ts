@@ -57,6 +57,7 @@ export interface QuestionOption {
   id: string;
   stepId: string;
   text: string;
+  textKk?: string | null;
   isCorrect: boolean;
   order: number;
 }
@@ -70,6 +71,7 @@ export interface QuestionStep {
   promptKk?: string | null;
   expectedAnswer: string;
   hint: string | null;
+  hintKk?: string | null;
   options: QuestionOption[];
 }
 
@@ -86,6 +88,7 @@ export interface Question {
   correctAnswer: string;
   answerType: AnswerType;
   explanation: string;
+  explanationKk?: string | null;
   createdAt: Date;
   topic: Topic;
   subtopic: Subtopic | null;
@@ -369,6 +372,7 @@ export interface AttemptResult {
   score: number;
   stepResults: StepResult[];
   explanation: string;
+  explanationKk?: string | null;
   correctAnswer?: string;
   errorType?: ErrorType;
   usedHint: boolean;

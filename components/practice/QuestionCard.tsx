@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { PracticeQuestion, AiAction } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { contentText } from '@/lib/i18n/content';
+import { MathText } from '@/components/ui/MathText';
 import { GeometryViewer, GeometryConfig } from "@/components/ui/GeometryViewer";
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 import { toast } from "sonner";
@@ -188,12 +190,12 @@ export default function QuestionCard({
         {/* Question Title & Text */}
         <div className="space-y-3">
           <h2 className="text-lg sm:text-xl font-bold tracking-tight">
-            {locale === "kk" ? question.titleKk ?? question.title : question.title}
+            {contentText(question.title, question.titleKk, locale)}
           </h2>
           {question.questionText && (
-            <p className="text-sm sm:text-base text-foreground/90 whitespace-pre-line">
-              {locale === "kk" ? question.questionTextKk ?? question.questionText : question.questionText}
-            </p>
+              <div className="text-sm sm:text-base text-foreground/90 whitespace-pre-line">
+                <MathText content={contentText(question.questionText, question.questionTextKk, locale).replace(/\[GEOMETRY:[\s\S]*?\]/g, '')} />
+              </div>
           )}
 
           {/* Interactive Geometric Drawing (if present) */}
@@ -246,7 +248,7 @@ export default function QuestionCard({
                       <span className="text-primary font-bold mr-2">
                         {t.session.step} {idx + 1}:
                       </span>
-                      {locale === "kk" ? step.promptKk ?? step.prompt : step.prompt}
+                      {contentText(step.prompt, step.promptKk, locale)}
                     </p>
                     {currentVal && (
                       <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-1" />
@@ -256,7 +258,7 @@ export default function QuestionCard({
                   {revealedHints[step.id] ? (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 p-2 rounded-lg">
                       <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      <span>{revealedHints[step.id]}</span>
+                      <span>{contentText(revealedHints[step.id], step.hintKk, locale)}</span>
                     </div>
                   ) : step.hasHint && !assistanceDisabled ? (
                     <Button type="button" variant="ghost" size="sm"
@@ -288,7 +290,7 @@ export default function QuestionCard({
                             <span className="font-mono text-xs opacity-60 mr-2">
                               {String.fromCharCode(65 + opt.order)}.
                             </span>
-                            {opt.text}
+                            {contentText(opt.text, opt.textKk, locale)}
                           </button>
                         );
                       })}

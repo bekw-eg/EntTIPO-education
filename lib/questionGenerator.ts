@@ -5,9 +5,11 @@
  */
 
 import { PRACTICE_EXERCISES, SkillId } from "./skillCatalog";
+import { withKazakhContent } from './i18n/content';
 
 export interface GeneratedStepOption {
   text: string;
+  textKk?: string | null;
   isCorrect: boolean;
   order: number;
 }
@@ -16,8 +18,10 @@ export interface GeneratedStep {
   order: number;
   type: "multiple_choice" | "numeric_input" | "expression_input";
   prompt: string;
+  promptKk?: string | null;
   expectedAnswer: string;
   hint: string;
+  hintKk?: string | null;
   options: GeneratedStepOption[];
   skillIds?: string[];
 }
@@ -29,12 +33,16 @@ export interface GeneratedQuestion {
   weakSkill?: string;
   skillIds?: string[];
   title: string;
+  titleKk?: string | null;
   questionText: string;
+  questionTextKk?: string | null;
   latex?: string;
   difficulty: number;
   correctAnswer: string;
   answerType: "multiple_choice" | "number" | "expression";
   explanation: string;
+  explanationKk?: string | null;
+  localizationSource?: string;
   steps: GeneratedStep[];
 }
 
@@ -56,7 +64,7 @@ export function generateRootsAndPowers(index = 1): GeneratedQuestion {
   const power = m + n;
   const result = Math.pow(a, power);
 
-  return {
+  return withKazakhContent({
     topicId: "t1",
     skillTag: "roots_and_powers",
     skillIds: ["power_properties"],
@@ -100,7 +108,7 @@ export function generateRootsAndPowers(index = 1): GeneratedQuestion {
         options: [],
       },
     ],
-  };
+  });
 }
 
 // 2. Многочлены
@@ -109,7 +117,7 @@ export function generatePolynomials(index = 1): GeneratedQuestion {
   const b = p * 2;
   const c = p * p;
 
-  return {
+  return withKazakhContent({
     topicId: "t2",
     skillTag: "polynomials_expansion",
     weakSkill: "формулы_сокращенного_умножения",
@@ -151,7 +159,7 @@ export function generatePolynomials(index = 1): GeneratedQuestion {
         options: [],
       },
     ],
-  };
+  });
 }
 
 // 3. Комплексные числа
@@ -163,7 +171,7 @@ export function generateComplexNumbers(index = 1): GeneratedQuestion {
   const sumRe = re1 + re2;
   const sumIm = im1 + im2;
 
-  return {
+  return withKazakhContent({
     topicId: "t3",
     skillTag: "complex_numbers",
     weakSkill: "комплексные_числа",
@@ -205,7 +213,7 @@ export function generateComplexNumbers(index = 1): GeneratedQuestion {
         ],
       },
     ],
-  };
+  });
 }
 
 // 4. Производная
@@ -217,7 +225,7 @@ export function generateDerivative(index = 1): GeneratedQuestion {
 
   const expectedStr = newN === 1 ? `${newK}*x` : `${newK}*x^${newN}`;
 
-  return {
+  return withKazakhContent({
     topicId: "t4",
     skillTag: "power_rule_derivative",
     weakSkill: "вычисление_производной",
@@ -259,7 +267,7 @@ export function generateDerivative(index = 1): GeneratedQuestion {
         options: [],
       },
     ],
-  };
+  });
 }
 
 // 5. Касательная к графику
@@ -274,7 +282,7 @@ export function generateTangent(index = 1): GeneratedQuestion {
   const slope = 2 * a * x0;
   const intercept = fx0 - slope * x0;
 
-  return {
+  return withKazakhContent({
     topicId: "t5",
     skillTag: "tangent_equation",
     weakSkill: "уравнение_касательной",
@@ -316,7 +324,7 @@ export function generateTangent(index = 1): GeneratedQuestion {
         ],
       },
     ],
-  };
+  });
 }
 
 // 7. Интегралы
@@ -328,7 +336,7 @@ export function generateIntegrals(index = 1): GeneratedQuestion {
   const isEven = num % 2 === 0;
   const resStr = isEven ? `${num / 2}` : `${num}/2`;
 
-  return {
+  return withKazakhContent({
     topicId: "t7",
     skillTag: "definite_integrals",
     weakSkill: "вычисление_интегралов",
@@ -362,7 +370,7 @@ export function generateIntegrals(index = 1): GeneratedQuestion {
         options: [],
       },
     ],
-  };
+  });
 }
 
 // 9. Логарифмы
@@ -371,7 +379,7 @@ export function generateLogarithms(index = 1): GeneratedQuestion {
   const power = randInt(2, 4);
   const arg = Math.pow(base, power);
 
-  return {
+  return withKazakhContent({
     topicId: "t9",
     skillTag: "logarithm_properties",
     weakSkill: "свойства_логарифмов",
@@ -405,7 +413,7 @@ export function generateLogarithms(index = 1): GeneratedQuestion {
         ],
       },
     ],
-  };
+  });
 }
 
 // 11. Тригонометрия
@@ -418,7 +426,7 @@ export function generateTrigonometry(index = 1): GeneratedQuestion {
   ];
   const item = pickRandom(angles);
 
-  return {
+  return withKazakhContent({
     topicId: "t11",
     skillTag: "trigonometry_values",
     weakSkill: "тригонометрические_функции",
@@ -452,7 +460,7 @@ export function generateTrigonometry(index = 1): GeneratedQuestion {
         ],
       },
     ],
-  };
+  });
 }
 
 // 14. ДУ второго порядка
@@ -462,7 +470,7 @@ export function generateDiffEq2(index = 1): GeneratedQuestion {
   const p = -(k1 + k2);
   const q = k1 * k2;
 
-  return {
+  return withKazakhContent({
     topicId: "t14",
     skillTag: "second_order_diffeq",
     weakSkill: "дифференциальные_уравнения",
@@ -501,7 +509,7 @@ export function generateDiffEq2(index = 1): GeneratedQuestion {
         ],
       },
     ],
-  };
+  });
 }
 
 // 16. Стереометрия (с геометрическим чертежом)
@@ -519,7 +527,7 @@ export function generateStereometry(index = 1): GeneratedQuestion {
     highlightPart: "height",
   };
 
-  return {
+  return withKazakhContent({
     topicId: "exam_volumes",
     skillTag: "stereometry_volume",
     weakSkill: "стереометрия_объемы",
@@ -561,7 +569,7 @@ export function generateStereometry(index = 1): GeneratedQuestion {
         options: [],
       },
     ],
-  };
+  });
 }
 
 /**
@@ -643,11 +651,11 @@ export function generateQuestionForSkill(
 function generateCatalogPractice(skillId: SkillId, index: number): GeneratedQuestion {
   const pool = PRACTICE_EXERCISES.filter((q) => q.steps.every((s) => s.skillIds.includes(skillId)));
   const q = pool[Math.abs(index) % pool.length];
-  return { topicId: q.topicId, skillTag: skillId, skillIds: [skillId], weakSkill: q.title,
+  return withKazakhContent({ topicId: q.topicId, skillTag: skillId, skillIds: [skillId], weakSkill: q.title,
     title: q.title, questionText: q.questionText, explanation: q.explanation, difficulty: q.difficulty,
     correctAnswer: q.steps.at(-1)!.expectedAnswer, answerType: "expression",
     steps: q.steps.map((s, i) => ({ order: i + 1, type: "expression_input", prompt: s.prompt,
-      expectedAnswer: s.expectedAnswer, hint: s.hint, options: [], skillIds: s.skillIds })) };
+      expectedAnswer: s.expectedAnswer, hint: s.hint, options: [], skillIds: s.skillIds })) });
 }
 
 /**

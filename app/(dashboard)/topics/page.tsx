@@ -22,6 +22,7 @@ export default async function TopicsPage() {
     id: t.id,
     name: t.name,
     description: t.description,
+    descriptionKk: t.descriptionKk,
     difficulty: t.difficulty,
     order: t.order,
     masteryScore: t.progress[0]?.masteryScore ?? 0,

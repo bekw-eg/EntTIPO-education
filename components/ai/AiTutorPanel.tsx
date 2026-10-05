@@ -29,6 +29,7 @@ import { MathDisplay } from "@/components/ui/MathDisplay";
 import { AiMessageRenderer } from "./AiMessageRenderer";
 import { Question, PracticeQuestion, AiAction, AiErrorAnalysis, AiSimilarQuestion } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { errorText } from '@/lib/i18n/messages';
 import { toast } from "sonner";
 
 export interface AiTutorPanelProps {
@@ -146,7 +147,7 @@ export function AiTutorPanel({
   formulaLatex,
   formulaName,
 }: AiTutorPanelProps) {
-  const { t, locale } = useLanguage();
+  const { t, locale, getTopicName } = useLanguage();
   const { user } = useAccount();
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [historyKey, setHistoryKey] = useState<string | null>(null);
@@ -168,9 +169,9 @@ export function AiTutorPanel({
 
   // History belongs to an account, even when two students solve the same question.
   const storageKey = !user ? null : question?.id
-    ? `enttipo_ai_user_${user.id}_q_${question.id}`
+    ? `enttipo_ai_user_${user.id}_q_${question.id}_${locale}`
     : topicId
-    ? `enttipo_ai_user_${user.id}_topic_${topicId}`
+    ? `enttipo_ai_user_${user.id}_topic_${topicId}_${locale}`
     : null;
   const contextKey = `${storageKey}:${sessionId || ""}`;
   const currentContext = useRef(contextKey);
@@ -218,7 +219,8 @@ export function AiTutorPanel({
       let cachedHistory: { messages?: MessageItem[]; currentHintLevel?: number } | null = null;
       if (storageKey && typeof window !== "undefined") {
         try {
-          const cached = localStorage.getItem(storageKey);
+          // Preserve the old untagged dialog in RU; never import it into a KK conversation.
+          const cached = localStorage.getItem(storageKey) ?? (locale === 'ru' ? localStorage.getItem(storageKey.replace(/_ru$/, '')) : null);
           if (cached) cachedHistory = JSON.parse(cached);
         } catch (err) {
           // Blocked storage must not prevent the tutor from making a fresh request.
@@ -298,6 +300,7 @@ export function AiTutorPanel({
     if (storageKey && typeof window !== "undefined") {
       try {
         localStorage.removeItem(storageKey);
+        if (locale === 'ru') localStorage.removeItem(storageKey.replace(/_ru$/, ''));
       } catch (err) {
         console.warn("Failed to clear AI dialog history:", err);
       }
@@ -310,7 +313,7 @@ export function AiTutorPanel({
   // Text to speech toggling
   const handleToggleSpeech = (messageId: string, rawText: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      toast.error("Text-to-speech is not supported in this browser");
+      toast.error(locale === 'kk' ? 'Бұл браузер мәтінді дыбыстауды қолдамайды.' : 'Этот браузер не поддерживает озвучивание текста.');
       return;
     }
 
@@ -391,7 +394,7 @@ export function AiTutorPanel({
       console.warn("Speech recognition error:", event.error);
       setIsListening(false);
       if (event.error === "not-allowed") {
-        toast.error("Доступ к микрофону заблокирован");
+        toast.error(locale === 'kk' ? 'Микрофонға қолжетімділік бұғатталған.' : 'Доступ к микрофону заблокирован');
       }
     };
 
@@ -487,13 +490,13 @@ export function AiTutorPanel({
     } catch (err: any) {
       if (currentContext.current !== contextKey) return;
       console.error("AI Tutor action error:", err);
-      toast.error(err.message || t.ai.loading);
+      toast.error(errorText(err.message, locale));
       setMessages((prev) => [
         ...prev,
         {
           id: `err-${Date.now()}`,
           role: "ai",
-          text: err.message || t.ai.loading,
+          text: errorText(err.message, locale),
         },
       ]);
     } finally {
@@ -541,7 +544,7 @@ export function AiTutorPanel({
               {t.ai.tutorTitle}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {question?.topic?.name || t.ai.tutorSubtitle}
+              {question?.topic?.name ? getTopicName(question.topic.name) : t.ai.tutorSubtitle}
             </p>
           </div>
         </div>
@@ -673,7 +676,7 @@ export function AiTutorPanel({
             <div className="space-y-1">
               <h4 className="font-semibold text-sm">{t.ai.tutorTitle}</h4>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
-                {t.ai.tutorSubtitle}. Выберите быстрое действие сверху или задайте вопрос голосом или текстом ниже.
+                {t.ai.tutorSubtitle}. {locale === 'kk' ? 'Жоғарыдағы әрекетті таңдаңыз немесе төменде дауыспен не мәтінмен сұрақ қойыңыз.' : locale === 'en' ? 'Choose an action above or ask a question below using voice or text.' : 'Выберите быстрое действие сверху или задайте вопрос голосом или текстом ниже.'}
               </p>
             </div>
           </div>
@@ -795,8 +798,8 @@ export function AiTutorPanel({
                     <div className="pt-2 border-t flex flex-wrap items-center justify-between gap-2">
                       <p className="text-[11px] text-muted-foreground">
                         {m.hintLevel === 1
-                          ? "Нужно больше конкретики?"
-                          : "Всё ещё сложно?"}
+                          ? (locale === 'kk' ? 'Нақтырақ түсіндіру керек пе?' : locale === 'en' ? 'Need more detail?' : "Нужно больше конкретики?")
+                          : (locale === 'kk' ? 'Әлі де қиын ба?' : locale === 'en' ? 'Still difficult?' : "Всё ещё сложно?")}
                       </p>
                       <div className="flex items-center gap-1.5">
                         {m.hintLevel === 1 && (

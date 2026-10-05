@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { localizedJson } from "@/lib/i18n/http";
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserId, unauthorizedResponse } from '@/lib/user'
 
@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   try {
     const userId = getCurrentUserId(request)
-    if (!userId) return unauthorizedResponse()
+    if (!userId) return unauthorizedResponse(request)
     const topics = await prisma.topic.findMany({
       include: {
         progress: {
@@ -23,9 +23,9 @@ export async function GET(request: Request) {
       currentLevel: topic.progress[0]?.currentLevel ?? 1,
     }))
 
-    return NextResponse.json(progressData)
+    return localizedJson(request, progressData)
   } catch (error) {
     console.error('Error in GET /api/progress:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return localizedJson(request, { error: 'Internal server error' }, { status: 500 })
   }
 }

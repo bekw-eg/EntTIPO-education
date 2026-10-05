@@ -54,7 +54,8 @@ async function main() {
   assert.equal(paper.find((q) => q.id === practiceQuestion.id)!.previouslyExposed, true);
   // Owner scope for every read and mutation.
   for (const [method, body, route] of [["GET", undefined, path], ["PATCH", { requestId: randomUUID(), revision: 0, currentIndex: 0, answers: {}, flaggedQuestionIds: [] }, path], ["POST", {}, `${path}/finish`]] as const) assert.equal((await api(route, b.cookie, method, body)).status, 404);
-  assert.equal((await api("/api/exams", a.cookie, "POST", { ...settings(), language: "kk" })).status, 400);
+  assert.equal((await api("/api/exams", a.cookie, "POST", { ...settings(), language: "kk" })).data.id, id, 'Changing the requested language resumes the existing paper');
+  assert.equal((await api("/api/exams", a.cookie, "POST", { ...settings(), language: "en" })).status, 400);
   assert.equal((await api("/api/exams", a.cookie, "POST", { ...settings(), profileVersion: "wrong" })).status, 404);
   const firstQuestion = paper[0];
   const save = { requestId: randomUUID(), revision: state.revision, currentIndex: 3, answers: { [firstQuestion.id]: firstQuestion.correctIndex }, flaggedQuestionIds: [firstQuestion.id, paper[3].id] };

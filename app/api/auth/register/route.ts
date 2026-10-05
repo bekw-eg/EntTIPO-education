@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword, createSessionToken, AUTH_COOKIE_NAME } from "@/lib/auth";
 import { z } from "zod";
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = registrationSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
+      return localizedJson(req,
         { error: "Введите имя, корректный email и пароль от 4 до 128 символов" },
         { status: 400 }
       );
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (existing) {
-      return NextResponse.json(
+      return localizedJson(req,
         { error: "Пользователь с таким email уже зарегистрирован" },
         { status: 409 }
       );
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
     // Create session token
     const token = createSessionToken(newUser.id);
 
-    const res = NextResponse.json({
+    const res = localizedJson(req, {
       success: true,
       user: {
         id: newUser.id,
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
     return res;
   } catch (err: any) {
     console.error("Register error:", err);
-    return NextResponse.json(
+    return localizedJson(req,
       { error: "Ошибка сервера при регистрации" },
       { status: 500 }
     );

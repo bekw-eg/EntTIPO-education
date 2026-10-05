@@ -9,11 +9,13 @@ import { BookOpen, Zap, CheckCircle2 } from "lucide-react";
 import { getMasteryBadgeColor } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { getLocalizedLesson } from "@/lib/i18n/lessons";
+import { contentText } from '@/lib/i18n/content';
 
 interface TopicItem {
   id: string;
   name: string;
   description: string;
+  descriptionKk?: string | null;
   difficulty: number;
   order: number;
   masteryScore: number;
@@ -104,7 +106,7 @@ export function TopicsView({ topics }: TopicsViewProps) {
 
             const localized = getLocalizedLesson(topic.id, locale);
             const translatedName = localized?.title || getTopicName(topic.name);
-            const translatedDesc = localized?.description || topic.description;
+            const translatedDesc = localized?.description || contentText(topic.description, topic.descriptionKk, locale);
 
             return (
               <Card

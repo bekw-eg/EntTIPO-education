@@ -21,6 +21,7 @@ import {
 import { getMasteryBadgeColor, AiAction } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { getLocalizedLesson } from "@/lib/i18n/lessons";
+import { contentText } from '@/lib/i18n/content';
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 
 interface TopicDetailViewProps {
@@ -31,17 +32,17 @@ interface TopicDetailViewProps {
 export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
   const { t, locale, getTopicName, getMasteryLabel } = useLanguage();
 
-  const localized = getLocalizedLesson(topic.id, locale);
+  const localized = locale === 'kk' && topic.lesson?.contentKk ? topic.lesson.contentKk : getLocalizedLesson(topic.id, locale);
   const lesson = topic.lesson;
 
   const translatedName = localized?.title || getTopicName(topic.name);
-  const description = localized?.description || topic.description;
-  const whatIsIt = localized?.whatIsIt || lesson?.whatIsIt;
-  const whenUsed = localized?.whenUsed || lesson?.whenUsed;
+  const description = localized?.description || contentText(topic.description, topic.descriptionKk, locale);
+  const whatIsIt = localized?.whatIsIt || (lesson?.whatIsIt && contentText(lesson.whatIsIt, null, locale));
+  const whenUsed = localized?.whenUsed || (lesson?.whenUsed && contentText(lesson.whenUsed, null, locale));
   const formulaLatex = localized?.formulaLatex || lesson?.formulaLatex;
   const formula = localized?.formula || lesson?.formula;
-  const example = localized?.example || lesson?.example;
-  const commonErrors = localized?.commonErrors || lesson?.commonErrors;
+  const example = localized?.example || (lesson?.example && contentText(lesson.example, null, locale));
+  const commonErrors = localized?.commonErrors || (lesson?.commonErrors && contentText(lesson.commonErrors, null, locale));
 
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [selectedFormula, setSelectedFormula] = useState<string | undefined>(undefined);
@@ -224,7 +225,7 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
                       </span>
                     </div>
 
-                    <p className="text-sm font-medium">{q.title}</p>
+                    <p className="text-sm font-medium">{contentText(q.title, q.titleKk, locale)}</p>
 
                     {q.latex && (
                       <div className="py-2 px-3 bg-muted/30 rounded-lg text-center overflow-x-auto text-sm border">

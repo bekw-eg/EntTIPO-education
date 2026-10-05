@@ -7,6 +7,8 @@ interface GeminiMessage {
   role: "user" | "model";
   parts: Array<{ text: string }>;
 }
+import { assertTutorLanguage } from './language';
+import type { Locale } from '../i18n/types';
 
 interface GeminiContentRequest {
   systemInstruction?: {
@@ -63,6 +65,7 @@ export async function callGemini(
     jsonMode?: boolean;
     timeoutMs?: number;
     model?: string;
+    language?: Locale;
   }
 ): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -132,6 +135,7 @@ export async function callGemini(
           throw new Error("Empty response from Gemini API");
         }
 
+        assertTutorLanguage(text, options?.language);
         return text;
       } catch (error: any) {
         clearTimeout(timeoutId);

@@ -3,8 +3,9 @@ import { questionFingerprint, examFormat } from "./fingerprint";
 import { assessExamReadiness, type ExamCandidate } from "./readiness";
 import { validateExamProfile, type ExamProfile, type MatchQuality } from "./profile";
 import type { BankQuestion, ContentReview } from "./types";
+import { missingQuestionTranslations } from '../i18n/content';
 
-export function auditCoverage(profile: ExamProfile, bank: BankQuestion[], reviews: ContentReview[] = CONTENT_REVIEWS) {
+export function auditCoverage(profile: ExamProfile, bank: BankQuestion[], reviews: ContentReview[] = CONTENT_REVIEWS, language: 'ru' | 'kk' = 'ru') {
   validateExamProfile(profile);
   validateReviewReferences(reviews);
   if (new Set(bank.map((q) => q.id)).size !== bank.length) throw new Error("Duplicate question IDs in bank snapshot");
@@ -20,14 +21,15 @@ export function auditCoverage(profile: ExamProfile, bank: BankQuestion[], review
     const quality: MatchQuality = r?.quality ?? "needs_review";
     const format = examFormat(q);
     const missingSkills = (r?.skillIds ?? []).filter((s) => !q.skills.some((link) => link.skillId === s));
-    const eligible = quality === "direct" && format === profile.official.format && !!r?.band &&
+    const missingTranslations = language === 'kk' ? missingQuestionTranslations(q) : [];
+    const eligible = missingTranslations.length === 0 && quality === "direct" && format === profile.official.format && !!r?.band &&
       q.purpose === "practice" && missingSkills.length === 0;
     if (eligible) candidates.push({ id: q.id, contentHash: hash, pointCode: r!.pointCode!, band: r!.band!, family: r!.family });
-    return { id: q.id, title: q.title, questionText: q.questionText, latex: q.latex, topicId: q.topicId, pointCode: r?.pointCode ?? known?.pointCode ?? null,
+    return { id: q.id, title: q.title, titleKk: q.titleKk, questionText: q.questionText, questionTextKk: q.questionTextKk, latex: q.latex, topicId: q.topicId, pointCode: r?.pointCode ?? known?.pointCode ?? null,
       quality, rationale: r?.rationale ?? (stale ? "Содержание изменилось после проверки; требуется новая проверка." : "Нет проверки текущего содержания для этого профиля."),
       format, band: r?.band ?? null, platformDifficulty: q.difficulty, family: r?.family ?? null, contentHash: hash,
       reviewedAt: r?.reviewedAt ?? null,
-      skillIds: q.skills.map((s) => s.skillId), missingSkills, eligible,
+      skillIds: q.skills.map((s) => s.skillId), missingSkills, missingTranslations, eligible,
       topicMismatch: !!r?.pointCode && q.topicId !== profile.points.find((p) => p.code === r.pointCode)?.topicId };
   });
   const points = profile.points.map((point) => {

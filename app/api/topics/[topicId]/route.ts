@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 
@@ -10,7 +11,7 @@ export async function GET(
 ) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     const { topicId } = await context.params;
 
     const topic = await prisma.topic.findUnique({
@@ -26,7 +27,7 @@ export async function GET(
     });
 
     if (!topic) {
-      return NextResponse.json({ error: "Topic not found" }, { status: 404 });
+      return localizedJson(request, { error: "Topic not found" }, { status: 404 });
     }
 
     const topicWithProgress = {
@@ -35,9 +36,9 @@ export async function GET(
       currentLevel: topic.progress[0]?.currentLevel ?? 1,
     };
 
-    return NextResponse.json(topicWithProgress);
+    return localizedJson(request, topicWithProgress);
   } catch (error) {
     console.error("Error in GET /api/topics/[topicId]:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return localizedJson(request, { error: "Internal server error" }, { status: 500 });
   }
 }

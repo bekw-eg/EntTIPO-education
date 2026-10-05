@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { PracticeError, lockAccount } from "@/lib/practiceStorage";
@@ -13,18 +14,18 @@ export async function GET(
 ) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     const { sessionId } = await context.params;
 
     const snapshot = await prisma.$transaction(async (tx) => {
       await lockAccount(tx, userId);
       return readPracticeSnapshot(tx, sessionId, userId);
     }, { maxWait: 10000, timeout: 10000 });
-    return NextResponse.json(snapshot);
+    return localizedJson(request, snapshot);
   } catch (error) {
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof PracticeError) return localizedJson(request, { error: error.message }, { status: error.status });
     console.error("Error in GET /api/sessions/[sessionId]:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return localizedJson(request, { error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -34,7 +35,7 @@ export async function PATCH(
 ) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     const { sessionId } = await context.params;
 
     const session = await prisma.$transaction(async (tx) => {
@@ -54,10 +55,10 @@ export async function PATCH(
       return { ...saved, ...stats };
     }, { maxWait: 10000, timeout: 10000 });
 
-    return NextResponse.json(session);
+    return localizedJson(request, session);
   } catch (error) {
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof PracticeError) return localizedJson(request, { error: error.message }, { status: error.status });
     console.error("Error in PATCH /api/sessions/[sessionId]:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return localizedJson(request, { error: "Internal server error" }, { status: 500 });
   }
 }

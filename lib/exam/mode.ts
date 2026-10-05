@@ -4,7 +4,7 @@ import type { DifficultyBand, ExamProfile } from "./profile";
 // No official mathematics-only deadline exists in 6.1. These are explicitly learning settings.
 export const TRAINING_DURATIONS = [30, 40, 120] as const;
 export const startExamSchema = z.object({ requestId: z.string().uuid(), profileId: z.string(),
-  profileVersion: z.string(), language: z.literal("ru"), durationMinutes: z.union([z.literal(30), z.literal(40), z.literal(120)]) }).strict();
+  profileVersion: z.string(), language: z.enum(['ru', 'kk']), durationMinutes: z.union([z.literal(30), z.literal(40), z.literal(120)]) }).strict();
 export const saveExamSchema = z.object({ requestId: z.string().uuid(), revision: z.number().int().nonnegative(),
   currentIndex: z.number().int().nonnegative(), answers: z.record(z.number().int().min(0).max(3)).refine((v) => Object.keys(v).length <= 20),
   flaggedQuestionIds: z.array(z.string()).max(20).refine((v) => new Set(v).size === v.length) }).strict();

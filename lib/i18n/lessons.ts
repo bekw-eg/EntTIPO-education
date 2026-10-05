@@ -27,11 +27,11 @@ export const topicLessons: Record<string, Record<Locale, LessonContent>> = {
       title: "Түбірлер мен дәрежелер",
       description: "Рационал көрсеткішті дәрежелер мен арифметикалық түбірлердің қасиеттері.",
       whatIsIt: "Дәреже — санның өзіне-өзі бірнеше рет көбейтілуін көрсетеді. Теріс емес a санынан алынған n-ші дәрежелі арифметикалық түбір — n-ші дәрежесі a-ға тең теріс емес сан.",
-      whenUsed: "ҰБТ-да өрнектерді ықшамдау, анықталу облысын (ММБ) табу және иррационал теңдеулерді шешу тапсырмаларында қолданылады.",
+      whenUsed: "ҰБТ-да өрнектерді ықшамдау, анықталу облысын (ММЖ) табу және иррационал теңдеулерді шешу тапсырмаларында қолданылады.",
       formulaLatex: "a^n \\cdot a^m = a^{n+m}, \\quad a^{\\frac{1}{n}} = \\sqrt[n]{a}, \\quad (a^n)^m = a^{n \\cdot m}",
       formula: "a^n * a^m = a^(n+m), a^(1/n) = sqrt[n](a)",
       example: "2^3 = 8\n\\sqrt{9} = 3\n27^{2/3} = (\\sqrt[3]{27})^2 = 3^2 = 9",
-      commonErrors: "1. Көрсеткіштерді көбейту мен қосуды шатастыру: (a^n)^m = a^{n·m}, бірақ a^{n+m} емес.\n2. Жұп дәрежелі түбір астындағы өрнектің теріс болмау шартын (ММБ) ұмытып кету."
+      commonErrors: "1. Көрсеткіштерді көбейту мен қосуды шатастыру: (a^n)^m = a^{n·m}, бірақ a^{n+m} емес.\n2. Жұп дәрежелі түбір астындағы өрнектің теріс болмау шартын (ММЖ) ұмытып кету."
     },
     en: {
       title: "Roots and Powers",
@@ -295,7 +295,7 @@ export const topicLessons: Record<string, Record<Locale, LessonContent>> = {
       formulaLatex: "\\log_a(x \\cdot y) = \\log_a(x) + \\log_a(y), \\quad \\log_a\\left(\\frac{x}{y}\\right) = \\log_a(x) - \\log_a(y), \\quad \\log_a(x^p) = p \\log_a(x)",
       formula: "log_a(b) = c <=> a^c = b, log_a(x*y) = log_a(x) + log_a(y)",
       example: "\\log_2(32) = 5 \\quad (\\text{себебі } 2^5 = 32)\n\\log_3(x+2) = 2 \\implies x+2 = 3^2 = 9 \\implies x = 7",
-      commonErrors: "1. ММБ-ны (анықталу облысы) ұмыту: логарифм астындағы өрнек қатаң оң болуы керек (b > 0).\n2. \\log(x+y) = \\log(x) + \\log(y) деп қате қолдану (қосындының логарифмі жоқ)."
+      commonErrors: "1. ММЖ-ны (анықталу облысы) ұмыту: логарифм астындағы өрнек қатаң оң болуы керек (b > 0).\n2. \\log(x+y) = \\log(x) + \\log(y) деп қате қолдану (қосындының логарифмі жоқ)."
     },
     en: {
       title: "Logarithmic Functions",
@@ -492,7 +492,7 @@ export const topicLessons: Record<string, Record<Locale, LessonContent>> = {
       whenUsed: "Асимптоталарды табу, функцияны зерттеу, графиктерді салу және бөлшек-рационал теңсіздіктерді шешу.",
       formulaLatex: "y = \\frac{ax+b}{cx+d}, \\quad x_{\\text{асимпт}} = -\\frac{d}{c}, \\quad y_{\\text{асимпт}} = \\frac{a}{c}",
       formula: "y = (ax+b)/(cx+d), vertical: x = -d/c, horizontal: y = a/c",
-      example: "$f(x) = \\frac{x+1}{x-2}$ функциясы:\nММБ: $x \\neq 2$\nВертикаль асимптота: $x = 2$, горизонталь асимптота: $y = 1$",
+      example: "$f(x) = \\frac{x+1}{x-2}$ функциясы:\nММЖ: $x \\neq 2$\nВертикаль асимптота: $x = 2$, горизонталь асимптота: $y = 1$",
       commonErrors: "1. Бөлімнің нөлге тең болмау шартын ұмытып кету (анықталмаған нүкте).\n2. Горизонталь асимптотаны анықтағанда y = a/c қатынасын шатастыру."
     },
     en: {
@@ -510,10 +510,10 @@ export const topicLessons: Record<string, Record<Locale, LessonContent>> = {
 
 /**
  * Returns localized lesson content for a given topic ID and locale,
- * falling back to Russian if translation is missing.
+ * Kazakh content never falls back to Russian.
  */
 export function getLocalizedLesson(topicId: string, locale: Locale): LessonContent | null {
   const topicData = topicLessons[topicId];
   if (!topicData) return null;
-  return topicData[locale] || topicData.ru || null;
+  return topicData[locale] || (locale === 'kk' ? null : topicData.ru) || null;
 }

@@ -8,6 +8,7 @@ import { auditCoverage } from "./coverage";
 import { assessExamReadiness } from "./readiness";
 import { getExamProfile, type ExamProfile } from "./profile";
 import { gradeExamQuestion, publicExamQuestion, remainingSeconds, saveExamSchema, startExamSchema, type PaperQuestion } from "./mode";
+import { hasContentTranslation } from '../i18n/content';
 
 const json = (v: unknown) => JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
 const hash = (v: unknown) => createHash("sha256").update(JSON.stringify(v)).digest("hex");
@@ -27,14 +28,18 @@ async function ownedExam(tx: Prisma.TransactionClient, userId: string, id: strin
   if (!exam) throw new PracticeError("Экзамен не найден", 404);
   return exam;
 }
-export async function prepareExam(tx: Prisma.TransactionClient, profile: ExamProfile, userId: string) {
+export async function prepareExam(tx: Prisma.TransactionClient, profile: ExamProfile, userId: string, language: 'ru' | 'kk' = 'ru') {
   const bank = await tx.question.findMany({ orderBy: { id: "asc" }, include: {
     topic: true, skills: { include: { skill: true } }, steps: { orderBy: { order: "asc" }, include: { options: { orderBy: { order: "asc" } }, skills: true } },
   } });
-  const coverage = auditCoverage(profile, bank);
+  const coverage = auditCoverage(profile, bank, undefined, language);
   // Require both whole-task and actual tested-step skill mappings for mastery evidence.
-  const candidates = shuffled(coverage.questions.filter((q) => q.eligible &&
-    q.skillIds.every((s) => bank.find((b) => b.id === q.id)!.steps[0].skills.some((link) => link.skillId === s)))
+  const candidates = shuffled(coverage.questions.filter((q) => {
+    const source = bank.find(b => b.id === q.id)!;
+    return q.eligible && (language !== 'kk' || hasContentTranslation(source.topic.name, source.topic.nameKk) &&
+      source.skills.every(s => hasContentTranslation(s.skill.nameRu, s.skill.nameKk))) &&
+      q.skillIds.every(s => source.steps[0].skills.some(link => link.skillId === s));
+  })
     .map((q) => ({ id: q.id, contentHash: q.contentHash, pointCode: q.pointCode!, band: q.band!, family: q.family! })));
   const readiness = assessExamReadiness(profile, candidates, 1, true);
   const shortages = readiness.points.filter((p) => p.missingInPlan).map((p) => ({
@@ -50,11 +55,11 @@ export async function prepareExam(tx: Prisma.TransactionClient, profile: ExamPro
       tx.questionHelp.count({ where: { userId, questionId: id } }),
       tx.examSession.count({ where: { userId, status: "completed", questionIds: { has: id } } }),
     ]);
-    paper.push({ ...candidate, topicId: q.topicId, topicName: q.topic.name,
-      skillIds: q.skills.map((s) => s.skillId), skillNames: q.skills.map((s) => s.skill.nameRu),
-      title: q.title, questionText: q.questionText, latex: q.latex,
-      options: q.steps[0].options.map((o) => o.text), correctIndex: q.steps[0].options.findIndex((o) => o.isCorrect),
-      explanation: q.explanation, difficulty: q.difficulty, previouslyExposed: observations > 0 || attempts > 0 || help > 0 || previousExams > 0 });
+    paper.push({ ...candidate, topicId: q.topicId, topicName: language === 'kk' ? q.topic.nameKk! : q.topic.name,
+      skillIds: q.skills.map((s) => s.skillId), skillNames: q.skills.map((s) => language === 'kk' ? s.skill.nameKk : s.skill.nameRu),
+      title: language === 'kk' ? q.titleKk! : q.title, questionText: language === 'kk' ? q.questionTextKk! : q.questionText, latex: q.latex,
+      options: q.steps[0].options.map((o) => language === 'kk' ? o.textKk! : o.text), correctIndex: q.steps[0].options.findIndex((o) => o.isCorrect),
+      explanation: language === 'kk' ? q.explanationKk! : q.explanation, difficulty: q.difficulty, previouslyExposed: observations > 0 || attempts > 0 || help > 0 || previousExams > 0 });
   }
   return { paper, readiness, shortages };
 }
@@ -63,6 +68,7 @@ async function finalizeExam(tx: Prisma.TransactionClient, exam: ExamSession, now
   if (exam.status === "completed") return exam;
   const profile = exam.profileSnapshot as unknown as ExamProfile;
   const paper = exam.paper as unknown as PaperQuestion[], answers = exam.answers as Record<string, number>;
+  const kk = exam.language === 'kk';
   const questions = paper.map((q) => gradeExamQuestion(profile, q, answers[q.id]));
   const completedAt = reason === "timeout" ? exam.deadlineAt : now;
   const skillIds = [...new Set(paper.flatMap((q) => q.skillIds))];
@@ -90,8 +96,8 @@ async function finalizeExam(tx: Prisma.TransactionClient, exam: ExamSession, now
   }
   const gaps = questions.filter((q) => !q.isCorrect).map((q) => ({ questionId: q.id,
     pointCode: q.pointCode, title: q.title, skillIds: q.skillIds, reason: q.skipped ? "skipped" : "wrong_answer",
-    action: q.skipped ? `Решите задание по пункту ${q.pointCode} без ограничения времени, затем проверьте себя на другой задаче.` :
-      `Разберите решение по пункту ${q.pointCode}, повторите правило и решите другое задание самостоятельно.`,
+    action: q.skipped ? (kk ? `${q.pointCode} тармағының тапсырмасын уақыт шектеуінсіз шешіп, басқа есеппен өзіңізді тексеріңіз.` : `Решите задание по пункту ${q.pointCode} без ограничения времени, затем проверьте себя на другой задаче.`) :
+      (kk ? `${q.pointCode} тармағының шешімін талдап, ережені қайталаңыз және басқа тапсырманы өздігінен шешіңіз.` : `Разберите решение по пункту ${q.pointCode}, повторите правило и решите другое задание самостоятельно.`),
     ruleHref: `/learn/rules/${q.skillIds[0]}`, practiceHref: `/practice?mode=specific_topic&topicId=${q.topicId}&skillId=${q.skillIds[0]}` }));
   // Only attempted wrong answers create mistakes. A skipped task has an unknown cause and is shown in gaps.
   for (const [index, q] of paper.entries()) if (!questions[index].skipped && !questions[index].isCorrect) {
@@ -99,7 +105,7 @@ async function finalizeExam(tx: Prisma.TransactionClient, exam: ExamSession, now
       userId: exam.userId, examSessionId: exam.id, questionId: q.id, topicId: q.topicId,
       skillId, weakSkill: q.skillNames[skillIndex], errorType: "unclassified",
       userAnswer: q.options[answers[q.id]], correctAnswer: q.options[q.correctIndex],
-      explanation: "Зафиксирован неверный ответ. Его причина требует самостоятельной проверки.", description: q.explanation,
+      explanation: kk ? 'Қате жауап тіркелді. Оның себебін өздігінен тексеру қажет.' : "Зафиксирован неверный ответ. Его причина требует самостоятельной проверки.", description: q.explanation,
     } });
   }
   const result = { points: questions.reduce((s, q) => s + q.points, 0), maxPoints: profile.official.maxPoints,
@@ -109,9 +115,9 @@ async function finalizeExam(tx: Prisma.TransactionClient, exam: ExamSession, now
       return { topicId, name: related[0].topicName, points: related.reduce((s, q) => s + q.points, 0),
         maxPoints: related.reduce((s, q) => s + q.maxPoints, 0), skipped: related.filter((q) => q.skipped).length };
     }), skills, questions, gaps, recommendations: gaps.length ? gaps.slice(0, 5).map((g) => ({ ...g })) : [
-      { action: "Результат блока сохранён. Продолжайте план дня и проверьте навыки на новых заданиях: один ответ не доказывает полного освоения.", ruleHref: "/", practiceHref: "/practice" }],
+      { action: kk ? 'Блоктың нәтижесі сақталды. Күндік жоспарды жалғастырып, дағдыларды жаңа тапсырмалармен тексеріңіз: бір жауап толық меңгеруді дәлелдемейді.' : "Результат блока сохранён. Продолжайте план дня и проверьте навыки на новых заданиях: один ответ не доказывает полного освоения.", ruleHref: "/", practiceHref: "/practice" }],
     planHref: "/", previouslyExposedCount: paper.filter((q) => q.previouslyExposed).length,
-    masteryPolicy: "Баллы экзамена считаются отдельно. Mastery навыков получает одно наблюдение за отвеченное задание; пропуски не считаются попытками. Ранее раскрытые задания не дают независимого доказательства. Счётчики тренировок, серии и дневная цель не увеличиваются." };
+    masteryPolicy: kk ? 'Емтихан балдары бөлек есептеледі. Дағдыны меңгеру көрсеткіші жауап берілген әр тапсырмадан бір бақылау алады; өткізіп жіберілгендер әрекет болып саналмайды. Бұрын ашылған тапсырмалар өздік меңгеруді растамайды. Жаттығу санауыштары, серия және күндік мақсат артпайды.' : "Баллы экзамена считаются отдельно. Mastery навыков получает одно наблюдение за отвеченное задание; пропуски не считаются попытками. Ранее раскрытые задания не дают независимого доказательства. Счётчики тренировок, серии и дневная цель не увеличиваются." };
   return tx.examSession.update({ where: { id: exam.id }, data: { status: "completed", result: json(result),
     completedAt, completionReason: reason, revision: { increment: 1 } } });
 }
@@ -143,8 +149,8 @@ export async function startExam(userId: string, data: z.infer<typeof startExamSc
     }
     const active = await tx.examSession.findFirst({ where: { userId, status: "active" } });
     if (active) return snapshot(tx, active, await examServerNow(tx));
-    const prepared = await prepareExam(tx, profile, userId);
-    if (!prepared.paper) throw new PracticeError(`Банк не позволяет собрать вариант 20 заданий, A/B/C=5/10/5, по одному на каждый пункт. Не хватает ${prepared.readiness.shortage}. Пункты: ${prepared.shortages.map((s) => `${s.pointCode} — ${s.title}`).join("; ")}. Дефицит сложности: ${prepared.readiness.difficulty.filter((d) => d.missingInPlan).map((d) => `${d.band}: ${d.missingInPlan}`).join(", ") || "нет"}.`, 422);
+    const prepared = await prepareExam(tx, profile, userId, data.language);
+    if (!prepared.paper) throw new PracticeError(data.language === 'kk' ? `Толық аударылған тапсырмалар қоры 20 тапсырмалық A/B/C=5/10/5 нұсқасын құрастыруға жеткіліксіз. Жетіспейтін тапсырмалар: ${prepared.readiness.shortage}. Тармақтар: ${prepared.shortages.map(s => s.pointCode).join(', ')}.` : `Банк не позволяет собрать вариант 20 заданий, A/B/C=5/10/5, по одному на каждый пункт. Не хватает ${prepared.readiness.shortage}. Пункты: ${prepared.shortages.map((s) => `${s.pointCode} — ${s.title}`).join("; ")}. Дефицит сложности: ${prepared.readiness.difficulty.filter((d) => d.missingInPlan).map((d) => `${d.band}: ${d.missingInPlan}`).join(", ") || "нет"}.`, 422);
     const now = await examServerNow(tx);
     const exam = await tx.examSession.create({ data: { userId, startRequestId: data.requestId, startHash,
       profileId: profile.id, profileVersion: profile.version, language: data.language, profileSnapshot: json(profile),

@@ -31,7 +31,12 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "db:reset": "prisma migrate reset --force && tsx prisma/seed.ts"
+    "db:reset": "prisma migrate reset --force && tsx prisma/seed.ts",
+    "db:kazakh": "tsx scripts/seed_kazakh_content.ts",
+    "content:audit": "tsx scripts/audit_kazakh_content.ts",
+    "test:kazakh:unit": "tsx scripts/test_kazakh_content_unit.ts",
+    "test:kazakh": "tsx scripts/test_kazakh_content.ts",
+    "test:kazakh:ai": "tsx scripts/test_kazakh_ai.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

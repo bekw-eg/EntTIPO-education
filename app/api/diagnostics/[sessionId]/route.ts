@@ -1,3 +1,4 @@
+import { localizedJson } from "@/lib/i18n/http";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -15,10 +16,10 @@ function failure(error: unknown) {
 }
 export async function GET(request: Request, context: Context) {
   const userId = getCurrentUserId(request);
-  if (!userId) return unauthorizedResponse();
+  if (!userId) return unauthorizedResponse(request);
   try {
     const { sessionId } = await context.params;
-    return NextResponse.json(await prisma.$transaction(async (tx) => {
+    return localizedJson(request, await prisma.$transaction(async (tx) => {
       await lockAccount(tx, userId);
       return readDiagnosticSnapshot(tx, sessionId, userId);
     }, { maxWait: 10000, timeout: 10000 }));
@@ -26,7 +27,7 @@ export async function GET(request: Request, context: Context) {
 }
 export async function PATCH(request: Request, context: Context) {
   const userId = getCurrentUserId(request);
-  if (!userId) return unauthorizedResponse();
+  if (!userId) return unauthorizedResponse(request);
   try {
     const data = diagnosticDraftSchema.parse(await request.json());
     const { sessionId } = await context.params;
@@ -42,6 +43,6 @@ export async function PATCH(request: Request, context: Context) {
       } });
       return { revision: saved.revision };
     }, { maxWait: 10000, timeout: 10000 });
-    return NextResponse.json(result);
+    return localizedJson(request, result);
   } catch (error) { return failure(error); }
 }

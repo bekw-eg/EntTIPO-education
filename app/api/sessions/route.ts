@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import { localizedJson } from "@/lib/i18n/http";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { createSessionSchema } from "@/lib/validators";
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     const body = await request.json();
 
     const validatedData = createSessionSchema.parse(body);
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!questionIds || questionIds.length === 0) {
-      return NextResponse.json(
+      return localizedJson(request,
         { error: "Нет доступных заданий для этой тренировки" },
         { status: 400 }
       );
@@ -47,18 +48,18 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({
+    return localizedJson(request, {
       id: session.id,
       session,
       questionIds,
     });
   } catch (error) {
-    if (error instanceof PracticeError) return NextResponse.json({ error: error.message }, { status: error.status });
+    if (error instanceof PracticeError) return localizedJson(request, { error: error.message }, { status: error.status });
     if (error instanceof ZodError || error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Invalid session settings" }, { status: 400 });
+      return localizedJson(request, { error: "Invalid session settings" }, { status: 400 });
     }
     console.error("Error in POST /api/sessions:", error);
-    return NextResponse.json(
+    return localizedJson(request,
       { error: "Internal server error" },
       { status: 500 }
     );
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: Request) {
   try {
     const userId = getCurrentUserId(request);
-    if (!userId) return unauthorizedResponse();
+    if (!userId) return unauthorizedResponse(request);
     const sessions = await prisma.practiceSession.findMany({
       where: { userId, ...(new URL(request.url).searchParams.get("status") === "active" ? { status: "active" } : {}) },
       orderBy: { startedAt: "desc" },
@@ -78,12 +79,12 @@ export async function GET(request: Request) {
         attempts: { select: { questionId: true, isCorrect: true } } },
     });
 
-    return NextResponse.json(sessions.map(({ attempts, ...session }) => ({
+    return localizedJson(request, sessions.map(({ attempts, ...session }) => ({
       ...session, ...summarizeAttempts(attempts),
     })));
   } catch (error) {
     console.error("Error in GET /api/sessions:", error);
-    return NextResponse.json(
+    return localizedJson(request,
       { error: "Internal server error" },
       { status: 500 }
     );

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { localizedJson } from "@/lib/i18n/http";
 import { prisma } from '@/lib/prisma'
 import { getCurrentUserId, unauthorizedResponse } from '@/lib/user'
 
@@ -7,17 +7,17 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: Request) {
   try {
     const userId = getCurrentUserId(request)
-    if (!userId) return unauthorizedResponse()
-    
+    if (!userId) return unauthorizedResponse(request)
+
     const [attempts, thirtyDaysAttempts, topicProgress] = await Promise.all([
       prisma.userAttempt.findMany({
         where: { userId },
         select: { questionId: true, createdAt: true, isCorrect: true }
       }),
       prisma.userAttempt.findMany({
-        where: { 
-          userId, 
-          createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } 
+        where: {
+          userId,
+          createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
         },
         select: { questionId: true, createdAt: true, isCorrect: true }
       }),
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     const totalAttempts = attempts.length
     const correctCount = attempts.filter(a => a.isCorrect).length
     const overallAccuracy = totalAttempts > 0 ? (correctCount / totalAttempts) * 100 : 0
-    
+
     const distinctDays = new Set(attempts.map(a => new Date(a.createdAt).toDateString()))
     const totalDays = distinctDays.size
 
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     const bestTopic = [...topicProgress].sort((a, b) => b.masteryScore - a.masteryScore)[0] || null
     const weakestTopic = [...topicProgress].sort((a, b) => a.masteryScore - b.masteryScore).find(t => t.masteryScore > 0) || null
 
-    return NextResponse.json({
+    return localizedJson(request, {
       overallAccuracy,
       totalSolved,
       totalAttempts,
@@ -73,6 +73,6 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('Error in GET /api/statistics:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return localizedJson(request, { error: 'Internal server error' }, { status: 500 })
   }
 }
