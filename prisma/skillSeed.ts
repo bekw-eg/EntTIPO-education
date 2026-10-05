@@ -2,6 +2,7 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import { DIAGNOSTIC_EXERCISES, PRACTICE_EXERCISES, SKILLS } from "../lib/skillCatalog";
 import { DAILY_EXERCISES } from "../lib/dailyLearningBank";
 import { seedKazakhContent } from './kazakhSeed';
+import { seedPracticeChoices } from './practiceChoiceSeed';
 
 /** Additive and idempotent: never edit existing answers, attempts or legacy mistakes. */
 export async function seedSkills(prisma: PrismaClient) {
@@ -56,4 +57,5 @@ export async function seedSkills(prisma: PrismaClient) {
     }
   }, { maxWait: 10000, timeout: 30000 });
   await seedKazakhContent(prisma);
+  await seedPracticeChoices(prisma);
 }

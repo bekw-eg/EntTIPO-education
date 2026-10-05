@@ -65,7 +65,7 @@ export const translations: Record<Locale, TranslationSchema> = {
     practice: {
       setupTitle: "Настройка тренировки",
       setupSubtitle:
-        "Выбери формат и количество заданий для сегодняшней математической практики",
+        "Выбери режим и количество задач. В каждой задаче — пять вариантов ответа A–E.",
       tasksCount: "Количество заданий",
       tasksCountDesc: "Сколько задач готов решить за эту сессию?",
       customVariant: "Или введи своё количество (1–100):",
@@ -73,7 +73,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       deepPractice: "Выбери одну тему для глубокой практики",
       adaptiveSelection: "Адаптивная подборка вопросов",
       adaptiveHint:
-        "💡 Платформа автоматически отслеживает правильность каждого шага и пересчитывает твой рейтинг мастерства по формуле с весами последних 10 попыток.",
+        "💡 Платформа проверяет выбранные ответы и пересчитывает рейтинг мастерства с учётом последних 10 попыток, подсказок и повторов.",
       topicLabel: "Тема ЕНТ:",
       chooseTopicPlaceholder: "-- Выберите тему --",
       trainingMode: "Режим тренировки",
@@ -110,6 +110,9 @@ export const translations: Record<Locale, TranslationSchema> = {
       hintError: "Не удалось открыть подсказку. Попробуйте ещё раз.",
       completionError: "Не удалось завершить тренировку. Попробуйте ещё раз.",
       fillAllSteps: "Заполните все шаги для проверки",
+      choiceAnswers: "Варианты ответа",
+      checkAnswer: "Проверить",
+      chooseBeforeCheck: "Выберите ответ и нажмите «Проверить».",
       checkSolution: "Проверить решение",
       checking: "Проверяем...",
       emptyListToast: "Список заданий пуст",
@@ -120,7 +123,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       saved: "Ответы сохранены",
       saveError: "Ответы ещё не сохранены на сервере. Проверьте соединение.",
       stateChanged: "Состояние тренировки изменилось. Загружена последняя сохранённая версия.",
-      pendingSubmission: "Отправка ещё не подтверждена. Нажмите «Проверить решение» повторно, чтобы получить результат.",
+      pendingSubmission: "Отправка ещё не подтверждена. Повторите проверку, чтобы получить результат.",
       submitError: "Не удалось получить результат проверки. Повторите отправку.",
       inputNumberPlaceholder: "Например: 42 или 8/3",
       inputExpressionPlaceholder: "Например: 2*x + 1 или x^2",
@@ -131,11 +134,11 @@ export const translations: Record<Locale, TranslationSchema> = {
     result: {
       greatJob: "Отлично! Всё правильно 🎉",
       partialJob: "Частично верно",
-      hasErrors: "В решении допущена ошибка",
+      hasErrors: "Ответ неверный",
       allCorrectDesc:
-        "Все шаги выполнены математически верно. Мастери темы растёт!",
+        "Ответ верный. Мастерство темы растёт!",
       hasErrorsDesc:
-        "Посмотри разбор шагов ниже, чтобы понять, где именно возникла трудность.",
+        "Сравни свой ответ с правильным и изучи объяснение ниже.",
       errorTypeLabel: "Тип ошибки",
       stepAnalysis: "Анализ по шагам",
       stepItem: "Шаг",
@@ -354,7 +357,7 @@ export const translations: Record<Locale, TranslationSchema> = {
     practice: {
       setupTitle: "Жаттығуды баптау",
       setupSubtitle:
-        "Бүгінгі математикалық жаттығудың форматы мен тапсырмалар санын таңдаңыз",
+        "Режим мен тапсырмалар санын таңдаңыз. Әр тапсырмада A–E бес жауап нұсқасы бар.",
       tasksCount: "Тапсырмалар саны",
       tasksCountDesc: "Осы сессияда қанша тапсырма шешуге дайынсыз?",
       customVariant: "Немесе өз саныңызды енгізіңіз (1–100):",
@@ -362,7 +365,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       deepPractice: "Терең жаттығу үшін бір тақырыпты таңдаңыз",
       adaptiveSelection: "Бейімделген сұрақтар таңдауы",
       adaptiveHint:
-        "💡 Платформа әр қадамның дұрыстығын автоматты түрде қадағалап, соңғы 10 әрекеттің салмағы бойынша шеберлік рейтингіңізді қайта есептейді.",
+        "💡 Платформа таңдалған жауаптарды тексеріп, соңғы 10 әрекетті, көмекті және қайталауды ескеріп шеберлік рейтингін есептейді.",
       topicLabel: "ҰБТ тақырыбы:",
       chooseTopicPlaceholder: "-- Тақырыпты таңдаңыз --",
       trainingMode: "Жаттығу режимі",
@@ -399,6 +402,9 @@ export const translations: Record<Locale, TranslationSchema> = {
       hintError: "Көмекті ашу мүмкін болмады. Қайталап көріңіз.",
       completionError: "Жаттығуды аяқтау мүмкін болмады. Қайталап көріңіз.",
       fillAllSteps: "Тексеру үшін барлық қадамдарды толтырыңыз",
+      choiceAnswers: "Жауап нұсқалары",
+      checkAnswer: "Тексеру",
+      chooseBeforeCheck: "Жауапты таңдап, «Тексеру» түймесін басыңыз.",
       checkSolution: "Шешімді тексеру",
       checking: "Тексерілуде...",
       emptyListToast: "Тапсырмалар тізімі бос",
@@ -409,7 +415,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       saved: "Жауаптар сақталды",
       saveError: "Жауаптар серверде әлі сақталмады. Байланысты тексеріңіз.",
       stateChanged: "Жаттығу күйі өзгерді. Соңғы сақталған нұсқа жүктелді.",
-      pendingSubmission: "Жіберу әлі расталмады. Нәтиже алу үшін «Шешімді тексеру» түймесін қайта басыңыз.",
+      pendingSubmission: "Жіберу әлі расталмады. Нәтиже алу үшін тексеруді қайталаңыз.",
       submitError: "Тексеру нәтижесін алу мүмкін болмады. Қайта жіберіңіз.",
       inputNumberPlaceholder: "Мысалы: 42 немесе 8/3",
       inputExpressionPlaceholder: "Мысалы: 2*x + 1 немесе x^2",
@@ -420,11 +426,11 @@ export const translations: Record<Locale, TranslationSchema> = {
     result: {
       greatJob: "Керемет! Барлығы дұрыс 🎉",
       partialJob: "Жартылай дұрыс",
-      hasErrors: "Шешімде қате бар",
+      hasErrors: "Жауап қате",
       allCorrectDesc:
-        "Барлық қадамдар математикалық тұрғыдан дұрыс орындалды. Тақырып шеберлігі өсуде!",
+        "Жауап дұрыс. Тақырып шеберлігі өсуде!",
       hasErrorsDesc:
-        "Қай қадамда қиындық туындағанын түсіну үшін төмендегі талдауды қараңыз.",
+        "Жауабыңызды дұрыс жауаппен салыстырып, төмендегі түсіндіруді қараңыз.",
       errorTypeLabel: "Қате түрі",
       stepAnalysis: "Қадамдар бойынша талдау",
       stepItem: "Қадам",
@@ -643,7 +649,7 @@ export const translations: Record<Locale, TranslationSchema> = {
     practice: {
       setupTitle: "Practice Setup",
       setupSubtitle:
-        "Select the format and number of math problems for today's training",
+        "Choose a mode and number of tasks. Each task has five answer choices A–E.",
       tasksCount: "Number of Tasks",
       tasksCountDesc: "How many problems do you want to solve in this session?",
       customVariant: "Or enter a custom number (1–100):",
@@ -651,7 +657,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       deepPractice: "Choose a specific topic for deep practice",
       adaptiveSelection: "Adaptive question selection",
       adaptiveHint:
-        "💡 The platform automatically tracks correctness of each step and recalculates your mastery rating weighted by your last 10 attempts.",
+        "💡 The platform checks selected answers and updates mastery using your last 10 attempts, hints and retries.",
       topicLabel: "ENT Topic:",
       chooseTopicPlaceholder: "-- Select a topic --",
       trainingMode: "Practice Mode",
@@ -688,6 +694,9 @@ export const translations: Record<Locale, TranslationSchema> = {
       hintError: "Could not open the hint. Please try again.",
       completionError: "Could not finish the session. Please try again.",
       fillAllSteps: "Complete all steps before submitting",
+      choiceAnswers: "Answer choices",
+      checkAnswer: "Check",
+      chooseBeforeCheck: "Select an answer and click ‘Check’.",
       checkSolution: "Check Solution",
       checking: "Checking...",
       emptyListToast: "Task list is empty",
@@ -698,7 +707,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       saved: "Answers saved",
       saveError: "Answers have not reached the server yet. Check your connection.",
       stateChanged: "The session changed. Its latest saved state has been loaded.",
-      pendingSubmission: "Submission is still unconfirmed. Click ‘Check solution’ again to retrieve the result.",
+      pendingSubmission: "Submission is still unconfirmed. Check again to retrieve the result.",
       submitError: "Could not retrieve the result. Retry the submission.",
       inputNumberPlaceholder: "Example: 42 or 8/3",
       inputExpressionPlaceholder: "Example: 2*x + 1 or x^2",
@@ -709,11 +718,11 @@ export const translations: Record<Locale, TranslationSchema> = {
     result: {
       greatJob: "Awesome! Everything is correct 🎉",
       partialJob: "Partially correct",
-      hasErrors: "Error in solution",
+      hasErrors: "Incorrect answer",
       allCorrectDesc:
-        "All steps are mathematically valid. Your topic mastery is growing!",
+        "The answer is correct. Your topic mastery is growing!",
       hasErrorsDesc:
-        "Review the step-by-step breakdown below to see where the difficulty occurred.",
+        "Compare your answer with the correct answer and read the explanation below.",
       errorTypeLabel: "Error type",
       stepAnalysis: "Step Analysis",
       stepItem: "Step",

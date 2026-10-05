@@ -10,9 +10,9 @@
     "test:auth:unit": "tsx scripts/test_auth_security.ts",
     "test:auth": "tsx scripts/test_account_isolation.ts",
     "test:progress:unit": "tsx scripts/test_progress_unit.ts",
-    "test:progress": "tsx scripts/test_practice_progress.ts",
+    "test:progress": "npm run test:choices:http",
     "test:session:unit": "tsx scripts/test_practice_storage.ts",
-    "test:session": "tsx scripts/test_practice_persistence.ts",
+    "test:session": "npm run test:choices:http",
     "test:skills:unit": "tsx scripts/test_skill_diagnostics_unit.ts",
     "test:skills": "tsx scripts/test_skill_diagnostics.ts",
     "test:plan:unit": "tsx scripts/test_daily_learning_unit.ts",
@@ -41,8 +41,14 @@
     "prebuild": "npm run offline:build",
     "predev": "npm run offline:build",
     "test:offline:unit": "tsx scripts/test_offline_unit.ts",
-    "test:offline:http": "tsx scripts/test_offline_http.ts",
-    "test:offline:browser": "tsx scripts/test_offline_browser.ts"
+    "test:offline:http": "npm run test:choices:http",
+    "test:offline:browser": "npm run test:choices:browser",
+    "db:choices": "tsx scripts/seed_practice_choices.ts",
+    "test:choices:unit": "tsx scripts/test_choice_unit.ts",
+    "test:choices:http": "tsx scripts/test_choice_http.ts",
+    "test:choices:browser": "tsx scripts/test_choice_browser.ts",
+    "test:choices:math": "tsx scripts/audit_choice_content.ts",
+    "test:choices:migration": "tsx scripts/test_choice_migration.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

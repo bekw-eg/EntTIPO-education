@@ -2,6 +2,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { nextReview, studentTimeZone } from "./learningPolicy";
 import { assertNoActiveExam } from "./exam/guard";
+import { choiceStepId, sessionChoice } from "./practiceChoice";
+import { PracticeError } from "./practiceError";
 
 async function saveHelpEvidence(tx: Prisma.TransactionClient, userId: string, questionId: string) {
   const existing = await tx.questionHelp.findUnique({ where: { userId_questionId: { userId, questionId } } });
@@ -16,11 +18,7 @@ async function saveHelpEvidence(tx: Prisma.TransactionClient, userId: string, qu
   }
 }
 
-export class PracticeError extends Error {
-  constructor(message: string, public status: number) {
-    super(message);
-  }
-}
+export { PracticeError } from "./practiceError";
 
 /** Serialize progress, submissions and hint updates for an account across server processes. */
 export async function lockAccount(tx: Prisma.TransactionClient, userId: string) {
@@ -37,7 +35,7 @@ export async function recordHintUsage(userId: string, sessionId: string, questio
     const session = await tx.practiceSession.findFirst({ where: { id: sessionId, userId } });
     if (!session) throw new PracticeError("Session not found", 404);
     if (session.status !== "active") throw new PracticeError("Session is already completed", 409);
-    const question = await tx.question.findUnique({ where: { id: questionId }, select: { topicId: true } });
+    const question = await tx.question.findUnique({ where: { id: questionId }, select: { topicId: true, practiceChoice: true } });
     if (!question) throw new PracticeError("Question not found", 404);
     if (session.topicId && question.topicId !== session.topicId) {
       throw new PracticeError("Question does not match the session topic", 400);
@@ -52,8 +50,13 @@ export async function recordHintUsage(userId: string, sessionId: string, questio
       });
     }
     await saveHelpEvidence(tx, userId, questionId);
-    const hints = await tx.questionStep.findMany({ where: { questionId, hint: { not: null } },
+    const hints = await tx.questionStep.findMany({ where: { questionId, hint: { not: null } }, orderBy: { order: "asc" },
       select: { id: true, hint: true, hintKk: true } });
+    if (question.practiceChoice) {
+      const choice = await sessionChoice(tx, session, questionId);
+      return { usedHint: true, hints: { [choiceStepId(questionId)]: choice.hint?.ru ?? "" },
+        hintsKk: { [choiceStepId(questionId)]: choice.hint?.kk ?? "" } };
+    }
     return { usedHint: true, hints: Object.fromEntries(hints.map((step) => [step.id, step.hint])),
       hintsKk: Object.fromEntries(hints.map((step) => [step.id, step.hintKk])) };
   }, { maxWait: 10000, timeout: 10000 });

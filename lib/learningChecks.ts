@@ -1,6 +1,7 @@
 import { Prisma, UserAttempt } from "@prisma/client";
 import { PracticeError } from "./practiceStorage";
 import { independentCheck, localDay, nextReview, studentTimeZone } from "./learningPolicy";
+import { makeChoiceSnapshots } from "./practiceChoice";
 
 export async function similarQuestions(tx: Prisma.TransactionClient, userId: string, skillId: string,
   targetDifficulty: number, excluded: string[] = []) {
@@ -9,6 +10,7 @@ export async function similarQuestions(tx: Prisma.TransactionClient, userId: str
   const exposedExams = await tx.examSession.findMany({ where: { userId, status: "completed" }, select: { questionIds: true } });
   const candidates = await tx.question.findMany({ where: {
     purpose: { in: ["practice", "verification"] }, id: { notIn: [...excluded, ...hinted.flatMap((s) => s.hintedQuestionIds), ...exposedExams.flatMap((s) => s.questionIds)] },
+    practiceChoice: { path: ["type"], equals: "single" },
     difficulty: { gte: Math.max(1, targetDifficulty - 1), lte: Math.min(5, targetDifficulty + 1) },
     skills: { some: { skillId } }, steps: { some: { skills: { some: { skillId } } } },
     attempts: { none: { userId } }, questionHelp: { none: { userId } }, mistakes: { none: { userId } },
@@ -47,7 +49,8 @@ export async function startLearningCheck(tx: Prisma.TransactionClient, userId: s
     [...(data.excluded ?? []), ...(mistake ? [mistake.questionId] : [])]);
   const selected = candidates.find((q) => q.id === data.preferredQuestionId) ?? candidates[0];
   if (!selected) return null;
-  const session = await tx.practiceSession.create({ data: { userId, mode: "mixed", totalCount: 1, questionIds: [selected.id] } });
+  const session = await tx.practiceSession.create({ data: { userId, mode: "mixed", totalCount: 1, questionIds: [selected.id],
+    choiceSnapshots: await makeChoiceSnapshots(tx, [selected.id]) } });
   return tx.learningCheck.create({ data: { userId, skillId, mistakeId: data.mistakeId ?? null,
     questionId: selected.id, sessionId: session.id, purpose, targetDifficulty,
     reviewVersion: purpose === "review" ? schedule!.version : null } });

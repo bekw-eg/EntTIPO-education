@@ -1,4 +1,5 @@
 import { DailyLearningPlan, LearningPlanAction, Prisma } from "@prisma/client";
+import { makeChoiceSnapshots } from "./practiceChoice";
 import { prisma } from "./prisma";
 import { lockAccount, PracticeError } from "./practiceStorage";
 import { readUserSkills } from "./skillProgress";
@@ -83,7 +84,7 @@ async function buildActions(tx: Prisma.TransactionClient, plan: DailyLearningPla
   const mistake = mistakes.find((m) => m.skillId === selected.id);
   const recentDifficulty = observations.find((o) => o.skillId === selected.id)?.difficulty ?? examPaper?.find((q) => q.skillIds.includes(selected.id))?.difficulty ?? 1;
   const difficulty = mistake?.question.difficulty ?? Math.min(5, recentDifficulty + Number(selected.reasons.includes("maintenance")));
-  const candidates = await tx.question.findMany({ where: { purpose: "practice", skills: { some: { skillId: selected.id } },
+  const candidates = await tx.question.findMany({ where: { purpose: "practice", practiceChoice: { path: ["type"], equals: "single" }, skills: { some: { skillId: selected.id } },
     difficulty: { gte: Math.max(1, difficulty - 1), lte: Math.min(5, difficulty + 1) } },
     select: { id: true, difficulty: true, attempts: { where: { userId }, take: 1, select: { id: true } } },
     orderBy: [{ difficulty: "asc" }, { id: "asc" }] });
@@ -202,7 +203,8 @@ export async function runPlanAction(userId: string, actionId: string, operation:
         await tx.learningPlanAction.update({ where: { id: action.id }, data: { status: "completed", completedAt: new Date() } });
         return { completed: true };
       }
-      const session = await tx.practiceSession.create({ data: { userId, mode: "mixed", totalCount: remaining.length, questionIds: remaining } });
+      const session = await tx.practiceSession.create({ data: { userId, mode: "mixed", totalCount: remaining.length, questionIds: remaining,
+        choiceSnapshots: await makeChoiceSnapshots(tx, remaining) } });
       await tx.learningPlanAction.update({ where: { id: action.id }, data: { sessionId: session.id } });
       return { href: `/practice/session/${session.id}` };
     }

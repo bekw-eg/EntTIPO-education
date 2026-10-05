@@ -3,7 +3,7 @@ import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { prisma } from "@/lib/prisma";
 import { lockAccount, PracticeError } from "@/lib/practiceStorage";
 import { assertNoActiveExam } from "@/lib/exam/guard";
-import { currentContent } from "@/lib/offline/server";
+import { currentContent, packageChoiceSnapshots } from "@/lib/offline/server";
 import type { OfflineContent, OfflineLanguage } from "@/lib/offline/types";
 import { offlineError } from "@/lib/offline/http";
 
@@ -18,7 +18,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pac
       const pack = await tx.offlinePackage.findFirst({ where: { id: packageId, userId }, include: { session: true } });
       if (!pack) throw new PracticeError("Package not found", 404);
       const content = pack.content as unknown as OfflineContent;
-      const current = await currentContent(tx, content.topicIds, content.questions.map(q => q.id), pack.language as OfflineLanguage);
+      const current = await currentContent(tx, content.topicIds, content.questions.map(q => q.id), pack.language as OfflineLanguage,
+        packageChoiceSnapshots(pack));
       return { userId, sessionId: pack.sessionId, revision: pack.session.revision, currentVersion: current.version };
     });
     return NextResponse.json(state);

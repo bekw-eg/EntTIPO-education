@@ -53,7 +53,8 @@ export async function PATCH(
           completedCount: stats.completedCount, correctCount: stats.correctCount,
           draftAnswers: {}, revision: { increment: 1 } },
       });
-      return { ...saved, ...stats };
+      const { choiceSnapshots: _privateChoices, legacyDraftAnswers: _legacyDraft, ...publicSession } = saved;
+      return { ...publicSession, ...stats };
     }, { maxWait: 10000, timeout: 10000 });
 
     return localizedJson(request, session);

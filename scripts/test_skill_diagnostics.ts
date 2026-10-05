@@ -120,19 +120,20 @@ async function main() {
   const ps = practice.data.id;
   const q = (await api(`/api/sessions/${ps}`, a.cookie)).data.question;
   const partial = { submissionId: randomUUID(), sessionId: ps, questionId: q.id,
-    stepAnswers: [{ stepId: q.steps[0].id, answer: "x^5" }, { stepId: q.steps[1].id, answer: "-x^5+4" }] };
+    stepAnswers: [{ stepId: q.steps[0].id, answer: q.steps[0].options.find((o: any) => o.text === "-x^5+4").id }] };
   const graded = await api("/api/attempts", a.cookie, "POST", partial); assert.equal(graded.status, 200);
-  assert.equal(graded.data.score, 50); assert.equal(graded.data.isPartial, true);
+  assert.equal(graded.data.score, 0); assert.equal(graded.data.isPartial, false);
   const mistake = await prisma.mistake.findFirstOrThrow({ where: { attemptId: graded.data.attemptId } });
-  assert.equal(mistake.skillId, "bracket_signs"); assert.equal(mistake.stepId, q.steps[1].id);
+  assert.equal(mistake.skillId, "bracket_signs"); assert.equal(mistake.stepId, null);
   assert.match(mistake.explanation!, /не поменял знак второго слагаемого/);
   const outcomes = await prisma.skillObservation.findMany({ where: { attemptId: graded.data.attemptId } });
-  assert.equal(outcomes.find((o) => o.skillId === "power_properties")!.score, 100);
+  assert.equal(outcomes.find((o) => o.skillId === "power_properties")!.score, 0);
   assert.equal(outcomes.find((o) => o.skillId === "bracket_signs")!.score, 0);
   assert.equal((await api(`/api/sessions/${ps}/hint`, a.cookie, "POST", { questionId: q.id })).status, 200);
   let practiceState = (await api(`/api/sessions/${ps}`, a.cookie)).data;
   assert.equal((await api(`/api/sessions/${ps}/state`, a.cookie, "PATCH", { action: "retry", revision: practiceState.revision })).status, 200);
-  const correctPayload = { ...partial, submissionId: randomUUID(), stepAnswers: [partial.stepAnswers[0], { stepId: q.steps[1].id, answer: "-x^5-4" }] };
+  const correctPayload = { ...partial, submissionId: randomUUID(), stepAnswers: [{ stepId: q.steps[0].id,
+    answer: q.steps[0].options.find((o: any) => o.text === "-x^5-4").id }] };
   const retry = await api("/api/attempts", a.cookie, "POST", correctPayload); assert.equal(retry.status, 200);
   assert.equal(retry.data.usedHint, true); assert.equal(retry.data.attemptNumber, 2);
   const retryObservations = await prisma.skillObservation.findMany({ where: { attemptId: retry.data.attemptId } });
@@ -162,7 +163,7 @@ async function main() {
   assert.equal(await prisma.question.count(), beforeQuestions);
   assert.deepEqual((await api(path, a.cookie)).data.result, completed.result);
   console.log("PASS: isolated accounts, nine independent tasks, disabled hints/AI, delayed answer keys, saved drafts/cursor/report, concurrency and idempotency");
-  console.log("PASS: exact step-to-skill mistakes, partial practice scores, hints/retries, linked adaptive tasks, conservative evidence and additive repeatable migration");
+  console.log("PASS: explicitly mapped choice mistakes, binary practice scores, hints/retries, linked adaptive tasks, conservative evidence and additive repeatable migration");
 }
 async function cleanup() {
   const verified = await prisma.user.findMany({ where: { id: { in: users }, email: { startsWith: runId } }, select: { id: true } });

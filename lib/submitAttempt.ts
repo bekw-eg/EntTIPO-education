@@ -13,6 +13,7 @@ import { dayBounds, studentTimeZone } from "@/lib/learningPolicy";
 import { assertNoActiveExam } from "@/lib/exam/guard";
 
 import { validateOffline, type SyncMeta } from "./offline/server";
+import { choiceStepId, gradeChoice, sessionChoice } from "./practiceChoice";
 
 function replaySubmission(attempt: { submissionHash: string | null; submissionResult: Prisma.JsonValue | null }, hash: string) {
   if (attempt.submissionHash !== hash) throw new PracticeError("Submission ID has already been used for another answer", 409);
@@ -60,12 +61,13 @@ export async function submitAttempt(userId: string, data: SubmitAttemptInput, of
       throw new PracticeError("Question is not part of this session", 400);
     }
     if (session.mode === "offline_practice" && !offline) throw new PracticeError("Use offline synchronization for this training", 409);
-    if (offline) await prisma.$transaction(tx => validateOffline(tx, userId, data.sessionId, data.questionId, offline, false));
+    const offlinePackage = offline ? await prisma.$transaction(tx => validateOffline(tx, userId, data.sessionId, data.questionId, offline, false)) : null;
 
     const question = await prisma.question.findUnique({
       where: { id: data.questionId },
       include: {
         subtopic: true,
+        skills: true,
         steps: { include: { options: true, skills: { include: { skill: true } } }, orderBy: { order: "asc" } },
       },
     });
@@ -76,14 +78,34 @@ export async function submitAttempt(userId: string, data: SubmitAttemptInput, of
     if (question.purpose === "diagnostic") throw new PracticeError("Use the diagnostic endpoint for this question", 400);
 
     const answerMap = new Map(data.stepAnswers.map((answer) => [answer.stepId, answer.answer]));
-    if (answerMap.size !== question.steps.length || question.steps.some((step) => !answerMap.has(step.id))) {
+    // Compatibility is determined by the saved package, never by a client-chosen payload shape.
+    const offlineQuestion = offlinePackage ? (offlinePackage.content as unknown as import("./offline/types").OfflineContent)
+      .questions.find(q => q.id === question.id) : null;
+    const useChoices = !offline || offlineQuestion?.steps.some(step => step.id === choiceStepId(question.id));
+    const choice = useChoices ? await prisma.$transaction(async tx => {
+      await lockAccount(tx, userId);
+      const owned = await tx.practiceSession.findFirst({ where: { id: data.sessionId, userId } });
+      if (!owned) throw new PracticeError("Session not found", 404);
+      return sessionChoice(tx, owned, question.id);
+    }) : null;
+    if (choice ? answerMap.size !== 1 || !answerMap.has(choiceStepId(question.id)) :
+      answerMap.size !== question.steps.length || question.steps.some((step) => !answerMap.has(step.id))) {
       throw new PracticeError("Provide exactly one answer for every step of this question", 400);
     }
 
     const stepResults: StepResult[] = [];
     let correctSteps = 0;
 
-    for (const step of question.steps) {
+    const choiceGrade = choice ? gradeChoice(choice, answerMap.get(choiceStepId(question.id))!) : null;
+    const markedError = choice && choiceGrade && !choiceGrade.isCorrect && choiceGrade.selectedOptionIds.length === 1
+      ? choice.options.find(o => o.id === choiceGrade.selectedOptionIds[0])?.misconception : undefined;
+    if (choice && choiceGrade) {
+      correctSteps = Number(choiceGrade.isCorrect);
+      stepResults.push({ stepId: choiceStepId(question.id), stepOrder: 1, isCorrect: choiceGrade.isCorrect,
+        userAnswer: answerMap.get(choiceStepId(question.id))!, expectedAnswer: JSON.stringify(choice.correctOptionIds),
+        skillIds: choice.skillIds, ...(markedError ? { feedback: { ru: markedError.ru, kk: markedError.kk } } : {}) });
+    }
+    for (const step of choice ? [] : question.steps) {
       let isCorrect = false;
       const userAns = answerMap.get(step.id)!;
 
@@ -91,8 +113,7 @@ export async function submitAttempt(userId: string, data: SubmitAttemptInput, of
         const correctOpt = step.options.find((o) => o.isCorrect);
         if (
           correctOpt &&
-          (correctOpt.id === userAns ||
-            correctOpt.text.trim().toLowerCase() === userAns.toLowerCase())
+          correctOpt.id === userAns
         ) {
           isCorrect = true;
         }
@@ -126,11 +147,11 @@ export async function submitAttempt(userId: string, data: SubmitAttemptInput, of
       });
     }
 
-    const totalSteps = question.steps.length;
+    const totalSteps = choice ? 1 : question.steps.length;
     const isCorrect = totalSteps > 0 && correctSteps === totalSteps;
     const isPartial = correctSteps > 0 && correctSteps < totalSteps;
     const score = totalSteps > 0 ? Math.round((correctSteps / totalSteps) * 100) : 0;
-    const errorType = isCorrect ? undefined : determineErrorType(stepResults, question);
+    const errorType = isCorrect ? undefined : choice ? markedError?.errorType ?? "unclassified" : determineErrorType(stepResults, question);
 
     const result = await prisma.$transaction(async (tx) => {
       await lockAccount(tx, userId);
@@ -145,6 +166,9 @@ export async function submitAttempt(userId: string, data: SubmitAttemptInput, of
       if (!ownedSession) throw new PracticeError("Session not found", 404);
       if (offline) await validateOffline(tx, userId, data.sessionId, data.questionId, offline, true);
       if (ownedSession.status !== "active" && !(offline?.reconcile)) throw new PracticeError("Session is already completed", 409);
+      if (!offline && (ownedSession.questionIds[ownedSession.currentIndex] !== question.id || ownedSession.currentAttemptId)) {
+        throw new PracticeError("Question already checked or position changed; use an explicit retry", 409);
+      }
       if (ownedSession.topicId && ownedSession.topicId !== question.topicId) {
         throw new PracticeError("Question does not match the session topic", 400);
       }
@@ -182,7 +206,7 @@ export async function submitAttempt(userId: string, data: SubmitAttemptInput, of
           createdAt,
           attemptNumber: prevCount + 1,
           stepAnswers: {
-            create: stepResults.map((sr) => ({
+            create: (choice ? [] : stepResults).map((sr) => ({
               stepId: sr.stepId,
               answer: sr.userAnswer,
               isCorrect: sr.isCorrect,
@@ -191,7 +215,16 @@ export async function submitAttempt(userId: string, data: SubmitAttemptInput, of
         },
       });
 
-      if (!isCorrect && errorType) {
+      if (choice && choiceGrade && !isCorrect) {
+        const skill = markedError?.skillId ? await tx.skill.findUnique({ where: { id: markedError.skillId } }) : null;
+        await tx.mistake.create({ data: { userId, attemptId: attempt.id, questionId: question.id,
+          topicId: question.topicId, subtopicId: question.subtopicId, errorType: errorType!,
+          skillId: skill?.id, weakSkill: skill?.nameRu,
+          userAnswer: choice.options.filter(o => choiceGrade.selectedOptionIds.includes(o.id)).map(o => o.text).join("; "),
+          correctAnswer: choice.options.filter(o => choice.correctOptionIds.includes(o.id)).map(o => o.text).join("; "),
+          explanation: markedError?.ru ?? choice.explanation, description: choice.explanation } });
+      }
+      if (!choice && !isCorrect && errorType) {
         const combinedUserAnswer = stepResults
           .map((sr) => sr.userAnswer)
           .filter(Boolean)
@@ -222,7 +255,7 @@ export async function submitAttempt(userId: string, data: SubmitAttemptInput, of
 
       await recordPracticeSkills(tx, { userId, attemptId: attempt.id, questionId: question.id,
         difficulty: question.difficulty, usedHint, attemptNumber: attempt.attemptNumber,
-        createdAt, steps: question.steps, stepResults });
+        createdAt, steps: choice ? [{ id: choiceStepId(question.id), skills: choice.skillIds.map(skillId => ({ skillId })) }] : question.steps, stepResults });
       const learningCheck = await recordLearningAttempt(tx, attempt, question);
 
       // Update topic progress
@@ -321,9 +354,12 @@ export async function submitAttempt(userId: string, data: SubmitAttemptInput, of
         isPartial,
         score,
         stepResults,
-        explanation: question.explanation,
-        explanationKk: question.explanationKk,
-        correctAnswer: question.correctAnswer,
+        explanation: choice?.explanation ?? question.explanation,
+        explanationKk: choice?.explanationKk ?? question.explanationKk,
+        correctAnswer: choice ? choice.options.filter(o => choice.correctOptionIds.includes(o.id)).map(o => o.text).join("; ") : question.correctAnswer,
+        ...(choice && choiceGrade ? { choice: { selectedOptionIds: choiceGrade.selectedOptionIds,
+          correctOptionIds: choice.correctOptionIds, options: choice.options.map(({ id, text, textKk }) => ({ id, text, textKk })),
+          solutionSteps: choice.solutionSteps } } : {}),
         errorType,
         usedHint,
         attemptNumber: attempt.attemptNumber,

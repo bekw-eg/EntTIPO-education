@@ -6,7 +6,9 @@ import { createSessionSchema } from "@/lib/validators";
 import { selectQuestionsForSession } from "@/lib/adaptive";
 import { summarizeAttempts } from "@/lib/practiceStats";
 import { ZodError } from "zod";
-import { PracticeError } from "@/lib/practiceStorage";
+import { PracticeError, lockAccount } from "@/lib/practiceStorage";
+import { makeChoiceSnapshots } from "@/lib/practiceChoice";
+import { assertNoActiveExam } from "@/lib/exam/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +36,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const session = await prisma.practiceSession.create({
+    const session = await prisma.$transaction(async tx => {
+      await lockAccount(tx, userId);
+      await assertNoActiveExam(tx, userId);
+      return tx.practiceSession.create({
       data: {
         userId,
         topicId: validatedData.topicId,
@@ -45,8 +50,10 @@ export async function POST(request: NextRequest) {
         completedCount: 0,
         correctCount: 0,
         questionIds,
+        choiceSnapshots: await makeChoiceSnapshots(tx, questionIds),
       },
-    });
+      select: { id: true, mode: true, status: true, totalCount: true, questionIds: true, currentIndex: true, revision: true } });
+    }, { maxWait: 10000, timeout: 10000 });
 
     return localizedJson(request, {
       id: session.id,

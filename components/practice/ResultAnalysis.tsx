@@ -20,6 +20,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { contentText, answerText } from '@/lib/i18n/content';
 import { MathText } from '@/components/ui/MathText';
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
+import { ChoiceMath } from "./ChoiceMath";
 
 interface ResultAnalysisProps {
   result: AttemptResult;
@@ -40,7 +41,7 @@ export default function ResultAnalysis({
 }: ResultAnalysisProps) {
   const { t, getErrorLabel, locale } = useLanguage();
   const learningCopy = learningText[locale === "kk" ? "kk" : "ru"];
-  const [showExplanation, setShowExplanation] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(!!result.choice);
   const [localAiOpen, setLocalAiOpen] = useState(false);
   const isFull = result.isCorrect;
   const isPartial = result.isPartial;
@@ -114,8 +115,18 @@ export default function ResultAnalysis({
           {result.learningCheck.dueDay && <p>{learningCopy.next}: {result.learningCheck.dueDay}</p>}
           <a className="text-primary underline" href="/">{learningCopy.home}</a>
         </div>}
-        {/* Step-by-step review */}
-        <div className="space-y-3">
+        {result.choice && <div className="space-y-4">
+          {[{ title: t.result.yourAnswer, ids: result.choice.selectedOptionIds },
+            { title: t.result.correctAnswer, ids: result.choice.correctOptionIds }].map(group => <div key={group.title}>
+            <h3 className="font-semibold mb-2">{group.title}</h3>
+            {result.choice!.options.filter(o => group.ids.includes(o.id)).map(o => <div key={o.id} className="flex gap-3 items-center rounded-xl border p-3">
+              <strong>{String.fromCharCode(65 + result.choice!.options.findIndex(v => v.id === o.id))}.</strong>
+              <ChoiceMath text={contentText(o.text, o.textKk, locale)} />
+            </div>)}
+          </div>)}
+        </div>}
+        {/* Legacy step-by-step attempts remain reviewable. */}
+        {!result.choice && <div className="space-y-3">
           <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
             {t.result.stepAnalysis}
           </h3>
@@ -168,7 +179,7 @@ export default function ResultAnalysis({
               );
             })}
           </div>
-        </div>
+        </div>}
 
         {/* Explanation */}
         <div className="rounded-xl border p-4 bg-muted/20 space-y-2">
@@ -196,6 +207,14 @@ export default function ResultAnalysis({
             </div>
           )}
         </div>
+
+        {!!result.choice?.solutionSteps.length && <details className="rounded-xl border p-4">
+          <summary className="cursor-pointer font-semibold">{t.session.solutionSteps}</summary>
+          <ol className="mt-3 space-y-3">{result.choice.solutionSteps.map((step, index) => <li key={index}>
+            <MathText content={`${index + 1}. ${contentText(step.prompt, step.promptKk, locale)}`} />
+            <ChoiceMath text={step.answer} />
+          </li>)}</ol>
+        </details>}
 
         {/* Action buttons */}
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3">

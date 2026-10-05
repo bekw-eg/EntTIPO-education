@@ -14,6 +14,7 @@ import { MathText } from '@/components/ui/MathText';
 import { GeometryViewer, GeometryConfig } from "@/components/ui/GeometryViewer";
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 import { toast } from "sonner";
+import { ChoiceMath } from "./ChoiceMath";
 
 function tryParseGeometry(text: string): GeometryConfig | null {
   try {
@@ -109,7 +110,8 @@ export default function QuestionCard({
   const isAllAnswered =
     question.steps?.length > 0 &&
     question.steps.every(
-      (s) => stepAnswers[s.id] && stepAnswers[s.id].trim().length > 0
+      (s) => s.type === "multiple_select" ? (() => { try { return JSON.parse(stepAnswers[s.id] || "[]").length > 0; } catch { return false; } })() :
+        !!stepAnswers[s.id]?.trim()
     );
 
   const topicDisplay = question.topic?.name
@@ -230,13 +232,15 @@ export default function QuestionCard({
           <div className="flex items-center gap-2">
             <span className="h-5 w-1 bg-primary rounded-full inline-block" />
             <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
-              {t.session.solutionSteps}
+              {question.choiceFormat ? t.session.choiceAnswers : t.session.solutionSteps}
             </h3>
           </div>
 
           <div className="space-y-5">
             {question.steps?.map((step, idx) => {
               const currentVal = stepAnswers[step.id] || "";
+              const instruction = question.choiceFormat && locale === "en" ? step.type === "multiple_select"
+                ? "Select all correct answers" : "Select one correct answer" : contentText(step.prompt, step.promptKk, locale);
 
               return (
                 <div
@@ -245,10 +249,10 @@ export default function QuestionCard({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-medium text-sm sm:text-base">
-                      <span className="text-primary font-bold mr-2">
+                      {!question.choiceFormat && <span className="text-primary font-bold mr-2">
                         {t.session.step} {idx + 1}:
-                      </span>
-                      {contentText(step.prompt, step.promptKk, locale)}
+                      </span>}
+                      {instruction}
                     </p>
                     {currentVal && (
                       <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-1" />
@@ -270,31 +274,34 @@ export default function QuestionCard({
                   ) : null}
 
                   {/* Multiple Choice */}
-                  {step.type === "multiple_choice" && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                      {step.options?.map((opt) => {
-                        const isSelected =
-                          currentVal === opt.id || currentVal === opt.text;
+                  {(step.type === "multiple_choice" || step.type === "multiple_select") && (
+                    <fieldset aria-label={instruction} className="grid grid-cols-1 gap-2 pt-1">
+                      {step.options?.map((opt, optionIndex) => {
+                        let selectedIds: string[] = [];
+                        try { selectedIds = JSON.parse(currentVal || "[]"); } catch { /* single choice */ }
+                        const isSelected = step.type === "multiple_select" ? selectedIds.includes(opt.id) : currentVal === opt.id;
                         return (
-                          <button
+                          <label
                             key={opt.id}
-                            type="button"
-                            disabled={isLoading || answersLocked}
-                            onClick={() => onStepAnswer(step.id, opt.text)}
-                            className={`p-3 text-left rounded-lg text-sm border transition-all ${
+                            className={`flex items-center gap-3 min-h-14 p-4 cursor-pointer text-left rounded-xl text-sm border-2 transition-all ${
                               isSelected
                                 ? "border-primary bg-primary/10 text-primary font-medium shadow-xs"
                                 : "border-border hover:border-primary/30 hover:bg-muted/40"
                             }`}
                           >
+                            <input type={step.type === "multiple_select" ? "checkbox" : "radio"} name={step.id} value={opt.id}
+                              checked={isSelected} disabled={isLoading || answersLocked}
+                              className="h-5 w-5 accent-primary shrink-0"
+                              onChange={() => onStepAnswer(step.id, step.type === "multiple_select"
+                                ? JSON.stringify((isSelected ? selectedIds.filter(id => id !== opt.id) : [...selectedIds, opt.id]).sort()) : opt.id)} />
                             <span className="font-mono text-xs opacity-60 mr-2">
-                              {String.fromCharCode(65 + opt.order)}.
+                              {String.fromCharCode(65 + optionIndex)}.
                             </span>
-                            {contentText(opt.text, opt.textKk, locale)}
-                          </button>
+                            <ChoiceMath text={contentText(opt.text, opt.textKk, locale)} />
+                          </label>
                         );
                       })}
-                    </div>
+                    </fieldset>
                   )}
 
                   {/* Numeric Input */}
@@ -341,7 +348,7 @@ export default function QuestionCard({
         <div className="pt-4 border-t flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <p className="text-xs text-muted-foreground hidden sm:block">
-              {t.session.fillAllSteps}
+              {question.choiceFormat ? t.session.chooseBeforeCheck : t.session.fillAllSteps}
             </p>
             {!assistanceDisabled && <><Button
               type="button"
@@ -373,7 +380,7 @@ export default function QuestionCard({
             size="lg"
             className="px-8 font-semibold shadow-xs"
           >
-            {isLoading ? t.session.checking : submitLabel ?? t.session.checkSolution}
+            {isLoading ? t.session.checking : submitLabel ?? (question.choiceFormat ? t.session.checkAnswer : t.session.checkSolution)}
           </Button>
         </div>
       </CardContent>

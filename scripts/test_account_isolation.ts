@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import { testChoice } from "./choice_test_fixture";
+import { choiceStepId } from "../lib/practiceChoice";
 
 const prisma = new PrismaClient();
 const baseUrl = process.env.AUTH_TEST_BASE_URL || "http://localhost:3000";
@@ -34,6 +36,7 @@ async function main() {
   }, include: { questions: { include: { steps: true } } } });
   topicId = fixture.id;
   const question = fixture.questions[0];
+  await prisma.question.update({ where: { id: question.id }, data: { practiceChoice: testChoice(question.id, false, undefined, 2) } });
 
   async function register(label: string) {
     const email = `${runId}-${label}@example.test`;
@@ -67,7 +70,7 @@ async function main() {
   const sessionB = await createSession(b.cookie);
   async function answer(cookie: string, sessionId: string, value: string) {
     return api("/api/attempts", cookie, "POST", { submissionId: crypto.randomUUID(), sessionId, questionId: question.id,
-      stepAnswers: [{ stepId: question.steps[0].id, answer: value }], timeSpent: 10 });
+      stepAnswers: [{ stepId: choiceStepId(question.id), answer: `${question.id}-${value === "2" ? 0 : 1}` }], timeSpent: 10 });
   }
   const attemptA = await answer(a.cookie, sessionA, "3");
   const attemptB = await answer(b.cookie, sessionB, "2");

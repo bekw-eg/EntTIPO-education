@@ -95,6 +95,9 @@ export interface TranslationSchema {
     hintError: string;
     completionError: string;
     fillAllSteps: string;
+    choiceAnswers: string;
+    checkAnswer: string;
+    chooseBeforeCheck: string;
     checkSolution: string;
     checking: string;
     emptyListToast: string;

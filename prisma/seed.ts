@@ -693,6 +693,8 @@ async function main() {
 main().then(async () => {
   const { seedKazakhContent } = await import('./kazakhSeed');
   await seedKazakhContent(prisma);
+  const { seedPracticeChoices } = await import('./practiceChoiceSeed');
+  await seedPracticeChoices(prisma);
 })
   .catch(e => {
     console.error(e)

@@ -5,6 +5,7 @@ import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { practiceStateSchema } from "@/lib/validators";
 import { PracticeError, lockAccount } from "@/lib/practiceStorage";
 import { readPracticeSnapshot } from "@/lib/practiceSession";
+import { choiceStepId, selection, sessionChoice } from "@/lib/practiceChoice";
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ sessionId: string }> }) {
   const userId = getCurrentUserId(request);
@@ -28,11 +29,12 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ s
         if (session.currentAttemptId || session.currentIndex !== data.currentIndex) {
           throw new PracticeError("Question state changed; reload its latest state", 409);
         }
-        const steps = await tx.questionStep.findMany({ where: { questionId }, select: { id: true } });
-        const validSteps = new Set(steps.map((step) => step.id));
-        if (Object.keys(data.answers).some((id) => !validSteps.has(id))) {
+        const choice = await sessionChoice(tx, session, questionId);
+        const stepId = choiceStepId(questionId);
+        if (Object.keys(data.answers).some(id => id !== stepId)) {
           throw new PracticeError("Answers must belong to the current question", 400);
         }
+        if (data.answers[stepId] !== undefined) selection(choice, data.answers[stepId], true);
         const saved = await tx.practiceSession.update({ where: { id: sessionId, userId }, data: {
           draftAnswers: data.answers, revision: { increment: 1 },
         } });
