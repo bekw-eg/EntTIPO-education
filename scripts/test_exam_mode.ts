@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import { spawnSync } from "node:child_process";
 import { TIPO_MATH } from "../lib/exam/profile";
 import type { PaperQuestion } from "../lib/exam/mode";
+import { parseChoice, choiceStepId } from "../lib/practiceChoice";
 
 const prisma = new PrismaClient(), base = process.env.EXAM_TEST_BASE_URL ?? "http://127.0.0.1:3100";
 const users: { id: string; cookie: string; email: string }[] = [];
@@ -33,8 +34,9 @@ async function main() {
   const practiceQuestion = await prisma.question.findUniqueOrThrow({ where: { id: "exam_v1_derivative_fraction" }, include: { steps: { include: { options: true } } } });
   const practice = await api("/api/sessions", a.cookie, "POST", { mode: "mixed", totalCount: 1, questionId: practiceQuestion.id, skillId: "exam_derivative_rules" });
   assert.equal(practice.status, 200); const practiceId = practice.data.id;
+  const practiceChoice = parseChoice(practiceQuestion.practiceChoice);
   const oldAttempt = await api("/api/attempts", a.cookie, "POST", { submissionId: randomUUID(), sessionId: practiceId, questionId: practiceQuestion.id,
-    stepAnswers: [{ stepId: practiceQuestion.steps[0].id, answer: practiceQuestion.steps[0].options.find((o) => !o.isCorrect)!.id }] });
+    stepAnswers: [{ stepId: choiceStepId(practiceQuestion.id), answer: practiceChoice.options.find(o => !practiceChoice.correctOptionIds.includes(o.id))!.id }] });
   assert.equal(oldAttempt.status, 200);
   const beforeObservations = await prisma.skillObservation.count({ where: { userId: a.id } });
   const counters = { attempts: await prisma.userAttempt.count({ where: { userId: a.id } }),

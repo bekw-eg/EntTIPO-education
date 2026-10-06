@@ -3,7 +3,7 @@ export type Answers = Record<string, string>;
 export interface OfflineStep {
   id: string; type: string; prompt: string;
   options: { id: string; text: string }[];
-  // This is an explicit assisted mode. Keys are readable by the device owner.
+  // Compatibility with packages downloaded before the choice upgrade. Fresh packages omit keys.
   localKey?: { kind: "choice" | "number" | "select"; value: string };
 }
 export interface OfflineQuestion {
@@ -38,6 +38,7 @@ export interface QueueEntry extends OfflineSend {
   receipt?: { submissionId: string; revision: number; result: {
     isCorrect: boolean; score: number; stepResults: { stepId: string; isCorrect: boolean; expectedAnswer: string }[];
     explanation?: string; explanationKk?: string | null;
+    choice?: { selectedOptionIds: string[]; correctOptionIds: string[]; options: { id: string; text: string; textKk?: string | null }[] };
   } };
 }
 export interface OfflineAccount { userId: string; name: string; requiresLogin?: boolean }

@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import QuestionCard from "@/components/practice/QuestionCard";
 import ResultAnalysis from "@/components/practice/ResultAnalysis";
 import SessionSummary from "@/components/practice/SessionSummary";
+import { PracticeHistory } from "@/components/practice/PracticeHistory";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "@/components/providers/AccountProvider";
 import { toast } from "sonner";
@@ -260,8 +261,9 @@ function PracticeSessionContent() {
       {phase === "result" && snapshot?.result && question && <ResultAnalysis
         result={snapshot.result} question={question} isLoading={isLoading}
         onRetry={() => { void transition("retry"); }} onNext={() => { void transition("next"); }} onOpenAi={handleOpenAi} />}
-      {phase === "summary" && snapshot && <SessionSummary session={snapshot}
-        onGoToDashboard={() => router.push("/")} onNewSession={() => router.push("/practice")} />}
+      {phase === "summary" && snapshot && <><SessionSummary session={snapshot}
+        onGoToDashboard={() => router.push("/")} onNewSession={() => router.push("/practice")} />
+        <PracticeHistory sessionId={sessionId} /></>}
       <AiTutorPanel isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} question={question}
         stepAnswers={stepAnswers} hasAttempted={phase === "result"} attemptId={snapshot?.result?.attemptId}
         sessionId={sessionId} onHintUsed={handleHintUsed} initialAction={aiAction} />

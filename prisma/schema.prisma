@@ -80,6 +80,7 @@ model Question {
   explanationKk String?
   localizationSource String?
   purpose       String   @default("practice") // practice | diagnostic | verification
+  practiceChoice Json? // Versioned, reviewed final-answer choices; legacy/exam steps stay intact.
 
   topic    Topic          @relation(fields: [topicId], references: [id])
   subtopic Subtopic?      @relation(fields: [subtopicId], references: [id])
@@ -139,6 +140,8 @@ model PracticeSession {
   draftAnswers   Json      @default("{}")
   revision       Int       @default(0)
   currentAttemptId String?
+  choiceSnapshots Json @default("{}") // Private immutable content and option order, never returned raw.
+  legacyDraftAnswers Json @default("{}") // Archived free-text drafts from the additive upgrade.
 
   user     User          @relation(fields: [userId], references: [id])
   attempts UserAttempt[]

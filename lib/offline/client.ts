@@ -1,4 +1,5 @@
 import katex from "katex";
+import { choiceLatex } from "../choiceDisplay";
 import { activeAccount, offlineLocked, setActiveAccount, listPackages, savePackage, getWork, saveDraft, enqueue, queueFor, deletePackage, updateWork } from "./store";
 import { request, synchronize } from "./sync";
 import { cacheAssets, assetsReady } from "./assets";
@@ -11,7 +12,7 @@ const messages = {
   login: ["Войти снова", "Қайта кіру"], logout: ["Закрыть офлайн-доступ и выйти", "Желісіз қолжетімділікті жауып, шығу"],
   required: ["Требуется повторный вход в этот аккаунт. Работа сохранена на устройстве.", "Осы аккаунтқа қайта кіру қажет. Жұмыс құрылғыда сақталған."],
   noAccount: ["Войдите в личный аккаунт с интернетом, чтобы скачать материалы. После выхода офлайн-данные скрыты.", "Материал жүктеу үшін желі арқылы жеке аккаунтқа кіріңіз. Шыққаннан кейін желісіз деректер жасырын болады."],
-  intro: ["Скачайте выбранные темы, правила, материалы и задания. Пакет включает доступные владельцу устройства эталоны для простой локальной проверки. Результаты предварительные; Mastery меняется только после серверной перепроверки с учётом помощи. Подтверждение ошибки требует отдельной самостоятельной онлайн-проверки.", "Тақырыптарды, ережелерді, материалдар мен тапсырмаларды жүктеңіз. Қарапайым жергілікті тексеруге арналған эталондар құрылғы иесіне қолжетімді. Нәтиже алдын ала беріледі; Mastery сервер тексергеннен кейін ғана көмек ескеріліп өзгереді. Қатені меңгеруді растау үшін бөлек дербес онлайн тексеру керек."],
+  intro: ["Скачайте темы и задания, выберите ответы A–E и нажмите «Проверить». Без сети ответы сохраняются на устройстве; результат и объяснение появятся после серверной проверки. Mastery учитывает помощь. Подтверждение ошибки требует отдельной самостоятельной онлайн-проверки.", "Тақырыптар мен тапсырмаларды жүктеп, A–E жауаптарын таңдаңыз және «Тексеру» түймесін басыңыз. Желісіз жауаптар құрылғыда сақталады; нәтиже мен түсіндіру сервер тексергеннен кейін көрсетіледі. Mastery көмекті ескереді. Қатені меңгеруді растау үшін бөлек дербес онлайн тексеру керек."],
   exam: ["Экзамен без сети не поддерживается: сервер контролирует срок, завершение, сохранение ответов и достоверность результата. Офлайн-пакеты не содержат экзаменационные или контрольные задания.", "Желісіз емтихан қолдау таппайды: мерзімді, аяқтауды, жауаптардың сақталуы мен нәтиженің дұрыстығын сервер бақылайды. Желісіз пакеттерде емтихан немесе бақылау тапсырмалары жоқ."],
   ai: ["AI-помощник недоступен без сети. Используйте скачанные правила и материалы.", "AI көмекшісі желісіз қолжетімсіз. Жүктелген ережелер мен материалдарды пайдаланыңыз."],
   download: ["Скачать пакет", "Пакетті жүктеу"], topics: ["Темы и правила", "Тақырыптар мен ережелер"], count: ["Количество заданий (1–50)", "Тапсырмалар саны (1–50)"],
@@ -21,7 +22,7 @@ const messages = {
   checking: ["Ожидает проверки", "Тексеруді күтуде"], preliminary: ["Предварительно верно", "Алдын ала дұрыс"], wrong: ["Предварительно неверно", "Алдын ала қате"],
   open: ["Открыть тренировку", "Жаттығуды ашу"], update: ["Скачать новую версию отдельно", "Жаңа нұсқаны бөлек жүктеу"], remove: ["Удалить пакет", "Пакетті жою"],
   export: ["Экспортировать ответы", "Жауаптарды экспорттау"], back: ["К пакетам", "Пакеттерге"], prev: ["Предыдущее", "Алдыңғы"], next: ["Следующее", "Келесі"],
-  submit: ["Проверить предварительно и сохранить отправку", "Алдын ала тексеріп, жіберуді сақтау"], materials: ["Правила и материалы", "Ережелер мен материалдар"],
+  submit: ["Проверить", "Тексеру"], materials: ["Правила и материалы", "Ережелер мен материалдар"],
   conflict: ["Состояние изменилось на другом устройстве. Ответы и идентификаторы сохранены. Можно явно отправить оставшуюся работу с текущим состоянием сервера; другой ответ на то же задание будет отдельной попыткой.", "Күй басқа құрылғыда өзгерді. Жауаптар мен идентификаторлар сақталды. Қалған жұмысты сервердің қазіргі күйімен жіберуге болады; сол тапсырмаға басқа жауап бөлек әрекет болады."],
   stale: ["Версия контента изменилась. Ответы сохранены. Можно явно перепроверить их по текущим эталонам; при изменении структуры задания потребуется новый пакет и экспорт прежней работы.", "Контент нұсқасы өзгерді. Жауаптар сақталды. Оларды қазіргі эталондармен қайта тексеруге болады; тапсырма құрылымы өзгерсе, жаңа пакет пен бұрынғы жұмысты экспорттау қажет."],
   resolve: ["Принять текущую версию и отправить сохранённые ответы", "Қазіргі нұсқаны қабылдап, сақталған жауаптарды жіберу"],
@@ -30,7 +31,7 @@ const messages = {
   server: ["Сервер перепроверил ответ", "Сервер жауапты қайта тексерді"], deviceError: ["Не удалось сохранить. Оставьте страницу открытой и экспортируйте ответы; проверьте свободное место на устройстве.", "Сақтау мүмкін болмады. Бетті ашық қалдырып, жауаптарды экспорттаңыз; құрылғыдағы бос орынды тексеріңіз."],
   deleteBlocked: ["Пакет содержит несинхронизированные ответы или черновик. Сначала синхронизируйте работу; экспорт сохранит отдельную резервную копию.", "Пакетте синхрондалмаған жауаптар немесе жоба бар. Алдымен жұмысты синхрондаңыз; экспорт бөлек резервтік көшірме сақтайды."],
   draftConflict: ["Черновик изменился в другой вкладке. Откройте тренировку заново; экспорт сохранит копию введённых здесь ответов.", "Жоба басқа қойындыда өзгерді. Жаттығуды қайта ашыңыз; экспорт осы жерде енгізілген жауаптардың көшірмесін сақтайды."],
-  answerRequired: ["Заполните все шаги ответа (не более 2000 символов на шаг).", "Жауаптың барлық қадамдарын толтырыңыз (әр қадамда 2000 таңбаға дейін)."],
+  answerRequired: ["Выберите ответ перед проверкой.", "Тексеруден бұрын жауапты таңдаңыз."],
   order: ["Сначала сохраните предыдущие задания.", "Алдымен алдыңғы тапсырмаларды сақтаңыз."],
   forbidden: ["Синхронизация временно запрещена. Если открыт экзамен, завершите его на сервере. Ответы сохранены на устройстве.", "Синхрондауға уақытша тыйым салынған. Емтихан ашық болса, оны серверде аяқтаңыз. Жауаптар құрылғыда сақталған."],
 } satisfies Record<string, [string, string]>;
@@ -87,6 +88,12 @@ function text(parent: HTMLElement, content: string) {
     }
     parent.append(node);
   }
+}
+function optionText(parent: HTMLElement, content: string) {
+  const unit = content.match(/^(.*?)\s+(см|cm)([²³])$/i);
+  if (unit) { math(parent, choiceLatex(unit[1])); parent.append(document.createTextNode(` ${unit[2]}${unit[3]}`)); }
+  else if (!content.includes("$") && !/[а-яА-Яәіңғүұқөһ]/i.test(content)) math(parent, choiceLatex(content));
+  else text(parent, content);
 }
 function connection() {
   document.querySelector("#connection")!.textContent = t(navigator.onLine ? "connected" : "disconnected");
@@ -253,7 +260,7 @@ function renderTraining() {
       }).catch(error => { pendingWrites--; dirty = true; status.textContent = t("deviceError"); say(friendlyError(error)); });
     };
     if (step.type === "multiple_choice" || step.type === "multiple_select") {
-      for (const option of step.options) {
+      for (const [optionIndex, option] of step.options.entries()) {
         const input = e("input"); input.type = step.type === "multiple_choice" ? "radio" : "checkbox"; input.name = step.id; input.value = option.id; input.disabled = !!sent;
         let selectedIds: string[] = []; try { selectedIds = JSON.parse(visibleAnswers[step.id] || "[]"); } catch { /* empty draft */ }
         input.checked = step.type === "multiple_choice" ? visibleAnswers[step.id] === option.id : selectedIds.includes(option.id);
@@ -261,7 +268,8 @@ function renderTraining() {
           if (step.type === "multiple_choice") setAnswer(option.id);
           else setAnswer(JSON.stringify([...field.querySelectorAll<HTMLInputElement>('input:checked')].map(i => i.value)));
         };
-        const label = e("label"); label.append(input); text(label, option.text); field.append(label);
+        const label = e("label"); label.append(input, e("strong", `${String.fromCharCode(65 + optionIndex)}. `));
+        optionText(label, option.text); field.append(label);
       }
     } else {
       const input = e("input"); input.type = "text"; input.maxLength = 2000; input.value = visibleAnswers[step.id] || ""; input.disabled = !!sent; input.setAttribute("aria-label", step.prompt); input.dataset.stepId = step.id;
@@ -273,7 +281,19 @@ function renderTraining() {
     } else if (!step.localKey) field.append(e("small", t("checking")));
     section.append(field);
   }
-  if (sent) section.append(e("p", t(sent.receipt ? "synced" : "waiting"), "status"));
+  if (sent) {
+    section.append(e("p", t(sent.receipt ? "synced" : "waiting"), "status"));
+    const result = sent.receipt?.result;
+    if (result?.choice) for (const [title, ids] of [["Ваш ответ / Сіздің жауабыңыз", result.choice.selectedOptionIds],
+      ["Правильный ответ / Дұрыс жауап", result.choice.correctOptionIds]] as const) {
+      section.append(e("h3", title));
+      for (const [index, option] of result.choice.options.entries()) if (ids.includes(option.id)) {
+        const line = e("p", `${String.fromCharCode(65 + index)}. `);
+        optionText(line, language === "kk" ? option.textKk ?? option.text : option.text); section.append(line);
+      }
+    }
+    if (result?.explanation) text(section, language === "kk" ? result.explanationKk ?? result.explanation : result.explanation);
+  }
   const submit = button(t("submit"), async () => {
     await writes; if (!work || dirty) throw new Error(t("deviceError"));
     await enqueue(pack, question.id, work.localRevision);

@@ -2,6 +2,8 @@ import { prisma } from "./prisma";
 import { SessionMode } from "@/types";
 import { readUserSkills } from "./skillProgress";
 import { PracticeError } from "./practiceStorage";
+import { Prisma } from "@prisma/client";
+import { capChoiceQuestions } from "./practiceChoice";
 
 export interface UserSkillProfile {
   topWeakSkills: string[];
@@ -87,6 +89,24 @@ export async function getUserSkillProfile(userId: string): Promise<UserSkillProf
  * - 15% challenge (level above current)
  */
 export async function selectQuestionsForSession({
+  ...settings
+}: {
+  userId: string; count: number; mode: SessionMode; topicId?: string; skillId?: string; questionId?: string;
+}): Promise<string[]> {
+  const preferred = await selectPreferredQuestions(settings);
+  const eligible = await prisma.question.findMany({ where: {
+    purpose: "practice", practiceChoice: { not: Prisma.DbNull },
+    ...(settings.topicId ? { topicId: settings.topicId } : {}),
+    ...(settings.skillId ? { skills: { some: { skillId: settings.skillId } } } : {}),
+  }, select: { id: true, practiceChoice: true }, orderBy: [{ difficulty: "asc" }, { id: "asc" }] });
+  const ordered = [...preferred.map(id => eligible.find(q => q.id === id)).filter((q): q is typeof eligible[number] => !!q),
+    ...eligible.filter(q => !preferred.includes(q.id))];
+  const selected = capChoiceQuestions(ordered, settings.count).map(q => q.id);
+  if (settings.questionId && !selected.includes(settings.questionId)) throw new PracticeError("Requested question has no reviewed single-answer choices", 400);
+  return selected;
+}
+
+async function selectPreferredQuestions({
   userId,
   count,
   mode,

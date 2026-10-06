@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
 import { lockAccount, PracticeError } from "../practiceStorage";
 import { assertNoActiveExam } from "../exam/guard";
@@ -8,6 +8,7 @@ import { getLocalizedLesson } from "../i18n/lessons";
 import type { OfflineContent, OfflineLanguage, OfflineStep } from "./types";
 import { simpleNumber } from "./grading";
 import { z } from "zod";
+import { choiceStepId, makeChoiceSnapshots, parseChoice, publicChoiceStep } from "../practiceChoice";
 
 export const downloadSchema = z.object({
   downloadId: z.string().uuid(), topicIds: z.array(z.string().min(1)).min(1).max(16),
@@ -20,8 +21,15 @@ export const syncMetaSchema = z.object({
 });
 export type SyncMeta = z.infer<typeof syncMetaSchema>;
 
+/** The saved package defines its contract even if its session has later been viewed online. */
+export function packageChoiceSnapshots(pack: { content: Prisma.JsonValue; session: { choiceSnapshots: Prisma.JsonValue } }) {
+  const content = pack.content as unknown as OfflineContent;
+  return content.questions.every(q => q.steps.length === 1 && q.steps[0].id === choiceStepId(q.id))
+    ? pack.session.choiceSnapshots : undefined;
+}
+
 /** Hash server-owned keys, question structure and materials, never the client's claimed grade. */
-export async function currentContent(tx: Prisma.TransactionClient, topicIds: string[], questionIds: string[], language: OfflineLanguage) {
+export async function currentContent(tx: Prisma.TransactionClient, topicIds: string[], questionIds: string[], language: OfflineLanguage, snapshots?: Prisma.JsonValue | Prisma.InputJsonValue) {
   const topics = await tx.topic.findMany({ where: { id: { in: topicIds } }, orderBy: { id: "asc" }, include: { lesson: true, skills: { orderBy: { id: "asc" } } } });
   const unordered = await tx.question.findMany({ where: { id: { in: questionIds }, purpose: "practice", NOT: { id: { startsWith: "exam_v1_" } } },
     include: { steps: { orderBy: { order: "asc" }, include: { options: { orderBy: { order: "asc" } } } } } });
@@ -37,7 +45,16 @@ export async function currentContent(tx: Prisma.TransactionClient, topicIds: str
       const lesson = localized ?? (language === "kk" ? t.lesson?.contentKk as unknown as typeof localized : t.lesson);
       return lesson ? [{ title: lesson.title, text: [lesson.whatIsIt, lesson.whenUsed, lesson.example, lesson.commonErrors].join("\n\n"), latex: lesson.formulaLatex }] : [];
     }),
-    questions: questions.map(q => ({ id: q.id, title: contentText(q.title, q.titleKk, language),
+    questions: questions.map(q => {
+      const saved = snapshots && typeof snapshots === "object" && !Array.isArray(snapshots) ? (snapshots as Record<string, unknown>)[q.id] : undefined;
+      if (saved) {
+        const choice = parseChoice(saved), step = publicChoiceStep(q.id, choice);
+        return { id: q.id, title: contentText(q.title, q.titleKk, language),
+          text: contentText(choice.questionText, choice.questionTextKk, language), latex: choice.latex,
+          steps: [{ id: step.id, type: step.type, prompt: contentText(step.prompt, step.promptKk, language),
+            options: step.options.map(o => ({ id: o.id, text: contentText(o.text, o.textKk, language) })) }] };
+      }
+      return { id: q.id, title: contentText(q.title, q.titleKk, language),
       text: contentText(q.questionText, q.questionTextKk, language), latex: q.latex,
       steps: q.steps.map(s => {
         const options = s.options.map(o => ({ id: o.id, text: contentText(o.text, o.textKk, language) }));
@@ -48,11 +65,15 @@ export async function currentContent(tx: Prisma.TransactionClient, topicIds: str
         if (s.type === "numeric_input" && simpleNumber(s.expectedAnswer) !== null) localKey = { kind: "number", value: s.expectedAnswer };
         return { id: s.id, type: s.type, prompt: contentText(s.prompt, s.promptKk, language), options, ...(localKey ? { localKey } : {}) };
       }),
-    })),
+    }; }),
   };
   const grading = questions.map(q => [q.id, q.difficulty, q.correctAnswer, q.explanation, q.explanationKk,
     q.steps.map(s => [s.id, s.type, s.expectedAnswer, s.options.map(o => [o.id, o.isCorrect])])]);
-  const version = createHash("sha256").update(JSON.stringify([content, grading])).digest("hex");
+  // PostgreSQL JSONB changes object key order. Hash canonical objects, preserving option arrays.
+  const versionSource = snapshots ? JSON.stringify([content, snapshots], (_key, value) =>
+    value && typeof value === "object" && !Array.isArray(value) ?
+      Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])) : value) : JSON.stringify([content, grading]);
+  const version = createHash("sha256").update(versionSource).digest("hex");
   return { content, version };
 }
 
@@ -70,7 +91,8 @@ export async function downloadPackage(userId: string, data: z.infer<typeof downl
       }
       return previous;
     }
-    const candidates = await tx.question.findMany({ where: { purpose: "practice", NOT: { id: { startsWith: "exam_v1_" } }, topicId: { in: topicIds }, steps: { some: {} } },
+    const candidates = await tx.question.findMany({ where: { purpose: "practice", practiceChoice: { path: ["type"], equals: "single" },
+      NOT: { id: { startsWith: "exam_v1_" } }, topicId: { in: topicIds }, steps: { some: {} } },
       select: { id: true, topicId: true }, orderBy: [{ difficulty: "asc" }, { id: "asc" }] });
     // Round-robin ensures selected topics are represented before filling the count.
     const groups = topicIds.map(id => candidates.filter(q => q.topicId === id));
@@ -82,9 +104,10 @@ export async function downloadPackage(userId: string, data: z.infer<typeof downl
       if (!row.length) break;
       questionIds.push(...row.slice(0, data.count - questionIds.length));
     }
-    const { content, version } = await currentContent(tx, topicIds, questionIds, data.language);
+    const choiceSnapshots = await makeChoiceSnapshots(tx, questionIds);
+    const { content, version } = await currentContent(tx, topicIds, questionIds, data.language, choiceSnapshots);
     const session = await tx.practiceSession.create({ data: { userId, mode: "offline_practice", questionIds,
-      totalCount: questionIds.length, hintedQuestionIds: questionIds } });
+      totalCount: questionIds.length, hintedQuestionIds: questionIds, choiceSnapshots } });
     // Exposure remains durable even after the browser deletes this package.
     await tx.questionHelp.createMany({ data: questionIds.map(questionId => ({ userId, questionId })), skipDuplicates: true });
     return tx.offlinePackage.create({ data: { id: data.downloadId, userId, sessionId: session.id,
@@ -99,7 +122,8 @@ export async function validateOffline(tx: Prisma.TransactionClient, userId: stri
   if (pack.contentVersion !== meta.contentVersion) throw new PracticeError("STALE_PACKAGE", 409);
   const content = pack.content as unknown as OfflineContent;
   if (content.questions[meta.sequence]?.id !== questionId) throw new PracticeError("QUEUE_ORDER_CONFLICT", 409);
-  const current = await currentContent(tx, content.topicIds, content.questions.map(q => q.id), pack.language as OfflineLanguage);
+  const current = await currentContent(tx, content.topicIds, content.questions.map(q => q.id), pack.language as OfflineLanguage,
+    packageChoiceSnapshots(pack));
   if (current.version !== pack.contentVersion && meta.acceptedVersion !== current.version) throw new PracticeError("STALE_PACKAGE", 409);
   const original = content.questions[meta.sequence], updated = current.content.questions[meta.sequence];
   if (JSON.stringify(original.steps.map(s => [s.id, s.type, s.options.map(o => o.id)])) !== JSON.stringify(updated.steps.map(s => [s.id, s.type, s.options.map(o => o.id)]))) {

@@ -1,5 +1,6 @@
 import { localizedJson } from "@/lib/i18n/http";
 import { NextRequest } from "next/server";
+import { parseChoice } from "@/lib/practiceChoice";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { PracticeError, recordHintUsage, recordQuestionHelp } from "@/lib/practiceStorage";
@@ -138,6 +139,28 @@ export async function POST(request: NextRequest) {
         userProgressRecord = await prisma.userTopicProgress.findUnique({
           where: { userId_topicId: { userId, topicId: data.topicId } },
         });
+      }
+    }
+
+    // Before checking a choice task, assistance is an authored conceptual hint only.
+    // Never let a free-form request or hint level reveal the private solution.
+    if (questionRecord?.practiceChoice && !data.attemptId) {
+      const hint = parseChoice(questionRecord.practiceChoice).hint;
+      return localizedJson(request, { action: data.action, hintLevel: 1,
+        text: lang === "kk" ? hint?.kk ?? "Алдымен жауапты таңдап, тексеріңіз." : hint?.ru ?? "Сначала выберите ответ и нажмите «Проверить»." });
+    }
+    if (questionRecord?.practiceChoice && data.attemptId && data.action === "analyze_error") {
+      const attempt = await prisma.userAttempt.findFirst({ where: { id: data.attemptId, userId }, select: { submissionResult: true } });
+      const saved = attempt?.submissionResult as any;
+      if (saved?.choice) {
+        const mistake = await prisma.mistake.findFirst({ where: { attemptId: data.attemptId, userId } });
+        const feedback = saved.stepResults?.[0]?.feedback;
+        const text = feedback ? (lang === "kk" ? feedback.kk : feedback.ru) : contentText(saved.explanation, saved.explanationKk, lang);
+        return localizedJson(request, { action: "analyze_error", text, structuredError: {
+          errorType: mistake?.errorType ?? "unclassified", weakSkill: mistake?.weakSkill ?? "",
+          reason: text, shortExplanation: text, hint: lang === "kk" ? "Ережені қайталап, басқа тапсырма шешіңіз." : "Повторите правило и решите другую задачу.",
+          recommendedAction: "practice", recommendedDifficulty: questionRecord.difficulty,
+        } });
       }
     }
 

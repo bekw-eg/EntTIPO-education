@@ -13,6 +13,7 @@ import {
   GeneratedQuestion,
 } from "../lib/questionGenerator";
 import { questionFingerprint } from "../lib/exam/fingerprint";
+import { seedPracticeChoices } from "../prisma/practiceChoiceSeed";
 
 const prisma = new PrismaClient();
 
@@ -109,6 +110,7 @@ async function main() {
   }
 
   const totalInDb = await prisma.question.count();
+  await seedPracticeChoices(prisma);
   console.log(`\n🎉 Question Pool Scaling Complete!`);
   console.log(`✅ Newly inserted questions: ${insertedCount}`);
   console.log(`📊 Total questions now in database: ${totalInDb}`);

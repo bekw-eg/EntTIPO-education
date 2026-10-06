@@ -6,6 +6,7 @@ import { questionFingerprint } from "../lib/exam/fingerprint";
 import { EXAM_RULES } from "../lib/exam/rules";
 import { examPointsKk } from '../lib/i18n/exam-content';
 import { seedKazakhContent } from './kazakhSeed';
+import { seedPracticeChoices } from './practiceChoiceSeed';
 
 /** Additive, serialized, stable IDs. Preserve every existing question and its attempt history. */
 export async function seedExamBank(prisma: PrismaClient) {
@@ -52,4 +53,5 @@ export async function seedExamBank(prisma: PrismaClient) {
     }
   }, { maxWait: 10000, timeout: 60000 });
   await seedKazakhContent(prisma);
+  await seedPracticeChoices(prisma);
 }

@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { PracticeError } from "./practiceStorage";
 import { summarizeAttempts } from "./practiceStats";
 import { assertNoActiveExam } from "./exam/guard";
+import { choiceStepId, publicChoiceStep, sessionChoice } from "./practiceChoice";
 
 // Whitelist both exercise and option fields: never send an answer key with a task.
 export const practiceQuestionSelect = {
@@ -56,17 +57,30 @@ export async function readPracticeSnapshot(tx: Prisma.TransactionClient, session
       };
     }
   }
-  if (result && typeof result === 'object' && !Array.isArray(result) && questionId) {
+  if (result && typeof result === 'object' && !Array.isArray(result) && !("choice" in result) && questionId) {
     const translation = await tx.question.findUnique({ where: { id: questionId }, select: { explanationKk: true } });
     result = { ...result, explanationKk: translation?.explanationKk ?? null };
+  }
+  const isLegacyResult = !!result && typeof result === "object" && !Array.isArray(result) && !("choice" in result);
+  let publicQuestion = question ? publicPracticeQuestion(question, session.hintedQuestionIds.includes(question.id)) : null;
+  let draftAnswers = session.draftAnswers;
+  if (question && !isLegacyResult && (session.status === "active" || result)) {
+    const choice = await sessionChoice(tx, session, question.id);
+    publicQuestion = { ...publicPracticeQuestion(question), choiceFormat: true,
+      questionText: choice.questionText, questionTextKk: choice.questionTextKk ?? null, latex: choice.latex,
+      usedHint: session.hintedQuestionIds.includes(question.id),
+      steps: [{ ...publicChoiceStep(question.id, choice, session.hintedQuestionIds.includes(question.id) && choice.hint ? choice.hint : undefined),
+        hasHint: !!choice.hint }] } as typeof publicQuestion;
+    const drafts = session.draftAnswers as Record<string, string>;
+    draftAnswers = drafts[choiceStepId(question.id)] ? { [choiceStepId(question.id)]: drafts[choiceStepId(question.id)] } : {};
   }
   return {
     id: session.id, status: session.status, mode: session.mode,
     totalCount: session.totalCount, ...summarizeAttempts(attempts),
     startedAt: session.startedAt, completedAt: session.completedAt,
     questionIds: session.questionIds, currentIndex: session.currentIndex,
-    revision: session.revision, draftAnswers: session.draftAnswers,
-    question: question ? publicPracticeQuestion(question, session.hintedQuestionIds.includes(question.id)) : null,
+    revision: session.revision, draftAnswers,
+    question: publicQuestion,
     result,
   };
 }

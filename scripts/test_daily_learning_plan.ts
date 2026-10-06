@@ -7,6 +7,8 @@ import { getDailyLearningPlan } from "../lib/dailyLearningPlan";
 import { recordQuestionHelp } from "../lib/practiceStorage";
 import { addDays, localDay } from "../lib/learningPolicy";
 import { seedSkills } from "../prisma/skillSeed";
+import { choiceStepId, parseChoice } from "../lib/practiceChoice";
+import { testChoice } from "./choice_test_fixture";
 
 const prisma = new PrismaClient(), users: string[] = [];
 const base = process.env.PLAN_TEST_BASE_URL ?? "http://127.0.0.1:3000";
@@ -32,11 +34,19 @@ async function practice(account: Account, questionId: string, skillId = "power_p
 }
 async function payload(sessionId: string, questionId: string, correct = true) {
   const q = await prisma.question.findUniqueOrThrow({ where: { id: questionId }, include: { steps: { include: { options: true } } } });
+  if (q.purpose !== "diagnostic") {
+    const choice = parseChoice(q.practiceChoice);
+    return { sessionId, questionId, submissionId: randomUUID(), usedHint: false, stepAnswers: [{ stepId: choiceStepId(questionId),
+      answer: correct ? choice.correctOptionIds[0] : choice.options.find(o => !choice.correctOptionIds.includes(o.id))!.id }] };
+  }
   return { sessionId, questionId, submissionId: randomUUID(), usedHint: false, stepAnswers: q.steps.map((s) => ({
     stepId: s.id, answer: correct ? s.type === "multiple_choice" ? s.options.find((o) => o.isCorrect)!.id : s.expectedAnswer : "999999",
   })) };
 }
 async function answer(account: Account, sessionId: string, questionId: string, correct = true, copies = 1) {
+  const statePath = `/api/sessions/${sessionId}`, state = (await api(statePath, account.cookie)).data;
+  if (state.result) assert.equal((await api(`${statePath}/state`, account.cookie, "PATCH", {
+    action: state.question.id === questionId ? "retry" : "next", revision: state.revision })).status, 200);
   const body = await payload(sessionId, questionId, correct);
   const responses = await Promise.all(Array.from({ length: copies }, () => api("/api/attempts", account.cookie, "POST", body)));
   responses.forEach((r) => { assert.equal(r.status, 200, JSON.stringify(r.data)); assert.deepEqual(r.data, responses[0].data); });
@@ -89,7 +99,7 @@ async function main() {
   assert.equal(await prisma.practiceSession.count({ where: { id: workSession, userId: a.id } }), 1);
   const statePath = `/api/sessions/${workSession}`;
   const workState = (await api(statePath, a.cookie)).data;
-  const draft = { [workState.question.steps[0].id]: "x^(" };
+  const draft = { [workState.question.steps[0].id]: workState.question.steps[0].options[0].id };
   assert.equal((await api(`${statePath}/state`, a.cookie, "PATCH", { action: "save", currentIndex: 0, revision: workState.revision, answers: draft })).status, 200);
   await api("/api/auth/logout", a.cookie, "POST");
   const login = await api("/api/auth/login", undefined, "POST", { email: a.email, password: "test-password-123" });
@@ -206,7 +216,7 @@ async function main() {
   await api("/api/learning-plan", c.cookie, "POST", { action: "complete_rule", actionId: cRule.id });
   const training = await api("/api/learning-plan", c.cookie, "POST", { action: "start", actionId: cWork.id });
   const cs = sessionFromHref(training.data.href), cursor = (await api(`/api/sessions/${cs}`, c.cookie)).data;
-  const savedDraft = { [cursor.question.steps[0].id]: "unfinished" };
+  const savedDraft = { [cursor.question.steps[0].id]: cursor.question.steps[0].options[0].id };
   await api(`/api/sessions/${cs}/state`, c.cookie, "PATCH", { action: "save", currentIndex: 0, revision: cursor.revision, answers: savedDraft });
   assert.equal((await getDailyLearningPlan(c.id, beforeMidnight)).id, yesterday.id);
   const tomorrow = await getDailyLearningPlan(c.id, afterMidnight);
@@ -234,6 +244,7 @@ async function main() {
   await prisma.skill.create({ data: { id: fixtureSkillId, topicId: fixtureTopicId, nameRu: "test", nameKk: "test", ruleRu: "test", ruleKk: "test", explanationRu: "test", explanationKk: "test" } });
   for (const [suffix, difficulty] of [["original", 1], ["hard", 5]] as const) await prisma.question.create({ data: {
     id: `${runId}-${suffix}`, topicId: fixtureTopicId, title: "test", questionText: "test", correctAnswer: "2", answerType: "number", explanation: "test", difficulty,
+    practiceChoice: testChoice(`${runId}-${suffix}`, false, fixtureSkillId, 2),
     skills: { create: { skillId: fixtureSkillId } }, steps: { create: { order: 1, type: "numeric_input", prompt: "test", expectedAnswer: "2", skills: { create: { skillId: fixtureSkillId } } } },
   } });
   const unavailable = await prisma.mistake.create({ data: { userId: b.id, questionId: `${runId}-original`, topicId: fixtureTopicId, skillId: fixtureSkillId, errorType: "concept_error", isReviewed: true, reviewedAt: new Date() } });
@@ -245,6 +256,7 @@ async function main() {
   for (const suffix of ["seen", "helped", "fresh"]) {
     const q = await prisma.question.create({ data: { id: `${runId}-${suffix}`, topicId: fixtureTopicId, title: "test", questionText: "test",
       correctAnswer: "2", answerType: "number", explanation: "test", difficulty: 1,
+      practiceChoice: testChoice(`${runId}-${suffix}`, false, fixtureSkillId, 2),
       skills: { create: { skillId: fixtureSkillId } }, steps: { create: { order: 1, type: "numeric_input", prompt: "test", expectedAnswer: "2", skills: { create: { skillId: fixtureSkillId } } } } } });
     if (suffix === "seen") await answer(b, await practice(b, q.id, fixtureSkillId), q.id);
     if (suffix === "helped") await recordQuestionHelp(b.id, q.id);

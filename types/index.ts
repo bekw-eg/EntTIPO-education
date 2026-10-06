@@ -98,6 +98,7 @@ export interface Question {
 
 /** Public exercise data. Solutions are supplied only by a checked attempt. */
 export type PracticeQuestion = Omit<Question, "correctAnswer" | "explanation" | "steps"> & {
+  choiceFormat?: boolean;
   steps: (Omit<QuestionStep, "expectedAnswer" | "hint" | "options"> & {
     hasHint: boolean;
     hint?: string | null;
@@ -365,6 +366,9 @@ export interface StepResult {
 }
 
 export interface AttemptResult {
+  choice?: { selectedOptionIds: string[]; correctOptionIds: string[];
+    options: { id: string; text: string; textKk?: string | null }[];
+    solutionSteps: { prompt: string; promptKk?: string | null; answer: string }[] };
   learningCheck?: { status: string; mistakeId: string | null; dueDay: string | null } | null;
   attemptId: string;
   isCorrect: boolean;

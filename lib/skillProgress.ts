@@ -49,7 +49,7 @@ export async function readUserSkills(tx: Prisma.TransactionClient, userId: strin
 
 /** Every returned task has an explicit link to the requested skill. */
 export async function recommendSkillQuestion(tx: Prisma.TransactionClient, userId: string, skillId: string, preferredQuestionId?: string) {
-  const questions = await tx.question.findMany({ where: { purpose: "practice", skills: { some: { skillId } } },
+  const questions = await tx.question.findMany({ where: { purpose: "practice", practiceChoice: { path: ["type"], equals: "single" }, skills: { some: { skillId } } },
     select: { id: true, title: true, titleKk: true, questionText: true, questionTextKk: true, latex: true, difficulty: true,
       attempts: { where: { userId }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } } },
     orderBy: [{ difficulty: "asc" }, { id: "asc" }] });

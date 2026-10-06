@@ -5,6 +5,7 @@ import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { practiceQuestionSelect, publicPracticeQuestion } from "@/lib/practiceSession";
 import { assertNoActiveExam } from "@/lib/exam/guard";
 import { lockAccount, PracticeError } from "@/lib/practiceStorage";
+import { publicChoiceStep, sessionChoice } from "@/lib/practiceChoice";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export async function GET(
       await assertNoActiveExam(tx, userId);
       const session = await tx.practiceSession.findFirst({
         where: { id: sessionId, userId },
-        select: { id: true, hintedQuestionIds: true, questionIds: true, currentIndex: true },
+        select: { id: true, hintedQuestionIds: true, questionIds: true, currentIndex: true, choiceSnapshots: true },
       });
       if (!session) throw new PracticeError("Session not found", 404);
       const { searchParams } = new URL(request.url);
@@ -34,7 +35,10 @@ export async function GET(
         select: practiceQuestionSelect,
       });
       if (!question) throw new PracticeError("Question not found", 404);
-      return publicPracticeQuestion(question, session.hintedQuestionIds.includes(question.id));
+      const choice = await sessionChoice(tx, session, question.id);
+      return { ...publicPracticeQuestion(question), choiceFormat: true,
+        questionText: choice.questionText, questionTextKk: choice.questionTextKk, latex: choice.latex,
+        steps: [publicChoiceStep(question.id, choice)] };
     });
     return localizedJson(request, result);
   } catch (error) {
