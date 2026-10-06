@@ -68,6 +68,18 @@
   font-size: 1.1em;
 }
 
+/* Keep the lesson readable and let individual formulae scroll on narrow screens. */
+.analysis-content .analysis-copy > div,
+.analysis-content .analysis-question > div {
+  @apply max-w-full overflow-x-auto break-words border-0 bg-transparent p-0 font-normal shadow-none;
+}
+.analysis-content .analysis-copy > div {
+  @apply text-sm leading-relaxed sm:text-base;
+}
+.analysis-content .analysis-question > div {
+  @apply text-base font-medium leading-relaxed sm:text-lg;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

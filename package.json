@@ -50,6 +50,8 @@
     "test:choices:math": "tsx scripts/audit_choice_content.ts",
     "test:choices:migration": "tsx scripts/test_choice_migration.ts",
     "typecheck": "tsc --noEmit",
+    "test:analysis:unit": "tsx scripts/test_result_analysis_unit.ts",
+    "test:analysis:browser": "tsx scripts/test_result_analysis_browser.ts",
     "test:road:unit": "tsx scripts/test_learning_road_unit.ts",
     "test:road:http": "tsx scripts/test_learning_road_http.ts",
     "test:road:browser": "tsx scripts/test_learning_road_browser.ts"

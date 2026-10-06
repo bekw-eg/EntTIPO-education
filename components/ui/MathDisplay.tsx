@@ -18,7 +18,7 @@ export function MathDisplay({ math, block = false, className }: MathDisplayProps
       katex.render(math, ref.current, {
         throwOnError: false,
         displayMode: block,
-        output: "html",
+        output: "htmlAndMathml",
       });
     } catch {
       if (ref.current) ref.current.textContent = math;

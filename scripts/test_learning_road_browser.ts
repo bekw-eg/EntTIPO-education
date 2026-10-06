@@ -70,7 +70,7 @@ async function main() {
       const id = session.questionIds[index], question = await prisma.question.findUniqueOrThrow({ where: { id } });
       await page.locator(`input[value="${parseChoice(question.practiceChoice).correctOptionIds[0]}"]`).check();
       await page.getByRole("button", { name: "Проверить", exact: true }).click();
-      await page.getByRole("button", { name: "Следующее задание", exact: true }).click();
+      await page.getByRole("button", { name: index + 1 === session.questionIds.length ? "Завершить тренировку" : "Следующее задание", exact: true }).click();
     }
     await expect(page.getByRole("link", { name: "Продолжить путь", exact: true })).toBeVisible();
     await page.getByRole("link", { name: "Продолжить путь", exact: true }).click();

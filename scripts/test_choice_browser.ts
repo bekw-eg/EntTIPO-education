@@ -32,14 +32,14 @@ async function main() {
     await page.close();await context.setOffline(false);page=await context.newPage();page.on("pageerror",error=>errors.push(error.message));
     await page.goto(url);await expect(page.locator(`input[value="${f.q(0)}-2"]`)).toBeChecked();
     await page.locator(`input[value="${f.q(0)}-0"]`).check();await page.getByRole("button",{name:"Проверить",exact:true}).click();
-    await expect(page.getByText("Отлично! Всё правильно",{exact:false})).toBeVisible();
-    await expect(page.getByText("Правильный ответ:",{exact:true})).toBeVisible();await expect(page.getByRole("radio")).toHaveCount(0);
-    await page.reload();await expect(page.getByText("Отлично! Всё правильно",{exact:false})).toBeVisible();
+    await expect(page.getByText("Задание выполнено правильно",{exact:true})).toBeVisible();
+    await expect(page.getByText("Правильный ответ",{exact:true})).toBeVisible();await expect(page.getByRole("radio")).toHaveCount(0);
+    await page.reload();await expect(page.getByText("Задание выполнено правильно",{exact:true})).toBeVisible();
     await page.getByRole("button",{name:"Следующее задание",exact:true}).click();await expect(page.getByRole("radio")).toHaveCount(5);
     await page.locator(`input[value="${f.q(1)}-2"]`).check();await page.getByRole("button",{name:"Проверить",exact:true}).click();
-    await page.getByRole("button",{name:"Попробовать ещё раз",exact:true}).click();await expect(page.getByRole("radio")).toHaveCount(5);
+    await page.getByRole("button",{name:"Решить задание",exact:false}).click();await expect(page.getByRole("radio")).toHaveCount(5);
     await page.locator(`input[value="${f.q(1)}-0"]`).check();await page.getByRole("button",{name:"Проверить",exact:true}).click();
-    await page.getByRole("button",{name:"Следующее задание",exact:true}).click();
+    await page.getByRole("button",{name:"Завершить тренировку",exact:true}).click();
     await page.getByRole("button",{name:"Просмотреть историю ответов",exact:true}).click();await expect(page.locator("details")).toHaveCount(3);
     assert.equal(await prisma.userAttempt.count({where:{sessionId:session.id}}),3);
     const stats=await prisma.practiceSession.findUniqueOrThrow({where:{id:session.id}});assert.equal(stats.completedCount,2);
@@ -50,7 +50,7 @@ async function main() {
     await page.locator(`input[value="${f.q(21)}-0"]`).check();await page.locator(`input[value="${f.q(21)}-1"]`).check();
     await expect(page.getByRole("status").filter({hasText:"Ответы сохранены"})).toBeVisible();await page.reload();
     await expect(page.locator("input:checked")).toHaveCount(2);await page.getByRole("button",{name:"Проверить",exact:true}).click();
-    await expect(page.getByText("Отлично! Всё правильно",{exact:false})).toBeVisible();
+    await expect(page.getByText("Задание выполнено правильно",{exact:true})).toBeVisible();
     await page.goto(`${baseUrl}/practice/session/${session.id}`);await page.setViewportSize({width:390,height:844});
     await page.screenshot({path:"tmp/choice-browser.png",fullPage:true});
     // Fresh offline packages contain no keys and preserve choices through a disconnected restart.

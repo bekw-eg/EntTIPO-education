@@ -262,6 +262,7 @@ function PracticeSessionContent() {
       </>}
       {phase === "result" && snapshot?.result && question && <ResultAnalysis
         result={snapshot.result} question={question} isLoading={isLoading}
+        questionNumber={snapshot.currentIndex + 1} isLastQuestion={snapshot.currentIndex + 1 >= snapshot.totalCount}
         onRetry={() => { void transition("retry"); }} onNext={() => { void transition("next"); }} onOpenAi={handleOpenAi} />}
       {phase === "summary" && snapshot && <><SessionSummary session={snapshot}
         onGoToDashboard={() => router.push("/")} onNewSession={() => router.push("/practice")} />
