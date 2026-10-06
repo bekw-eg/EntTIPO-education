@@ -25,6 +25,24 @@ $$\text{Диагностика} \longrightarrow \text{Выявление сла�
 
 ## 🚀 Быстрый запуск
 
+### Персональный учебный путь
+
+На `/learning-road` доступен «Мой путь» / «Менің оқу жолым»: стабильный
+небольшой блок теории, закрепления, практики, повторения и проверки.
+Он использует существующие навыки, Mastery, диагностику и интервалы 1/3/7/14.
+Карточка на главной показывает текущий фокус и прогресс блока.
+
+Для существующей базы, при остановленном приложении:
+
+```powershell
+npx prisma db execute --file prisma/updates/20261006_adaptive_learning_road.sql --schema prisma/schema.prisma
+npm run db:generate
+```
+
+Проверки: `npm run test:road:unit`, `npm run test:road:http`,
+`npm run test:road:browser`. [Алгоритм, стабильность, prerequisites,
+миграция, список файлов и ограничения](docs/adaptive-learning-road.md).
+
 ### 1. Предварительные требования
 * [Docker Desktop](https://www.docker.com/products/docker-desktop/) (запущен)
 * [Node.js](https://nodejs.org/) (v18+) & `npm`

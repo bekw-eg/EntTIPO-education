@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   CheckCircle2,
   XCircle,
@@ -113,7 +114,7 @@ export default function ResultAnalysis({
           <p className="font-semibold">{result.learningCheck.status === "passed" ? learningCopy.success : learningCopy.failed}</p>
           {result.learningCheck.status !== "passed" && <p>{learningCopy.retry}</p>}
           {result.learningCheck.dueDay && <p>{learningCopy.next}: {result.learningCheck.dueDay}</p>}
-          <a className="text-primary underline" href="/">{learningCopy.home}</a>
+          <Link className="text-primary underline" href="/">{learningCopy.home}</Link>
         </div>}
         {result.choice && <div className="space-y-4">
           {[{ title: t.result.yourAnswer, ids: result.choice.selectedOptionIds },
