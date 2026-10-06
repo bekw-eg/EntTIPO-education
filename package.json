@@ -54,7 +54,8 @@
     "test:analysis:browser": "tsx scripts/test_result_analysis_browser.ts",
     "test:road:unit": "tsx scripts/test_learning_road_unit.ts",
     "test:road:http": "tsx scripts/test_learning_road_http.ts",
-    "test:road:browser": "tsx scripts/test_learning_road_browser.ts"
+    "test:road:browser": "tsx scripts/test_learning_road_browser.ts",
+    "test:ui:smoke": "tsx scripts/test_ui_smoke.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

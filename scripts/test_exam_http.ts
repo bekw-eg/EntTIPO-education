@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { EXAM_EXERCISES } from "../lib/exam/bank";
 import { TIPO_MATH } from "../lib/exam/profile";
+import { choiceStepId, parseChoice } from "../lib/practiceChoice";
 
 const prisma = new PrismaClient();
 const base = process.env.EXAM_TEST_BASE_URL ?? "http://127.0.0.1:3100";
@@ -31,9 +32,10 @@ async function main() {
   const started = await fetch(`${base}/api/sessions`, { method: "POST", headers: { cookie, "Content-Type": "application/json" },
     body: JSON.stringify({ mode: "mixed", totalCount: 1, questionId: q.id, skillId: q.skills[0].skillId }) });
   assert.equal(started.status, 200); const sessionId = (await started.json()).id;
+  const choice = parseChoice(q.practiceChoice);
   const submitted = await fetch(`${base}/api/attempts`, { method: "POST", headers: { cookie, "Content-Type": "application/json" },
     body: JSON.stringify({ submissionId: randomUUID(), sessionId, questionId: q.id, usedHint: false,
-      stepAnswers: [{ stepId: q.steps[0].id, answer: q.steps[0].options.find((o) => o.isCorrect)!.id }] }) });
+      stepAnswers: [{ stepId: choiceStepId(q.id), answer: choice.correctOptionIds[0] }] }) });
   assert.equal(submitted.status, 200); assert.equal((await submitted.json()).isCorrect, true);
   assert.equal(await prisma.skillObservation.count({ where: { userId, skillId: q.skills[0].skillId, isCorrect: true } }), 1);
   const plan = await fetch(`${base}/api/learning-plan`, { headers: { cookie } });

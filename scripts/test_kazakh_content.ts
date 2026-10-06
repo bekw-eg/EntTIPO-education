@@ -10,6 +10,7 @@ import { questionFingerprint } from '../lib/exam/fingerprint';
 import { assertTutorLanguage } from '../lib/ai/language';
 import type { PaperQuestion } from '../lib/exam/mode';
 import { topicLessons } from '../lib/i18n/lessons';
+import { choiceStepId, parseChoice } from '../lib/practiceChoice';
 
 const prisma = new PrismaClient();
 const base = process.env.KAZAKH_TEST_BASE_URL ?? 'http://127.0.0.1:3100';
@@ -37,10 +38,16 @@ async function practice(cookie: string, questionId: string, skillId: string, lan
 }
 async function submit(cookie: string, sessionId: string, questionId: string, correct: boolean, language = 'kk') {
   const q = await prisma.question.findUniqueOrThrow({ where: { id: questionId }, include: { steps: { include: { options: true } } } });
+  const state = (await api(`/api/sessions/${sessionId}`, cookie, 'GET', undefined, language)).data;
+  if (state.result) {
+    const moved = await api(`/api/sessions/${sessionId}/state`, cookie, 'PATCH', {
+      action: state.question.id === questionId ? 'retry' : 'next', revision: state.revision }, language);
+    assert.equal(moved.status, 200, JSON.stringify(moved.data));
+  }
+  const choice = parseChoice(q.practiceChoice);
+  const ids = correct ? choice.correctOptionIds : [choice.options.find(o => !choice.correctOptionIds.includes(o.id))!.id];
   const r = await api('/api/attempts', cookie, 'POST', { submissionId: randomUUID(), sessionId, questionId,
-    stepAnswers: q.steps.map(s => ({ stepId: s.id, answer: correct ? s.type === 'multiple_choice'
-      ? s.options.find(o => o.isCorrect)!.text : s.expectedAnswer : s.type === 'multiple_choice'
-      ? s.options.find(o => !o.isCorrect)!.text : '999999' })) }, language);
+    stepAnswers: [{ stepId: choiceStepId(questionId), answer: choice.type === 'single' ? ids[0] : JSON.stringify(ids) }] }, language);
   assert.equal(r.status, 200, JSON.stringify(r.data)); return r.data;
 }
 function privateQuestion(question: any) {
@@ -77,7 +84,9 @@ async function main() {
   const path = `/api/sessions/${id}`;
   let state = (await api(path, a.cookie)).data;
   privateQuestion(state.question);
-  const draft = { [choice.steps[0].id]: choice.steps[0].options.find(o => !o.isCorrect)!.text };
+  const currentChoice = parseChoice(choice.practiceChoice);
+  const wrongOption = currentChoice.options.find(o => !currentChoice.correctOptionIds.includes(o.id))!;
+  const draft = { [choiceStepId(choice.id)]: wrongOption.id };
   const saved = await api(`${path}/state`, a.cookie, 'PATCH', { action: 'save', currentIndex: 0, revision: state.revision, answers: draft }, 'ru');
   assert.equal(saved.status, 200);
   const hint = await api(`${path}/hint`, a.cookie, 'POST', { questionId: choice.id });
@@ -87,7 +96,7 @@ async function main() {
   const switched = (await api(path, a.cookie)).data;
   for (const field of ['id', 'questionIds', 'currentIndex', 'draftAnswers', 'revision', 'result']) assert.deepEqual(switched[field], state[field], field);
   assert.equal(switched.question.usedHint, true);
-  assert.equal(answerText(draft[choice.steps[0].id], switched.question.steps[0], 'kk'), choice.steps[0].options.find(o => !o.isCorrect)!.textKk);
+  assert.equal(answerText(draft[choiceStepId(choice.id)], switched.question.steps[0], 'kk'), wrongOption.textKk);
   const wrongKk = await submit(a.cookie, id, choice.id, false);
   assert.equal(wrongKk.isCorrect, false); assert.ok(wrongKk.explanationKk);
   const russianSession = await practice(b.cookie, choice.id, choice.skills[0].skillId, 'ru');
