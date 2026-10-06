@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { roadText } from "@/lib/i18n/learning-road";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -26,6 +27,7 @@ export function Sidebar() {
 
   const navItems = [
     { name: t.nav.home, href: "/", icon: LayoutDashboard },
+    { name: roadText[locale].title, href: "/learning-road", icon: Compass },
     { name: t.nav.practice, href: "/practice", icon: BookOpen },
     { name: locale === "kk" ? "Емтихан" : "Экзамен", href: "/exam", icon: GraduationCap },
     { name: locale === "kk" ? "Диагностика" : "Диагностика навыков", href: "/diagnostics", icon: GraduationCap },

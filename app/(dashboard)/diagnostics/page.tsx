@@ -1,4 +1,5 @@
 "use client";
+import { LearningRoadLink } from "@/components/learning-road/LearningRoadLink";
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 
 import { useEffect, useRef, useState } from "react";
@@ -185,6 +186,7 @@ export default function DiagnosticsPage() {
       </>}
       {snapshot?.result && <DiagnosticResults report={snapshot.result} />}
       {snapshot?.status === "completed" && <div className="space-y-2">
+        <LearningRoadLink />
         <Button variant="outline" disabled={busy} onClick={() => { void start(snapshot.id); }}>{learningText[locale === "kk" ? "kk" : "ru"].retake}</Button>
         <p className="text-sm text-muted-foreground">{learningText[locale === "kk" ? "kk" : "ru"].retakeNote}</p>
       </div>}

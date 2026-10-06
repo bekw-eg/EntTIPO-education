@@ -20,6 +20,7 @@ import { DashboardStats } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { contentText } from '@/lib/i18n/content';
 import { DailyLearningPlanCard } from "./DailyLearningPlanCard";
+import { LearningRoadCard } from "@/components/learning-road/LearningRoadCard";
 
 interface DashboardViewProps {
   initialData: DashboardStats;
@@ -67,6 +68,7 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
 
       <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
         <DailyLearningPlanCard />
+        <LearningRoadCard />
         {/* Stats Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard

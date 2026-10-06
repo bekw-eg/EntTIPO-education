@@ -74,6 +74,7 @@ export async function readPracticeSnapshot(tx: Prisma.TransactionClient, session
     const drafts = session.draftAnswers as Record<string, string>;
     draftAnswers = drafts[choiceStepId(question.id)] ? { [choiceStepId(question.id)]: drafts[choiceStepId(question.id)] } : {};
   }
+  const roadNode = await tx.learningRoadNode.findFirst({ where: { sessionId, block: { userId } }, select: { id: true } });
   return {
     id: session.id, status: session.status, mode: session.mode,
     totalCount: session.totalCount, ...summarizeAttempts(attempts),
@@ -82,5 +83,6 @@ export async function readPracticeSnapshot(tx: Prisma.TransactionClient, session
     revision: session.revision, draftAnswers,
     question: publicQuestion,
     result,
+    roadNodeId: roadNode?.id ?? null,
   };
 }

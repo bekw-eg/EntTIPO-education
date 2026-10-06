@@ -7,6 +7,8 @@ import QuestionCard from "@/components/practice/QuestionCard";
 import ResultAnalysis from "@/components/practice/ResultAnalysis";
 import SessionSummary from "@/components/practice/SessionSummary";
 import { PracticeHistory } from "@/components/practice/PracticeHistory";
+import Link from "next/link";
+import { roadText } from "@/lib/i18n/learning-road";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "@/components/providers/AccountProvider";
 import { toast } from "sonner";
@@ -263,6 +265,7 @@ function PracticeSessionContent() {
         onRetry={() => { void transition("retry"); }} onNext={() => { void transition("next"); }} onOpenAi={handleOpenAi} />}
       {phase === "summary" && snapshot && <><SessionSummary session={snapshot}
         onGoToDashboard={() => router.push("/")} onNewSession={() => router.push("/practice")} />
+        {snapshot.roadNodeId && <Button asChild className="w-full"><Link href="/learning-road">{roadText[locale].continue}</Link></Button>}
         <PracticeHistory sessionId={sessionId} /></>}
       <AiTutorPanel isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} question={question}
         stepAnswers={stepAnswers} hasAttempted={phase === "result"} attemptId={snapshot?.result?.attemptId}

@@ -394,6 +394,7 @@ export interface SessionStats {
 }
 
 export interface PracticeSnapshot extends SessionStats {
+  roadNodeId?: string | null;
   id: string;
   status: SessionStatus;
   questionIds: string[];
