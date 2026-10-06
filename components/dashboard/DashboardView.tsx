@@ -4,18 +4,14 @@ import React from "react";
 import Link from "next/link";
 import {
   BookOpen,
-  Target,
-  BarChart3,
   AlertCircle,
-  Zap,
-  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/layout/Header";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { TopicProgressBar } from "@/components/dashboard/TopicProgressBar";
-import { StreakCard } from "@/components/dashboard/StreakCard";
+
 import { DashboardStats } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { contentText } from '@/lib/i18n/content';
@@ -52,38 +48,26 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0">
       <Header
         title={getGreeting()}
         subtitle={getFormattedDate()}
-        actions={
-          <Button asChild size="sm" className="hidden sm:flex shadow-sm">
-            <Link href="/practice">
-              <Zap className="w-4 h-4 mr-2" />
-              {t.dashboard.quickStart}
-            </Link>
-          </Button>
-        }
       />
 
-      <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+      <div className="page-content">
         <DailyLearningPlanCard />
         <LearningRoadCard />
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="metric-row">
           <StatsCard
             title={t.dashboard.todayTasks}
             value={`${data.todaySolved}`}
             subtitle={t.dashboard.tasksSolved}
-            icon={<CheckCircle2 className="w-5 h-5" />}
-            iconBg="bg-emerald-500/10 text-emerald-500"
           />
           <StatsCard
             title={t.dashboard.accuracy}
             value={`${data.overallAccuracy}%`}
             subtitle={t.dashboard.correctAnswers}
-            icon={<Target className="w-5 h-5" />}
-            iconBg="bg-blue-500/10 text-blue-500"
           />
           <StatsCard
             title={t.dashboard.streak}
@@ -91,37 +75,33 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
             subtitle={
               data.streak > 0 ? t.dashboard.streakDays : t.dashboard.startStreak
             }
-            icon={<Zap className="w-5 h-5" />}
-            iconBg="bg-orange-500/10 text-orange-500"
           />
           <StatsCard
             title={t.dashboard.totalSolved}
             value={data.totalSolved}
             subtitle={`${data.totalAttempts} ${t.statistics.solutionAttempts}`}
-            icon={<BarChart3 className="w-5 h-5" />}
-            iconBg="bg-purple-500/10 text-purple-500"
           />
         </div>
 
-        <StreakCard streak={data.streak} />
+
 
         {/* CTA Buttons */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Button asChild size="lg" className="col-span-2 sm:col-span-1 font-semibold shadow-md">
+        <div className="flex flex-wrap gap-2 border-b pb-6">
+          <Button asChild variant="ghost">
             <Link href="/practice">
               <BookOpen className="w-4 h-4 mr-2" />
               {t.dashboard.startPractice}
             </Link>
           </Button>
-          <Button asChild variant="outline" size="lg" className="border-border">
+          <Button asChild variant="ghost">
             <Link href="/practice?mode=weak_topics">{t.dashboard.weakTopics}</Link>
           </Button>
-          <Button asChild variant="outline" size="lg" className="border-border">
+          <Button asChild variant="ghost">
             <Link href="/topics">{t.dashboard.chooseTopic}</Link>
           </Button>
-          <Button asChild variant="outline" size="lg" className="border-border">
+          <Button asChild variant="ghost">
             <Link href="/mistakes">
-              <AlertCircle className="w-4 h-4 mr-2 text-rose-500" />
+              <AlertCircle className="w-4 h-4 mr-2 text-muted-foreground" />
               {t.dashboard.mistakes}
             </Link>
           </Button>
@@ -130,10 +110,10 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
         {/* Topics section: Weak & Strong */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Weak topics */}
-          <Card>
+          <Card className="border-0 bg-transparent">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
-                <span className="text-rose-500 font-bold">↓</span> {t.dashboard.weakTopics}
+                <span className="text-muted-foreground font-semibold">↓</span> {t.dashboard.weakTopics}
               </CardTitle>
               {data.weakTopics.length > 0 && (
                 <Button asChild variant="ghost" size="sm" className="text-xs h-7">
@@ -151,18 +131,19 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
                   />
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-6">
+                <p className="text-sm text-muted-foreground py-4">
                   {t.dashboard.noWeakTopics}
+                  <Link href="/diagnostics" className="mt-2 block text-primary underline">{locale === "en" ? "Diagnostics" : "Диагностика"}</Link>
                 </p>
               )}
             </CardContent>
           </Card>
 
           {/* Strong topics */}
-          <Card>
+          <Card className="border-0 bg-transparent">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
-                <span className="text-emerald-500 font-bold">↑</span> {t.dashboard.strongTopics}
+                <span className="text-muted-foreground font-semibold">↑</span> {t.dashboard.strongTopics}
               </CardTitle>
               <Button asChild variant="ghost" size="sm" className="text-xs h-7">
                 <Link href="/topics">{t.dashboard.allTopics}</Link>
@@ -178,7 +159,7 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
                   />
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground text-center py-6">
+                <p className="text-sm text-muted-foreground py-4">
                   {t.dashboard.noStrongTopics}
                 </p>
               )}
@@ -188,7 +169,7 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
 
         {/* Recent attempts */}
         {data.recentAttempts.length > 0 && (
-          <Card>
+          <Card className="border-0 bg-transparent">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">{t.dashboard.recentSolutions}</CardTitle>
             </CardHeader>

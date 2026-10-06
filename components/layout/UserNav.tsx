@@ -1,6 +1,7 @@
 "use client";
 import { uiText, errorText } from "@/lib/i18n/messages";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { interfaceText } from "@/lib/i18n/interface";
 
 
 import React, { useState } from "react";
@@ -108,7 +109,8 @@ export function UserNav() {
           <Button
             variant="ghost"
             size="sm"
-            className="flex items-center gap-2 h-9 px-2 hover:bg-muted rounded-full"
+            aria-label={interfaceText[locale].account}
+            className="flex items-center gap-2 px-2 hover:bg-muted"
           >
             <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs shadow-xs">
               {userInitial}

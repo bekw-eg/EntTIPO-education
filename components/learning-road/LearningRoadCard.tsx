@@ -12,7 +12,7 @@ export function LearningRoadCard() {
   const { locale } = useLanguage(), copy = roadText[locale];
   const { road, error, reload } = useLearningRoad();
   const focus = road?.nodes.find(node => node.status === "CURRENT");
-  return <Card className="border-primary/20"><CardContent className="p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+  return <Card className="border-0 border-b rounded-none bg-transparent"><CardContent className="px-0 py-5 flex flex-col sm:flex-row sm:items-center gap-4">
     <Route aria-hidden="true" className="h-8 w-8 shrink-0 text-primary" />
     <div className="flex-1 min-w-0 space-y-2"><h2 className="font-semibold">{copy.title}</h2>
       {error ? <Button variant="ghost" onClick={() => { void reload(); }}>{copy.reload}</Button> : !road ? <p role="status" className="text-sm text-muted-foreground">{copy.loading}</p> : <>
@@ -21,6 +21,6 @@ export function LearningRoadCard() {
           <Progress aria-label={copy.progress} value={100 * road.completedCount / road.nodes.length} className="h-1.5 max-w-sm" /></>}
       </>}
     </div>
-    <Button asChild className="shrink-0"><Link href="/learning-road">{copy.continue}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" /></Link></Button>
+    <Button asChild variant="outline" className="shrink-0"><Link href="/learning-road">{copy.continue}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" /></Link></Button>
   </CardContent></Card>;
 }

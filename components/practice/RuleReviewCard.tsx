@@ -10,7 +10,7 @@ export function RuleReviewCard({ rules, explanation }: { rules: { id: string; na
   const { locale } = useLanguage();
   const copy = analysisText[locale];
   if (!rules.length && !explanation) return null;
-  return <section aria-labelledby="analysis-rule-title" className="space-y-5 rounded-2xl border bg-card p-4 sm:p-6" data-rule-review>
+  return <section aria-labelledby="analysis-rule-title" className="lesson-section" data-rule-review>
     <h3 id="analysis-rule-title" className="flex items-center gap-2 font-semibold">
       <BookOpen aria-hidden="true" className="h-5 w-5 shrink-0 text-primary" />{copy.rule}
     </h3>

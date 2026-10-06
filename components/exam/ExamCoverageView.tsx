@@ -1,5 +1,6 @@
 "use client";
-import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
+import { Header } from "@/components/layout/Header";
+import { MathDisplay } from "@/components/ui/MathDisplay";
 import { uiText } from "@/lib/i18n/messages";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -20,10 +21,7 @@ export default function ExamCoverageView({ reportRu, reportKk }: { reportRu: Cov
   const labels = { uncovered: uiText("Не покрыто", locale), thin: uiText("Мало разнообразия", locale), represented: uiText("Есть разнообразие", locale) };
   const issues = questions.filter((q) => q.quality === "needs_review" || q.missingSkills.length > 0 || q.missingTranslations.length > 0);
   const outside = questions.filter((q) => q.quality === "outside");
-  return <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto">
-    <div className="md:hidden flex justify-end"><LanguageSwitcher variant="compact" /></div>
-    <div><h1 className="text-2xl font-bold">{uiText("Соответствие экзамену и покрытие банка", locale)}</h1>
-      <p className="text-muted-foreground mt-2">{uiText("Проверка фактических задач, форматов и разнообразия. Полное соответствие пока не подтверждено.", locale)}</p></div>
+  return <><Header title={uiText("Соответствие экзамену и покрытие банка", locale)} subtitle={uiText("Проверка фактических задач, форматов и разнообразия. Полное соответствие пока не подтверждено.", locale)} /><div className="page-content">
     <form className="flex flex-wrap gap-3 items-end">
       <label className="flex-1 min-w-0">{uiText("Экзаменационный профиль ", locale)}<select name="profile" defaultValue={profile.id} className="block w-full rounded border bg-background p-2 mt-1">
           {EXAM_PROFILES.map((p) => <option key={p.id} value={p.id}>{localizedExamProfile(p, locale).title}</option>)}
@@ -73,7 +71,7 @@ export default function ExamCoverageView({ reportRu, reportKk }: { reportRu: Cov
             <details className="mt-2"><summary className="cursor-pointer underline">{uiText("Задачи: ", locale)}{p.total}</summary>
               <ul className="mt-2 space-y-3">{questions.filter((q) => q.pointCode === p.code).map((q) => <li key={q.id}>
                 <Link className="underline" href={`/topics/${q.topicId}`}>{contentText(q.title, q.titleKk, locale)}</Link>
-                <p className="text-xs break-all">{q.id}</p><MathText content={contentText(q.questionText.replace(/\[GEOMETRY:[\s\S]*?\]/g, ""), q.questionTextKk?.replace(/\[GEOMETRY:[\s\S]*?\]/g, ""), locale)} />{q.latex && <p className="text-xs break-all">{q.latex}</p>}<p className="text-xs">{locale === "kk" ? ({ direct: "Мазмұны спецификацияға сәйкес; пішімі, деңгейі және аудармасы бойынша жарамдылық бөлек тексеріледі.", supporting: "Қосымша оқу практикасы; емтихан тапсырмасына тікелей сәйкес емес.", outside: "Тапсырма мазмұны осы профильден тыс.", needs_review: "Ағымдағы мазмұн үшін тексеру жоқ немесе тексеруден кейін мазмұн өзгерген." }[q.quality]) : q.rationale}</p>
+                <p className="text-xs break-all">{q.id}</p><MathText content={contentText(q.questionText.replace(/\[GEOMETRY:[\s\S]*?\]/g, ""), q.questionTextKk?.replace(/\[GEOMETRY:[\s\S]*?\]/g, ""), locale)} />{q.latex && !q.latex.includes("[GEOMETRY:") && <MathDisplay math={q.latex} block />}<p className="text-xs">{locale === "kk" ? ({ direct: "Мазмұны спецификацияға сәйкес; пішімі, деңгейі және аудармасы бойынша жарамдылық бөлек тексеріледі.", supporting: "Қосымша оқу практикасы; емтихан тапсырмасына тікелей сәйкес емес.", outside: "Тапсырма мазмұны осы профильден тыс.", needs_review: "Ағымдағы мазмұн үшін тексеру жоқ немесе тексеруден кейін мазмұн өзгерген." }[q.quality]) : q.rationale}</p>
                 <p className="text-xs text-muted-foreground">{q.eligible ? uiText("Пригодна для подбора", locale) : uiText("Не включается в подбор экзамена", locale)}{q.topicMismatch ? uiText(" · Неверная метка темы", locale) : ""}</p>
               </li>)}</ul>
             </details></td>
@@ -92,5 +90,5 @@ export default function ExamCoverageView({ reportRu, reportKk }: { reportRu: Cov
       <p className="text-sm">{uiText("Групп точных копий содержания: ", locale)}{report.duplicateGroups.length}{uiText(". Замена коэффициентов внутри одного семейства не увеличивает число разных способов решения.", locale)}</p>
       <p className="text-sm text-muted-foreground">{uiText("Не завершены все навыки внутри широких пунктов и калибровка сложности. Для полного экзамена B057 также нужна специальная дисциплина «Основы алгоритмизации и программирования».", locale)}</p>
     </section>
-  </div>;
+  </div></>;
 }

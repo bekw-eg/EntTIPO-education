@@ -13,7 +13,7 @@ export function RetryCard({ questionText, isCorrect, isLoading, isLastQuestion, 
 }) {
   const { t, locale } = useLanguage();
   const copy = analysisText[locale];
-  return <section aria-labelledby="analysis-retry-title" className="space-y-4 rounded-2xl border bg-card p-4 sm:p-6" data-retry-card>
+  return <section aria-labelledby="analysis-retry-title" className="lesson-section" data-retry-card>
     <h3 id="analysis-retry-title" className="font-semibold">{isCorrect ? (isLastQuestion ? copy.finish : t.result.nextTask) : copy.retry}</h3>
     {!isCorrect && <>
       <MathText className="analysis-question" content={choiceStem(questionText.replace(/\[GEOMETRY:[\s\S]*?\]/g, ""))} />

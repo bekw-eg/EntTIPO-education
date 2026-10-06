@@ -1,5 +1,8 @@
 "use client";
-import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
+import { Header } from "@/components/layout/Header";
+import { PageLoading } from "@/components/ui/page-state";
+import { ChoiceMath } from "@/components/practice/ChoiceMath";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { uiText, errorText } from "@/lib/i18n/messages";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -115,47 +118,45 @@ export default function ExamPage({ params }: { params: Promise<{ examId: string 
     await read(); operation.current = null; setPending(false); if (user) backupExamSave(user.id, examId, null);
   }
   const q = snapshot?.questions[snapshot.currentIndex], result = snapshot?.result;
-  return <div className="mx-auto max-w-5xl space-y-5 p-4 sm:p-8">
-    <div className="md:hidden flex justify-end"><LanguageSwitcher variant="compact" /></div>
+  return <><Header title={result ? `${uiText("Результат: ", locale)}${result.points}/${result.maxPoints} ${uiText(" баллов", locale)}` : q && snapshot ? `${uiText("Задание ", locale)}${snapshot.currentIndex + 1} ${uiText(" из ", locale)}${snapshot.questions.length}` : uiText("Экзамен · математический блок", locale)} /><div className="page-content reading-content">
     <Link href="/exam" className="text-sm text-primary underline">{uiText("Все экзамены", locale)}</Link>
     {error && <div role="alert" className="space-y-2 rounded border border-red-400 p-3"><p>{errorText(error, locale)}</p>
       <Button variant="outline" disabled={busy} onClick={() => finishRequested.current ? finish() : void run(pending ? sendPending : async () => { await read(); })}>{uiText("Повторить запрос", locale)}</Button>
       {pending && <Button variant="ghost" disabled={busy} onClick={() => void run(reload)}>{uiText("Загрузить серверную версию и отбросить несохранённое изменение", locale)}</Button>}
     </div>}
-    {!snapshot ? <p>{uiText("Загрузка экзамена…", locale)}</p> : result ? <>
-      <h1 className="text-3xl font-bold">{uiText("Результат: ", locale)}{result.points}/{result.maxPoints} {uiText(" баллов", locale)}</h1>
+    {!snapshot ? <PageLoading /> : result ? <>
       <p>{result.completionReason === "timeout" ? uiText("Время истекло.", locale) : uiText("Экзамен завершён.", locale)} {uiText(" Пропущено: ", locale)}{result.skipped}{uiText(". Профиль ", locale)}{snapshot.profile.id}@{snapshot.profile.version} · {snapshot.language === 'kk' ? 'Қазақ тілі' : uiText('Русский', locale)}.</p>
       <p className="text-sm text-muted-foreground">{result.masteryPolicy}</p>
       {result.previouslyExposedCount > 0 && <p className="text-sm">{uiText("Ранее встречались ", locale)}{result.previouslyExposedCount} {uiText(" заданий. Они учитываются в баллах блока, но не дают независимого подтверждения навыков.", locale)}</p>}
-      <section className="rounded-xl border p-4"><h2 className="mb-3 text-xl font-semibold">{uiText("Результат по темам", locale)}</h2>
+      <section className="rounded-lg border p-4"><h2 className="mb-3 text-xl font-semibold">{uiText("Результат по темам", locale)}</h2>
         <ul className="space-y-2">{result.topics.map((t) => <li key={t.topicId} className="flex justify-between gap-4"><span>{t.name}</span><strong>{t.points}/{t.maxPoints}</strong></li>)}</ul>
       </section>
-      <section className="rounded-xl border p-4"><h2 className="mb-3 text-xl font-semibold">{uiText("Навыки и Mastery Score", locale)}</h2><p className="mb-3 text-sm text-muted-foreground">{uiText("Для вывода об освоении нужно несколько разных заданий. Пропуск показывает нехватку ответа, а не доказанную причину ошибки.", locale)}</p>
+      <section className="rounded-lg border p-4"><h2 className="mb-3 text-xl font-semibold">{uiText("Навыки и Mastery Score", locale)}</h2><p className="mb-3 text-sm text-muted-foreground">{uiText("Для вывода об освоении нужно несколько разных заданий. Пропуск показывает нехватку ответа, а не доказанную причину ошибки.", locale)}</p>
         <ul className="space-y-2">{result.skills.map((s) => <li key={s.skillId}>{s.name}: <strong>{s.points}/{s.maxPoints}</strong> · {s.state === "insufficient" ? uiText("Недостаточно данных об освоении", locale) : `Mastery Score: ${s.masteryScore}`}</li>)}</ul>
       </section>
-      <section className="space-y-3 rounded-xl border p-4"><h2 className="text-xl font-semibold">{uiText("Пробелы и дальнейшие действия", locale)}</h2>
+      <section className="space-y-3 rounded-lg border p-4"><h2 className="text-xl font-semibold">{uiText("Пробелы и дальнейшие действия", locale)}</h2>
         {result.gaps.length ? result.gaps.map((g) => <div key={g.questionId} className="border-b pb-3"><p className="font-medium">{g.title} · {g.reason === "skipped" ? uiText("Нет ответа", locale) : uiText("Неверный ответ", locale)}</p><p className="my-2 text-sm">{g.action}</p><div className="flex flex-wrap gap-4 text-primary underline"><Link href={g.ruleHref}>{uiText("Повторить правило", locale)}</Link><Link href={g.practiceHref}>{uiText("Тренировка темы", locale)}</Link></div></div>) : <p>{uiText("В этом блоке ошибок нет. Продолжайте подготовку на новых заданиях.", locale)}</p>}
         <p className="text-sm">{uiText("План дня учитывает отвеченные задания и ошибки экзамена. Если сегодняшняя работа уже начата, новые результаты применяются к следующему плану. Нехватка практики или независимых проверочных задач отображается в плане.", locale)}</p>
         <Button asChild><Link href="/">{uiText("Открыть персональный план подготовки", locale)}</Link></Button>
       </section>
-      <section className="space-y-3"><h2 className="text-xl font-semibold">{uiText("Ответы и разбор", locale)}</h2>{result.questions.map((item, i) => <details key={item.id} className="rounded-xl border p-4">
+      <section className="space-y-3"><h2 className="text-xl font-semibold">{uiText("Ответы и разбор", locale)}</h2>{result.questions.map((item, i) => <details key={item.id} className="rounded-lg border p-4">
         <summary className="cursor-pointer font-medium">{i + 1}. {item.title} — {item.points}/{item.maxPoints}{item.skipped ? uiText(" · пропуск", locale) : ""}</summary>
-        <div className="mt-3 space-y-2"><MathText content={item.questionText} /><p>{uiText("Ваш ответ: ", locale)}{item.answer === null ? uiText("Пропуск", locale) : item.options[item.answer]}</p><p>{uiText("Правильный ответ: ", locale)}{item.options[item.correctIndex]}</p><MathText content={item.explanation} /></div>
+        <div className="mt-3 space-y-2"><MathText content={item.questionText} /><div>{uiText("Ваш ответ: ", locale)}{item.answer === null ? uiText("Пропуск", locale) : <ChoiceMath text={item.options[item.answer]} />}</div><div>{uiText("Правильный ответ: ", locale)}<ChoiceMath text={item.options[item.correctIndex]} /></div><MathText content={item.explanation} /></div>
       </details>)}</section>
     </> : q ? <>
-      <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-2xl font-bold">{uiText("Задание ", locale)}{snapshot.currentIndex + 1} {uiText(" из ", locale)}{snapshot.questions.length}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">{uiText("Оставшееся время", locale)}</p>
         <div role="timer" aria-label={uiText("Оставшееся время", locale)} className="rounded bg-muted px-4 py-2 font-mono text-xl tabular-nums">{Math.floor(seconds / 60).toString().padStart(2, "0")}:{(seconds % 60).toString().padStart(2, "0")}</div>
       </div>
       <p className="text-sm text-muted-foreground">{snapshot.profile.id}@{snapshot.profile.version} · {snapshot.language === 'kk' ? 'Қазақ тілі' : uiText('Русский', locale)} · {snapshot.durationMinutes} {uiText(" минут. Отвечено ", locale)}{Object.keys(snapshot.answers).length}/{snapshot.questions.length}. {busy ? uiText("Сохраняем…", locale) : pending ? uiText("Изменение ещё не подтверждено сервером", locale) : uiText("Изменения сохранены", locale)}</p>
       <nav aria-label={uiText("Переход между заданиями", locale)} className="flex flex-wrap gap-2">{snapshot.questions.map((item, i) =>
         <button key={item.id} aria-current={i === snapshot.currentIndex ? "step" : undefined} aria-label={uiText(`Задание ${i + 1}${snapshot.flaggedQuestionIds.includes(item.id) ? ", вернуться позже" : ""}`, locale)} disabled={busy || pending || seconds === 0}
-          onClick={() => change({ currentIndex: i })} className={`h-10 w-10 rounded-lg border text-sm ${i === snapshot.currentIndex ? "ring-2 ring-primary" : ""} ${snapshot.answers[item.id] !== undefined ? "bg-primary/15" : ""}`}>
+          onClick={() => change({ currentIndex: i })} className={`h-11 w-11 rounded-md border text-sm ${i === snapshot.currentIndex ? "ring-2 ring-primary" : ""} ${snapshot.answers[item.id] !== undefined ? "bg-primary/15" : ""}`}>
           {i + 1}{snapshot.flaggedQuestionIds.includes(item.id) && <span aria-hidden="true">*</span>}
         </button>)}</nav>
-      <fieldset className="space-y-4 rounded-2xl border bg-card p-5" disabled={busy || pending || seconds === 0}>
+      <fieldset className="space-y-4 rounded-lg border bg-card p-5" disabled={busy || pending || seconds === 0}>
         <legend className="px-2 font-semibold">{uiText("Пункт ", locale)}{q.pointCode} {uiText(" · сложность ", locale)}{q.band}</legend><MathText content={q.questionText} />
-        {q.options.map((text, index) => <label key={index} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 ${snapshot.answers[q.id] === index ? "border-primary bg-primary/10" : ""}`}>
-          <input type="radio" name={q.id} aria-label={uiText(`Вариант ${index + 1}: ${text}`, locale)} checked={snapshot.answers[q.id] === index} onChange={() => change({ answers: { ...snapshot.answers, [q.id]: index } })} /><MathText content={text} />
+        {q.options.map((text, index) => <label key={index} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 ${snapshot.answers[q.id] === index ? "border-primary bg-primary/10" : ""}`}>
+          <input type="radio" name={q.id} aria-label={uiText(`Вариант ${index + 1}: ${text}`, locale)} checked={snapshot.answers[q.id] === index} onChange={() => change({ answers: { ...snapshot.answers, [q.id]: index } })} /><div className="min-w-0 flex-1 overflow-x-auto"><ChoiceMath text={text} /></div>
         </label>)}
         <div className="flex flex-wrap gap-3"><Button variant="outline" onClick={() => change({ flaggedQuestionIds: snapshot.flaggedQuestionIds.includes(q.id) ? snapshot.flaggedQuestionIds.filter((id) => id !== q.id) : [...snapshot.flaggedQuestionIds, q.id] })}>{snapshot.flaggedQuestionIds.includes(q.id) ? uiText("Снять отметку", locale) : uiText("Вернуться позже", locale)}</Button>
           <Button variant="ghost" disabled={snapshot.answers[q.id] === undefined} onClick={() => { const answers = { ...snapshot.answers }; delete answers[q.id]; change({ answers }); }}>{uiText("Очистить ответ", locale)}</Button></div>
@@ -164,7 +165,11 @@ export default function ExamPage({ params }: { params: Promise<{ examId: string 
         <Button variant="outline" disabled={busy || pending || seconds === 0 || snapshot.currentIndex + 1 === snapshot.questions.length} onClick={() => change({ currentIndex: snapshot.currentIndex + 1 })}>{uiText("Далее", locale)}</Button>
         <Button disabled={busy} onClick={() => setConfirm(true)}>{uiText("Завершить экзамен", locale)}</Button></div>
       {seconds === 0 && <p role="status">{uiText("Время истекло. Сервер завершит экзамен при ближайшем запросе; новые ответы не принимаются.", locale)}</p>}
-      {confirm && <section role="alertdialog" aria-label={uiText("Завершение экзамена", locale)} className="space-y-3 rounded-xl border border-primary p-5"><p>{uiText("Завершить экзамен? Без ответа останутся ", locale)}{snapshot.questions.length - Object.keys(snapshot.answers).length} {uiText(" заданий. После завершения изменить ответы нельзя.", locale)}</p><div className="flex gap-3"><Button disabled={busy} onClick={finish}>{uiText("Подтвердить завершение", locale)}</Button><Button variant="outline" onClick={() => setConfirm(false)}>{uiText("Продолжить", locale)}</Button></div></section>}
+      <Dialog open={confirm} onOpenChange={setConfirm}><DialogContent closeLabel={uiText("Продолжить", locale)}>
+        <DialogTitle className="pr-10">{uiText("Завершение экзамена", locale)}</DialogTitle>
+        <DialogDescription>{uiText("Завершить экзамен? Без ответа останутся ", locale)}{snapshot.questions.length - Object.keys(snapshot.answers).length} {uiText(" заданий. После завершения изменить ответы нельзя.", locale)}</DialogDescription>
+        <div className="flex flex-wrap gap-3"><Button disabled={busy} onClick={finish}>{uiText("Подтвердить завершение", locale)}</Button><Button variant="outline" onClick={() => setConfirm(false)}>{uiText("Продолжить", locale)}</Button></div>
+      </DialogContent></Dialog>
     </> : null}
-  </div>;
+  </div></>;
 }

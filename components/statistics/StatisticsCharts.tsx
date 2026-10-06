@@ -36,13 +36,9 @@ export function StatisticsCharts({
     }))
     .sort((a, b) => b.score - a.score);
 
-  const getBarColor = (score: number) => {
-    if (score < 40) return "#f43f5e"; // rose-500
-    if (score < 70) return "#f59e0b"; // amber-500
-    if (score < 85) return "#3b82f6"; // blue-500
-    return "#10b981"; // emerald-500
-  };
+  const getBarColor = (_score: number) => "hsl(var(--primary))";
 
+  if (!dailyAccuracy.length && !topicProgress.length) return null;
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* 1. Accuracy over time */}
@@ -57,7 +53,7 @@ export function StatisticsCharts({
         </CardHeader>
         <CardContent className="pt-2">
           {dailyAccuracy.length > 0 ? (
-            <div className="h-[280px] w-full">
+            <div className="h-[280px] w-full min-w-0 overflow-hidden">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
                   data={dailyAccuracy}
@@ -65,8 +61,8 @@ export function StatisticsCharts({
                 >
                   <defs>
                     <linearGradient id="accuracyGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.12} />
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
@@ -83,7 +79,7 @@ export function StatisticsCharts({
                     axisLine={false}
                     unit="%"
                   />
-                  <Tooltip
+                  <Tooltip wrapperStyle={{ maxWidth: "min(240px, 100%)" }}
                     formatter={(value: any) => [`${value}%`, t.dashboard.accuracy]}
                     labelFormatter={(label) => `${label}`}
                     contentStyle={{
@@ -92,12 +88,15 @@ export function StatisticsCharts({
                       border: "none",
                       color: "#fff",
                       fontSize: "12px",
+                      whiteSpace: "normal",
+                      overflowWrap: "anywhere",
                     }}
                   />
                   <Area
+                    isAnimationActive={false}
                     type="monotone"
                     dataKey="accuracy"
-                    stroke="#3b82f6"
+                    stroke="hsl(var(--primary))"
                     strokeWidth={2.5}
                     fillOpacity={1}
                     fill="url(#accuracyGrad)"
@@ -123,7 +122,7 @@ export function StatisticsCharts({
         </CardHeader>
         <CardContent className="pt-2">
           {sortedTopics.length > 0 ? (
-            <div className="h-[280px] w-full">
+            <div className="h-[280px] w-full min-w-0 overflow-hidden">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={sortedTopics.slice(0, 8)}
@@ -147,7 +146,7 @@ export function StatisticsCharts({
                     axisLine={false}
                     tickLine={false}
                   />
-                  <Tooltip
+                  <Tooltip wrapperStyle={{ maxWidth: "min(240px, 100%)" }}
                     formatter={(val: any) => [`${val}%`, t.dashboard.accuracy]}
                     contentStyle={{
                       backgroundColor: "rgba(23, 23, 23, 0.9)",
@@ -155,9 +154,11 @@ export function StatisticsCharts({
                       border: "none",
                       color: "#fff",
                       fontSize: "12px",
+                      whiteSpace: "normal",
+                      overflowWrap: "anywhere",
                     }}
                   />
-                  <Bar dataKey="score" radius={[0, 4, 4, 0]}>
+                  <Bar isAnimationActive={false} dataKey="score" radius={[0, 4, 4, 0]}>
                     {sortedTopics.slice(0, 8).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={getBarColor(entry.score)} />
                     ))}

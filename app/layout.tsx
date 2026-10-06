@@ -18,12 +18,12 @@ export const metadata: Metadata = {
     "Персональный тренажёр математики для подготовки к ЕНТ ТиПО. ТжКБ ҰБТ математикасына арналған дербес жаттықтырушы.",
   keywords: ["ЕНТ", "ҰБТ", "математика", "подготовка", "ТиПО", "ТжКБ", "қазақстан"],
   manifest: "/manifest.json",
+  icons: { icon: "/icon.svg", apple: "/icon-192.png" },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#0f172a" },

@@ -33,13 +33,13 @@ export default function SessionSummary({
   const strokeDashoffset = circumference - (accuracy / 100) * circumference;
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-8 animate-in fade-in zoom-in-95 duration-500">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="text-center space-y-2">
-        <h1 className="text-3xl font-bold">{t.summary.title}</h1>
+        <h2 className="section-title">{t.summary.title}</h2>
         <p className="text-xl text-muted-foreground">{getMessage()}</p>
       </div>
 
-      <div className="bg-card p-8 rounded-2xl border shadow-sm flex flex-col items-center">
+      <div className="bg-card p-4 sm:p-6 rounded-lg border flex flex-col items-center">
         {/* Circular Progress */}
         <div className="relative w-40 h-40 flex items-center justify-center mb-8">
           <svg className="w-full h-full transform -rotate-90">
@@ -73,7 +73,7 @@ export default function SessionSummary({
           </svg>
           <div className="absolute flex flex-col items-center justify-center">
             <span className="text-3xl font-bold">{accuracy}%</span>
-            <span className="text-xs text-muted-foreground uppercase font-semibold">
+            <span className="text-xs text-muted-foreground">
               {t.summary.attemptAccuracy}
             </span>
           </div>

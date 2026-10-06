@@ -11,7 +11,7 @@ import { ChoiceMath } from "./ChoiceMath";
 
 function AnswerBlock({ title, answers, correct }: { title: string; answers: ReviewAnswer[]; correct: boolean }) {
   const Icon = correct ? CheckCircle2 : XCircle;
-  return <div className={`min-w-0 rounded-xl border p-3 sm:p-4 ${correct
+  return <div className={`min-w-0 rounded-md border p-3 sm:p-4 ${correct
     ? "border-emerald-500/20 bg-emerald-500/5" : "border-rose-500/20 bg-rose-500/5"}`}>
     <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
       <Icon aria-hidden="true" className={`h-4 w-4 shrink-0 ${correct ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`} />{title}
@@ -32,7 +32,7 @@ export function MistakeCard({ item, questionNumber, questionText, latex, stepLab
   const { locale } = useLanguage();
   const copy = analysisText[locale];
   const headingId = `review-${item.id}`;
-  return <article aria-labelledby={headingId} className="min-w-0 space-y-5 rounded-2xl border bg-card p-4 shadow-sm sm:p-6" data-mistake-card>
+  return <article aria-labelledby={headingId} className="min-w-0 space-y-5 rounded-lg border bg-card p-4 sm:p-6" data-mistake-card>
     <div className="space-y-3">
       <h3 id={headingId} className="text-sm font-semibold text-muted-foreground">
         {copy.question(questionNumber)}{stepLabel && <span> · {stepLabel}</span>}

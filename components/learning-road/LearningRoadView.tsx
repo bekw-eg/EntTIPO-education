@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { roadText } from "@/lib/i18n/learning-road";
+import { PageLoading } from "@/components/ui/page-state";
 import { cn } from "@/lib/utils";
 import type { RoadNodeType } from "@/lib/learning-road/types";
 import { useLearningRoad } from "./useLearningRoad";
@@ -39,11 +40,10 @@ export function LearningRoadView() {
     finally { busyRef.current = false; setBusy(false); }
   }
   return <div><Header title={copy.title} />
-    <div className="mx-auto max-w-2xl p-4 sm:p-6 space-y-6">
-      <p className="text-2xl font-bold sm:hidden">{copy.title}</p>
+    <div className="page-content reading-content">
       <p className="text-muted-foreground">{copy.intro}</p>
       {error ? <Card><CardContent className="p-6 space-y-3"><p role="alert">{copy.error}</p><Button onClick={() => { void reload(); }}>{copy.reload}</Button></CardContent></Card>
-        : !road ? <p role="status">{copy.loading}</p> : <>
+        : !road ? <PageLoading /> : <>
         {road.needsDiagnostic && <Card><CardContent className="p-5 space-y-3"><p className="text-sm text-muted-foreground">{copy.diagnosticNote}</p>
           <Button variant="outline" asChild><Link href="/diagnostics">{copy.diagnostic}</Link></Button></CardContent></Card>}
         {!!road.nodes.length && <Card className="border-primary/20"><CardContent className="p-5 space-y-3">
@@ -68,10 +68,10 @@ export function LearningRoadView() {
                   const buttons = event.currentTarget.closest("ol")?.querySelectorAll<HTMLButtonElement>("[data-road-node]");
                   buttons?.[Math.max(0, Math.min(road.nodes.length - 1, index + (event.key === "ArrowDown" ? 1 : -1)))]?.focus();
                 }}
-                className={cn("flex items-center justify-center rounded-full border-2 shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-4",
-                  isCurrent ? "h-24 w-24 border-primary bg-primary text-primary-foreground ring-4 ring-primary/15" : "h-20 w-20 bg-card",
+                className={cn("flex items-center justify-center rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring focus-visible:ring-offset-4",
+                  isCurrent ? "h-16 w-16 border-primary bg-primary text-primary-foreground" : "h-14 w-14 bg-card",
                   done ? "border-emerald-500 text-emerald-600 dark:text-emerald-400" : !isCurrent && "border-border text-muted-foreground hover:border-primary") }>
-                {done ? <Check aria-hidden="true" className="h-8 w-8" /> : <Icon aria-hidden="true" className="h-8 w-8" />}
+                {done ? <Check aria-hidden="true" className="h-6 w-6" /> : <Icon aria-hidden="true" className="h-6 w-6" />}
               </button>
               <div className="mt-3 max-w-[220px] text-center space-y-1 bg-background/95 rounded-lg px-2">
                 <p className="text-xs font-medium text-muted-foreground">{copy.types[node.type]} · {node.skipped ? copy.skipped : copy.statuses[node.status]}</p>
@@ -85,7 +85,7 @@ export function LearningRoadView() {
         <p className="text-xs text-muted-foreground">{copy.participation}</p>
       </>}
       <Dialog open={!!selected} onOpenChange={open => { if (!open) setSelectedId(null); }}>
-        {selected && <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg rounded-xl max-h-[85dvh] overflow-y-auto" closeLabel={copy.back}
+        {selected && <DialogContent className="sm:max-w-lg" closeLabel={copy.back}
           onCloseAutoFocus={event => { event.preventDefault(); returnFocusRef.current?.focus(); }}>
           <DialogTitle className="pr-6 leading-normal">{name(selected)}</DialogTitle>
           <DialogDescription>{copy.types[selected.type]} · {selected.skipped ? copy.skipped : copy.statuses[selected.status]}</DialogDescription>

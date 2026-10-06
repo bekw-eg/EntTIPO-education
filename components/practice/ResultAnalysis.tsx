@@ -51,7 +51,7 @@ export default function ResultAnalysis({ result, question, onRetry, onNext, onOp
       </ol>}
     </MistakeCard>)}
     <RuleReviewCard rules={review.rules} explanation={review.explanation} />
-    {result.learningCheck && <div role="status" className="space-y-2 rounded-2xl border bg-card p-4 text-sm sm:p-5">
+    {result.learningCheck && <div role="status" className="space-y-2 rounded-lg border bg-card p-4 text-sm sm:p-5">
       <p className="font-semibold">{result.learningCheck.status === "passed" ? learningCopy.success : learningCopy.failed}</p>
       {result.learningCheck.status !== "passed" && <p>{learningCopy.retry}</p>}
       {result.learningCheck.dueDay && <p>{learningCopy.next}: {result.learningCheck.dueDay}</p>}

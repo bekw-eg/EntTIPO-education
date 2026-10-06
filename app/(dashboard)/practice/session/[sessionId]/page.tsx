@@ -1,5 +1,6 @@
 "use client";
-import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
+import { Header } from "@/components/layout/Header";
+import { PageLoading } from "@/components/ui/page-state";
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -239,13 +240,12 @@ function PracticeSessionContent() {
 
   const question = snapshot?.question;
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6">
-      <div className="md:hidden flex justify-end"><LanguageSwitcher variant="compact" /></div>
-      {phase === "loading" && <div className="p-12 text-center space-y-3">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-sm text-muted-foreground">{t.session.loadingTask}</p>
-      </div>}
-      {phase === "error" && <div className="p-8 text-center space-y-4">
+    <>
+      <Header title={phase === "summary" ? t.summary.title : t.nav.practice} />
+      <div className="page-content reading-content">
+      <Button asChild variant="ghost"><Link href="/practice">{t.common.back}</Link></Button>
+      {phase === "loading" && <PageLoading />}
+      {phase === "error" && <div role="alert" className="p-4 text-center space-y-4">
         <p>{t.session.loadError}</p>
         <Button onClick={() => { setPhase("loading"); void loadSession(true).catch(() => setPhase("error")); }}>{t.session.reload}</Button>
         <Button variant="outline" onClick={() => router.push("/practice")}>{t.common.back}</Button>
@@ -271,7 +271,7 @@ function PracticeSessionContent() {
       <AiTutorPanel isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} question={question}
         stepAnswers={stepAnswers} hasAttempted={phase === "result"} attemptId={snapshot?.result?.attemptId}
         sessionId={sessionId} onHintUsed={handleHintUsed} initialAction={aiAction} />
-    </div>
+    </div></>
   );
 }
 
