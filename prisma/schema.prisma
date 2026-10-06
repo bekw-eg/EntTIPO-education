@@ -31,6 +31,7 @@ model User {
   questionHelp QuestionHelp[]
   exams ExamSession[]
   offlinePackages OfflinePackage[]
+  learningRoads LearningRoadBlock[]
 }
 
 model Topic {
@@ -148,6 +149,7 @@ model PracticeSession {
   planActions LearningPlanAction[]
   learningCheck LearningCheck?
   offlinePackage OfflinePackage?
+  roadNodes LearningRoadNode[]
 }
 
 // Explicit assisted-practice export. Personal payloads never enter the shared SW cache.
@@ -282,6 +284,41 @@ model Skill {
   planActions LearningPlanAction[]
   learningChecks LearningCheck[]
   reviews SkillReview[]
+  roadNodes LearningRoadNode[]
+}
+
+// Stable short blocks, independent of the calendar-based daily plan.
+model LearningRoadBlock {
+  id String @id @default(cuid())
+  userId String
+  sequence Int
+  diagnosticId String? // Initial completed screening snapshot; never rewrites started lessons.
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nodes LearningRoadNode[]
+  @@unique([userId, sequence])
+}
+
+model LearningRoadNode {
+  id String @id @default(cuid())
+  blockId String
+  position Int
+  key String
+  type String // THEORY | PRACTICE | REPAIR | REVIEW | CHECKPOINT
+  skillId String
+  reason String
+  prerequisiteIds String[] @default([])
+  questionCount Int
+  estimatedMinutes Int
+  sessionId String?
+  completedAt DateTime?
+  unavailable Boolean @default(false)
+  skipped Boolean @default(false)
+  block LearningRoadBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id])
+  session PracticeSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  @@unique([blockId, position])
+  @@index([sessionId])
 }
 
 model DailyLearningPlan {
