@@ -55,7 +55,11 @@
     "test:road:unit": "tsx scripts/test_learning_road_unit.ts",
     "test:road:http": "tsx scripts/test_learning_road_http.ts",
     "test:road:browser": "tsx scripts/test_learning_road_browser.ts",
-    "test:ui:smoke": "tsx scripts/test_ui_smoke.ts"
+    "test:ui:smoke": "tsx scripts/test_ui_smoke.ts",
+    "test:preparation:unit": "tsx scripts/test_preparation_unit.ts",
+    "test:preparation:http": "tsx scripts/test_preparation_http.ts",
+    "test:preparation:browser": "tsx scripts/test_preparation_browser.ts",
+    "test:preparation": "tsx scripts/run_preparation_tests.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

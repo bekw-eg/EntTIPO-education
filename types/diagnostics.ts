@@ -13,6 +13,7 @@ export interface SkillProgressView {
 export interface DiagnosticSkillResult extends SkillProgressView {
   assessment: "insufficient" | "gap_observed" | "no_gap_observed";
   evidence: (StepResult & { questionId: string; questionText: string; questionTextKk: string | null;
+    userAnswerText?: string; userAnswerTextKk?: string | null; expectedAnswerText?: string; expectedAnswerTextKk?: string | null;
     explanation: string; explanationKk: string | null })[];
 }
 export interface DiagnosticReport { skills: DiagnosticSkillResult[]; correctCount: number; totalCount: number }

@@ -1,6 +1,7 @@
 import messages from './ui-content.json';
 import type { Locale } from './types';
 import { translateContent } from './content';
+import { preparationText } from './preparation';
 
 const exact = new Map(messages.map(([ru, kk]) => [ru, kk]));
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -114,6 +115,8 @@ const errors: Record<string, string> = {
 
 /** Raw service details stay in server logs, never become untranslated user errors. */
 export function errorText(source: string | undefined, locale: Locale): string {
+  if (source && preparationText[locale].errors[source]) return preparationText[locale].errors[source];
+  if (source && Object.values(preparationText[locale].errors).includes(source)) return source;
   if (locale !== 'kk') return source || 'Не удалось выполнить действие. Попробуйте ещё раз.';
   if (source && errors[source]) return errors[source];
   if (source) { const translated = uiText(source, locale); if (translated !== source || /[ӘәҒғҚқҢңӨөҰұҮүҺһІі]/.test(source)) return translated; }

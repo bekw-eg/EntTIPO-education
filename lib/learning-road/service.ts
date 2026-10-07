@@ -81,14 +81,15 @@ export async function getLearningRoad(userId: string, nextBlock = false) {
     await lockAccount(tx, userId);
     await assertNoActiveExam(tx, userId);
     const now = new Date(), learning = await learningState(tx, userId, now);
-    let block = await tx.learningRoadBlock.findFirst({ where: { userId }, orderBy: { sequence: "desc" }, include: includeNodes });
+    let block = await tx.learningRoadBlock.findFirst({ where: { userId, programVersion: 0 }, orderBy: { sequence: "desc" }, include: includeNodes });
     if (block) block = await syncBlock(tx, block, now);
     if (nextBlock && block?.nodes.some(node => !node.completedAt)) throw new PracticeError("road_block_unfinished", 409);
     const initialDiagnostic = block && learning.diagnosticId && learning.diagnosticId !== block.diagnosticId
       && block.nodes.every(node => !node.completedAt && !node.sessionId);
     if (!block || nextBlock || initialDiagnostic) {
       const specs = buildLearningRoad(learning.state, skillGraph(learning.skills.map(skill => skill.id)));
-      if (specs.length) block = await tx.learningRoadBlock.create({ data: { userId, sequence: (block?.sequence ?? 0) + 1, diagnosticId: learning.diagnosticId,
+      const latest = await tx.learningRoadBlock.findFirst({ where: { userId }, orderBy: { sequence: "desc" }, select: { sequence: true } });
+      if (specs.length) block = await tx.learningRoadBlock.create({ data: { userId, sequence: (latest?.sequence ?? 0) + 1, diagnosticId: learning.diagnosticId,
         nodes: { create: specs.map((spec, position) => ({ ...spec, position })) } }, include: includeNodes });
     }
     return view(tx, block, learning);
@@ -99,7 +100,7 @@ export async function runRoadNode(userId: string, nodeId: string, operation: "st
   return prisma.$transaction(async tx => {
     await lockAccount(tx, userId);
     await assertNoActiveExam(tx, userId);
-    const node = await tx.learningRoadNode.findFirst({ where: { id: nodeId, block: { userId } }, include: { block: true } });
+    const node = await tx.learningRoadNode.findFirst({ where: { id: nodeId, block: { userId, programVersion: 0 } }, include: { block: true } });
     if (!node) throw new PracticeError("road_node_missing", 404);
     if (operation === "complete_theory") {
       if (node.type !== "THEORY") throw new PracticeError("road_theory_only", 400);
@@ -113,7 +114,7 @@ export async function runRoadNode(userId: string, nodeId: string, operation: "st
     }
     if (node.type === "THEORY") return { href: `/learn/rules/${encodeURIComponent(node.skillId)}?roadNodeId=${node.id}` };
     if (node.completedAt) return node.sessionId ? { href: `/practice/session/${node.sessionId}` } : { completed: true };
-    const latest = await tx.learningRoadBlock.findFirst({ where: { userId }, orderBy: { sequence: "desc" }, select: { id: true } });
+    const latest = await tx.learningRoadBlock.findFirst({ where: { userId, programVersion: 0 }, orderBy: { sequence: "desc" }, select: { id: true } });
     if (latest?.id !== node.blockId) throw new PracticeError("road_block_archived", 409);
     if (node.sessionId) return { href: `/practice/session/${node.sessionId}` };
     let sessionId: string | undefined;

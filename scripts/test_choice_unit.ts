@@ -36,9 +36,11 @@ assert.equal(capChoiceQuestions(Array.from({length:20}, (_,i) => ({ id:`${i}`, p
 for (const formula of ["sqrt(3)/2", "x^12", "ln(abs(x))+C", "3*x^2", "exp(2*x)+C", "{0; pi; 2*pi}", "√((−7)²)", "exp((x+1)^2)", "sqrt(1+sqrt(2))"]) {
   assert.ok(!katex.renderToString(choiceLatex(formula), { throwOnError: true }).includes("katex-error"));
 }
-for (const stem of ["Упрости −(x^2 · x^3 + 4)","Найдите f′(4), если f(x)=x^(3/2) при x>0.","√((−7)²) неге тең?", "Решите sin(x)>1/2 на [0; 2π]."]) {
+for (const stem of ["Упрости −(x^2 · x^3 + 4)","Найдите f′(4), если f(x)=x^(3/2) при x>0.","√((−7)²) неге тең?", "Решите sin(x)>1/2 на [0; 2π].", "S_бок=πrl. 3πl=30π, значит l=10 см.", "Площадь основания S_{осн} = a^2."]) {
   const formatted=choiceStem(stem);assert.ok(formatted.includes("$"));
   for(const match of formatted.matchAll(/\$([^$]+)\$/g)) katex.renderToString(match[1],{throwOnError:true});
 }
+assert.ok(choiceStem("Площадь основания S_осн = a^2.").startsWith("Площадь основания "));
+assert.ok(choiceStem("S_бок=πrl.").includes("S_{\\text{бок}}"));
 console.log("PASS: single/multiple exact selection, opaque IDs, whitelist, reorder, rare ceiling without a quota, mathematical rendering");
 void prisma.$disconnect();

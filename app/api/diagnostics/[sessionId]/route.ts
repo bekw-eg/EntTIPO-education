@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
-import { diagnosticDraftSchema, readDiagnosticSnapshot } from "@/lib/diagnostics";
+import { diagnosticDraftSchema, diagnosticQuestion, readDiagnosticSnapshot } from "@/lib/diagnostics";
 import { PracticeError, lockAccount } from "@/lib/practiceStorage";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ export async function PATCH(request: Request, context: Context) {
       const session = await tx.diagnosticSession.findFirst({ where: { id: sessionId, userId } });
       if (!session) throw new PracticeError("Diagnostic not found", 404);
       if (session.status !== "active" || session.revision !== data.revision || session.currentIndex !== data.currentIndex) throw new PracticeError("Diagnostic changed; reload the saved state", 409);
-      const steps = await tx.questionStep.findMany({ where: { questionId: session.questionIds[session.currentIndex] }, select: { id: true } });
+      const steps = (await diagnosticQuestion(tx, session, session.questionIds[session.currentIndex]))?.steps ?? [];
       if (Object.keys(data.answers).some((id) => !steps.some((s) => s.id === id))) throw new PracticeError("Answers must belong to the current question", 400);
       const saved = await tx.diagnosticSession.update({ where: { id: sessionId, userId }, data: {
         draftAnswers: data.answers, revision: { increment: 1 },

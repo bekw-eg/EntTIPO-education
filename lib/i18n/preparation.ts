@@ -1,0 +1,66 @@
+import type { Locale } from "./types";
+type Copy = { title: string; intro: string; start: string; resumeDiagnostic: string; diagnostic: string;
+  check: string; practice: string; resume: string; open: string; rule: string; confirmed: string; skills: string;
+  untilMixed: string; locked: string; shortage: string; reload: string; error: string; invalid: string;
+  history: string; result: string; goal: string; prerequisites: string; policy: string; training: string;
+  passed: string; repair: string; legacy: string; daily: string; strengths: string; priorities: string; unknown: string;
+  stages: Record<string, string>; types: Record<string, string>; reasons: Record<string, string>; errors: Record<string, string> };
+export const preparationText: Record<Locale, Copy> = {
+  ru: {
+    title: "Моя программа подготовки", intro: "Диагностика → навыки → смешанные пробники → тренировочный финал.",
+    start: "Начать подготовку", diagnostic: "Пройти диагностику", resumeDiagnostic: "Продолжить диагностику",
+    check: "Начать контрольную проверку", practice: "Перейти к закреплению", resume: "Продолжить", open: "Открыть дорожную карту",
+    rule: "Повторить правило", confirmed: "Подтверждено", skills: "навыков", untilMixed: "Блоков до следующего пробника",
+    locked: "После предыдущих этапов", shortage: "Недостаточно новых заданий для этой проверки. Прогресс сохранён. Можно повторить правило или заниматься свободно; проверка станет доступна после пополнения банка.",
+    reload: "Обновить", error: "Не удалось загрузить программу. Повторите запрос.", invalid: "Некорректный запрос программы",
+    history: "История программы", result: "Результат и разбор", goal: "Цель", prerequisites: "Сначала подтвердите",
+    policy: "Условия проверки", training: "Учебная проверка внутри платформы. Результат не является официальным результатом ЕНТ. Пороги — начальные настройки, а не научная оценка знаний.",
+    passed: "Контрольная проверка пройдена", repair: "Нужно закрепление: повторите правило, выполните тренировку и проверьте себя на новых заданиях.",
+    legacy: "Прежние короткие занятия", daily: "Дополнительный план дня", strengths: "Сильные стороны", priorities: "Приоритеты подготовки",
+    unknown: "Одного ответа недостаточно для вывода об освоении. Непроверенные навыки не считаются слабыми.",
+    stages: { diagnostic_needed: "Начните с оценки знаний", diagnostic_active: "Диагностика не завершена", road_ready: "Персональная программа готова",
+      learning: "Текущий учебный блок", mixed_ready: "Промежуточный пробник", final_ready: "Доступен финальный экзамен",
+      reinforcement: "Закрепление после финального экзамена", assessment_active: "Контрольная проверка идёт", completed: "Программа подтверждена — продолжайте интервальное повторение", content_shortage: "Нужны дополнительные задания" },
+    types: { SKILL: "Учебный блок", MIXED: "Смешанный пробник", FINAL: "Финальный тренировочный экзамен" },
+    reasons: { insufficient: "Недостаточно данных: начнём с короткой проверки.", observed_difficulty: "В ответах были затруднения; уточним их на новых заданиях.", confirmation: "Проверим знания самостоятельно.", due_review: "Наступил срок повторения.", final_gap: "Этот навык требует закрепления по результатам финала.", checkpoint_gap: "Предыдущий пробник выявил затруднение в этом навыке или его основе.", mixed_review: "Проверим недавние и ранее подтверждённые навыки вместе.", final: "Итоговая проверка по существующему экзаменационному профилю." },
+    errors: { preparation_missing: "Этап не найден", preparation_archived: "Откройте текущую программу", preparation_locked: "Сначала пройдите предыдущие этапы и базовые навыки", preparation_check_first: "Начните с контрольной проверки", preparation_practice_first: "Сначала выполните назначенное закрепление", preparation_request_conflict: "Этот запрос уже использован для другого действия", preparation_diagnostic_active: "Сначала завершите диагностику. Подсказки и другие проверки пока недоступны." },
+  },
+  kk: {
+    title: "Менің дайындық бағдарламам", intro: "Диагностика → дағдылар → аралас сынақтар → оқу емтиханы.",
+    start: "Дайындықты бастау", diagnostic: "Диагностикадан өту", resumeDiagnostic: "Диагностиканы жалғастыру",
+    check: "Бақылау тексеруін бастау", practice: "Бекітуге көшу", resume: "Жалғастыру", open: "Оқу жолын ашу",
+    rule: "Ережені қайталау", confirmed: "Расталды", skills: "дағды", untilMixed: "Келесі сынаққа дейінгі блоктар",
+    locked: "Алдыңғы кезеңдерден кейін", shortage: "Бұл тексеруге жаңа тапсырмалар жеткіліксіз. Ілгерілеу сақталды. Ережені қайталауға немесе еркін жаттығуға болады; қор толықтырылғанда тексеру ашылады.",
+    reload: "Жаңарту", error: "Бағдарламаны жүктеу мүмкін болмады. Қайталап көріңіз.", invalid: "Бағдарлама сұранысы дұрыс емес",
+    history: "Бағдарлама тарихы", result: "Нәтиже және талдау", goal: "Мақсат", prerequisites: "Алдымен растаңыз",
+    policy: "Тексеру шарттары", training: "Платформадағы оқу тексеруі. Нәтиже ҰБТ-ның ресми нәтижесі емес. Шектер — бастапқы баптаулар, ғылыми білім бағасы емес.",
+    passed: "Бақылау тексеруінен өттіңіз", repair: "Бекіту қажет: ережені қайталаңыз, жаттығыңыз және жаңа тапсырмалармен өзіңізді тексеріңіз.",
+    legacy: "Бұрынғы қысқа сабақтар", daily: "Қосымша күндік жоспар", strengths: "Күшті жақтар", priorities: "Дайындық басымдықтары",
+    unknown: "Бір жауап меңгеруді анықтауға жеткіліксіз. Тексерілмеген дағдылар әлсіз деп саналмайды.",
+    stages: { diagnostic_needed: "Білімді бағалаудан бастаңыз", diagnostic_active: "Диагностика аяқталмады", road_ready: "Жеке бағдарлама дайын",
+      learning: "Ағымдағы оқу блогы", mixed_ready: "Аралық сынақ", final_ready: "Қорытынды емтихан ашық",
+      reinforcement: "Қорытынды емтиханнан кейін бекіту", assessment_active: "Бақылау тексеруі жүріп жатыр", completed: "Бағдарлама расталды — аралық қайталауды жалғастырыңыз", content_shortage: "Қосымша тапсырмалар қажет" },
+    types: { SKILL: "Оқу блогы", MIXED: "Аралас сынақ", FINAL: "Қорытынды оқу емтиханы" },
+    reasons: { insufficient: "Деректер жеткіліксіз: қысқа тексеруден бастаймыз.", observed_difficulty: "Жауаптарда қиындықтар болды; жаңа тапсырмалармен нақтылаймыз.", confirmation: "Білімді өздігінен тексереміз.", due_review: "Қайталау мерзімі келді.", final_gap: "Қорытынды нәтижесі бойынша бұл дағдыны бекіту қажет.", checkpoint_gap: "Алдыңғы сынақ осы дағдыда не оның негізінде қиындық көрсетті.", mixed_review: "Жаңа және бұрын расталған дағдыларды бірге тексереміз.", final: "Қолданыстағы емтихан профилі бойынша қорытынды тексеру." },
+    errors: { preparation_missing: "Кезең табылмады", preparation_archived: "Ағымдағы бағдарламаны ашыңыз", preparation_locked: "Алдымен алдыңғы кезеңдер мен негізгі дағдылардан өтіңіз", preparation_check_first: "Бақылау тексеруінен бастаңыз", preparation_practice_first: "Алдымен тағайындалған бекітуді орындаңыз", preparation_request_conflict: "Бұл сұраныс басқа әрекетке қолданылған", preparation_diagnostic_active: "Алдымен диагностиканы аяқтаңыз. Көмек пен басқа тексерулер уақытша жабық." },
+  },
+  en: {
+    title: "My preparation programme", intro: "Diagnostics → skills → mixed checks → final practice exam.",
+    start: "Start preparation", diagnostic: "Take the diagnostic", resumeDiagnostic: "Resume diagnostic",
+    check: "Start checkpoint", practice: "Start reinforcement", resume: "Continue", open: "Open learning road",
+    rule: "Review the rule", confirmed: "Confirmed", skills: "skills", untilMixed: "Blocks until the next mixed check",
+    locked: "After the previous stages", shortage: "There are not enough new tasks for this check. Your progress is saved. Review a rule or practise freely; the check will become available when the bank grows.",
+    reload: "Refresh", error: "Could not load your programme. Please retry.", invalid: "Invalid programme request",
+    history: "Programme history", result: "Result and explanations", goal: "Goal", prerequisites: "Confirm these skills first",
+    policy: "Checkpoint criteria", training: "A practice assessment inside this platform, not an official UNT result. Thresholds are initial product settings, not a scientifically calibrated measure of knowledge.",
+    passed: "Checkpoint passed", repair: "Reinforcement needed: review the rule, complete the practice and try a new independent check.",
+    legacy: "Earlier short lessons", daily: "Additional daily plan", strengths: "Strengths", priorities: "Preparation priorities",
+    unknown: "One answer cannot establish mastery. Untested skills are not classified as weak.",
+    stages: { diagnostic_needed: "Start by assessing your knowledge", diagnostic_active: "Diagnostic in progress", road_ready: "Your personal programme is ready",
+      learning: "Current learning block", mixed_ready: "Mixed checkpoint ready", final_ready: "Final practice exam ready",
+      reinforcement: "Reinforcement after the final exam", assessment_active: "Assessment in progress", completed: "Programme confirmed — continue spaced review", content_shortage: "More tasks are needed" },
+    types: { SKILL: "Learning block", MIXED: "Mixed checkpoint", FINAL: "Final practice exam" },
+    reasons: { insufficient: "Not enough evidence: start with a short check.", observed_difficulty: "Some answers showed difficulty; check it with new tasks.", confirmation: "Check your knowledge independently.", due_review: "Scheduled review is due.", final_gap: "The final assessment identified this skill for reinforcement.", checkpoint_gap: "The previous check found difficulty in this skill or a prerequisite.", mixed_review: "Check recent and previously confirmed skills together.", final: "Final assessment using the existing exam profile." },
+    errors: { preparation_missing: "Stage not found", preparation_archived: "Open the current programme", preparation_locked: "Complete the preceding stages and prerequisites first", preparation_check_first: "Start with the checkpoint", preparation_practice_first: "Complete the assigned reinforcement first", preparation_request_conflict: "This request was already used for another action", preparation_diagnostic_active: "Finish your diagnostic first. Assistance and other assessments are temporarily unavailable." },
+  },
+};

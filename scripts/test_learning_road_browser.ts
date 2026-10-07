@@ -28,7 +28,7 @@ async function main() {
   await mkdir("tmp/learning-road", { recursive: true });
   page.on("pageerror", error => errors.push(error.message));
   try {
-    await page.goto(`${baseUrl}/learning-road`);
+    await page.goto(`${baseUrl}/learning-road?legacy=1`);
     const initial = await road(fixture.a.cookie);
     await expect(page.getByRole("heading", { name: "Мой путь", exact: true })).toBeVisible();
     await expect(page.locator("[data-road-node]")).toHaveCount(initial.nodes.length, { timeout: 30000 });
@@ -43,7 +43,7 @@ async function main() {
     await buttons.nth(0).click(); await page.getByRole("button", { name: "Начать", exact: true }).click();
     await expect(page).toHaveURL(/\/learn\/rules\/.+\?roadNodeId=/);
     await page.getByRole("button", { name: "Я прочитал правило", exact: true }).click();
-    await expect(page).toHaveURL(/\/learning-road$/);
+    await expect(page).toHaveURL(/\/learning-road\?legacy=1$/);
     await expect(page.locator("[data-road-node][aria-current=step]")).toHaveCount(1);
     await expect(page.getByText(`Прогресс блока: 1 / ${initial.nodes.length}`, { exact: true })).toBeVisible();
     // Dialog and language switching preserve the same lesson selection and saved block.
@@ -79,8 +79,8 @@ async function main() {
     await page.getByRole("button", { name: "Переключить тему оформления", exact: true }).click();
     await page.screenshot({ path: "tmp/learning-road/desktop-dark.png", fullPage: true, animations: "disabled" });
     await page.goto(baseUrl);
-    await expect(page.getByRole("heading", { name: "Мой путь", exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Продолжить путь", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Моя программа подготовки", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Пройти диагностику", exact: true })).toBeVisible();
     assert.deepEqual(errors, []);
     console.log("PASS: 360px/desktop, RU/KK/EN, keyboard/escape/focus, stable reload, theory, existing five-choice practice, completed node and dashboard card; screenshots in tmp/learning-road");
   } catch (error) {

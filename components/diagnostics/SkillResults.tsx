@@ -17,7 +17,7 @@ import type { DiagnosticReport, SkillProgressView } from "@/types/diagnostics";
 
 export function SkillPracticeButton({ skill }: { skill: SkillProgressView }) {
   const { locale } = useLanguage();
-  const copy = diagnosticText[locale === "kk" ? "kk" : "ru"];
+  const copy = diagnosticText[locale];
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const recommendation = skill.recommendation;
@@ -41,7 +41,7 @@ export function SkillPracticeButton({ skill }: { skill: SkillProgressView }) {
 
 export function SkillProgressCards({ skills }: { skills: SkillProgressView[] }) {
   const { locale } = useLanguage();
-  const copy = diagnosticText[locale === "kk" ? "kk" : "ru"];
+  const copy = diagnosticText[locale];
   const observed = skills.filter(skill => skill.observationCount > 0);
   const remaining = skills.filter(skill => skill.observationCount === 0);
   const renderSkill = (skill: SkillProgressView) => <Card key={skill.id} className="rounded-none border-0 bg-transparent py-5 space-y-3">
@@ -66,7 +66,7 @@ export function SkillProgressCards({ skills }: { skills: SkillProgressView[] }) 
 
 export function DiagnosticResults({ report }: { report: DiagnosticReport }) {
   const { locale } = useLanguage();
-  const copy = diagnosticText[locale === "kk" ? "kk" : "ru"];
+  const copy = diagnosticText[locale];
   return <section className="space-y-5">
     <h2 className="text-2xl font-bold">{copy.result}</h2>
     <p>{copy.checked}: {report.totalCount} · {copy.correct}: {report.correctCount}</p>
@@ -79,8 +79,8 @@ export function DiagnosticResults({ report }: { report: DiagnosticReport }) {
         <summary className="text-sm font-medium cursor-pointer">{copy.evidence} ({skill.evidence.length})</summary>
         {skill.evidence.map((e) => <div key={e.stepId} className="p-3 rounded-lg bg-muted/50 space-y-2 text-sm">
           <MathText className="font-medium" content={contentText(e.questionText, e.questionTextKk, locale)} />
-          <div className="flex flex-wrap items-baseline gap-1"><span>{copy.yourAnswer}:</span><div className="math-inline"><ChoiceMath text={e.userAnswer} /></div><span>· {e.isCorrect ? copy.correct : copy.incorrect}</span></div>
-          <div className="flex flex-wrap items-baseline gap-1"><span>{copy.expected}:</span><div className="math-inline"><ChoiceMath text={e.expectedAnswer} /></div></div>
+          <div className="flex flex-wrap items-baseline gap-1"><span>{copy.yourAnswer}:</span><div className="math-inline"><ChoiceMath text={locale === "kk" ? e.userAnswerTextKk ?? e.userAnswerText ?? e.userAnswer : e.userAnswerText ?? e.userAnswer} /></div><span>· {e.isCorrect ? copy.correct : copy.incorrect}</span></div>
+          <div className="flex flex-wrap items-baseline gap-1"><span>{copy.expected}:</span><div className="math-inline"><ChoiceMath text={locale === "kk" ? e.expectedAnswerTextKk ?? e.expectedAnswerText ?? e.expectedAnswer : e.expectedAnswerText ?? e.expectedAnswer} /></div></div>
           <MathText className="text-muted-foreground" content={contentText(e.explanation, e.explanationKk, locale)} />
         </div>)}
       </details>

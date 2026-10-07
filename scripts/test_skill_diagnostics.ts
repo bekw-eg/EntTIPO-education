@@ -33,7 +33,8 @@ async function main() {
   starts.forEach((s) => { assert.equal(s.status, 200); assert.equal(s.data.id, starts[0].data.id); });
   const sa = starts[0].data;
   const sb = (await api("/api/diagnostics", b.cookie, "POST")).data;
-  assert.notEqual(sa.id, sb.id); assert.equal(sa.questionIds.length, 9); noKey(sa);
+  assert.notEqual(sa.id, sb.id); assert.ok(sa.questionIds.length > 9); noKey(sa);
+  assert.ok(DIAGNOSTIC_EXERCISES.every(q => sa.questionIds.includes(q.id)), "Original three-skill screening remains covered");
   assert.equal(await prisma.diagnosticSession.count({ where: { userId: a.id } }), 1);
   const path = `/api/diagnostics/${sa.id}`;
   assert.equal((await api(path, b.cookie)).status, 404);
@@ -55,26 +56,26 @@ async function main() {
   assert.equal((await api(`${path}/answers`, a.cookie, "POST", { submissionId: randomUUID(), questionId: sa.questionIds[1],
     revision: 1, stepAnswers: [{ stepId: `${sa.questionIds[1]}_step_1`, answer: "9" }] })).status, 409);
   let firstPayload: any;
-  for (let index = 0; index < 9; index++) {
+  for (let index = 0; index < sa.questionIds.length; index++) {
     state = (await api(path, a.cookie)).data; assert.equal(state.currentIndex, index); noKey(state);
-    const exercise = DIAGNOSTIC_EXERCISES.find((q) => q.id === state.question.id)!;
-    const step = exercise.steps[0];
-    const answer = step.skillIds[0] === "power_properties" ? step.expectedAnswer : step.misconceptions[0].answer;
-    const payload = { submissionId: randomUUID(), questionId: exercise.id, revision: state.revision,
-      stepAnswers: [{ stepId: state.question.steps[0].id, answer }] };
-    const copies = await Promise.all(Array.from({ length: index === 0 || index === 8 ? 4 : 1 }, () => api(`${path}/answers`, a.cookie, "POST", payload)));
-    for (const copy of copies) { assert.equal(copy.status, 200); assert.deepEqual(copy.data, { accepted: true, questionId: exercise.id }); noKey(copy.data); }
+    const exercise = DIAGNOSTIC_EXERCISES.find((q) => q.id === state.question.id);
+    const q = await prisma.question.findUniqueOrThrow({ where: { id: state.question.id }, include: { steps: { include: { options: true } } } });
+    const payload = { submissionId: randomUUID(), questionId: q.id, revision: state.revision,
+      stepAnswers: q.steps.map(step => ({ stepId: step.id, answer: exercise && exercise.steps[0].skillIds[0] !== "power_properties" ? exercise.steps[0].misconceptions[0].answer
+        : step.type === "multiple_choice" ? step.options.find(o => o.isCorrect)!.id : step.expectedAnswer })) };
+    const copies = await Promise.all(Array.from({ length: index === 0 || index === sa.questionIds.length - 1 ? 4 : 1 }, () => api(`${path}/answers`, a.cookie, "POST", payload)));
+    for (const copy of copies) { assert.equal(copy.status, 200); assert.deepEqual(copy.data, { accepted: true, questionId: q.id }); noKey(copy.data); }
     if (index === 0) firstPayload = payload;
     assert.equal((await api(`${path}/answers`, a.cookie, "POST", { ...payload, submissionId: randomUUID() })).status, 409);
     assert.equal(await prisma.diagnosticAnswer.count({ where: { sessionId: sa.id } }), index + 1);
-    if (index < 8) {
+    if (index < sa.questionIds.length - 1) {
       assert.equal(await prisma.skillObservation.count({ where: { userId: a.id } }), 0);
       assert.equal((await api(path, a.cookie)).data.result, null);
     }
   }
   const completed = (await api(path, a.cookie)).data;
-  assert.equal(completed.status, "completed"); assert.equal(completed.currentIndex, 9);
-  assert.equal(completed.result.correctCount, 3);
+  assert.equal(completed.status, "completed"); assert.equal(completed.currentIndex, sa.questionIds.length);
+  assert.equal(completed.result.correctCount, sa.questionIds.length - 6);
   assert.deepEqual((await api(path, a.cookie)).data.result, completed.result, "Saved report survives reload");
   assert.equal((await api("/api/diagnostics", a.cookie, "POST")).data.id, sa.id);
   const power = completed.result.skills.find((s: any) => s.id === "power_properties");
@@ -90,22 +91,26 @@ async function main() {
   assert.match(chain.evidence[0].feedback.ru, /не умножил на производную внутренней/);
   assert.equal(signs.recommendation.id, "practice_sign_sum", "A sum-sign error leads to another sum-sign task");
   assert.equal(chain.recommendation.id, "practice_chain_linear");
-  assert.equal(await prisma.skillObservation.count({ where: { userId: a.id } }), 9);
+  const observationCount = completed.result.skills.reduce((sum: number, s: any) => sum + s.observationCount, 0);
+  assert.equal(await prisma.skillObservation.count({ where: { userId: a.id } }), observationCount);
   assert.equal(await prisma.userAttempt.count({ where: { userId: a.id } }), 0, "Entrance answers are separate from practice attempts");
   assert.equal((await api(`${path}/answers`, a.cookie, "POST", firstPayload)).status, 200);
   assert.equal((await api(`${path}/answers`, a.cookie, "POST", { ...firstPayload, stepAnswers: [{ ...firstPayload.stepAnswers[0], answer: "bad" }] })).status, 409);
-  assert.equal(await prisma.skillObservation.count({ where: { userId: a.id } }), 9);
-  assert.equal((await api(path, a.cookie, "PATCH", { revision: completed.revision, currentIndex: 9, answers: {} })).status, 409);
+  assert.equal(await prisma.skillObservation.count({ where: { userId: a.id } }), observationCount);
+  assert.equal((await api(path, a.cookie, "PATCH", { revision: completed.revision, currentIndex: sa.questionIds.length, answers: {} })).status, 409);
   assert.equal((await api(`/api/diagnostics/${sb.id}`, b.cookie)).data.currentIndex, 0);
 
-  for (let index = 0; index < 9; index++) {
+  for (let index = 0; index < sb.questionIds.length; index++) {
     const other = (await api(`/api/diagnostics/${sb.id}`, b.cookie)).data;
-    const question = DIAGNOSTIC_EXERCISES.find((q) => q.id === other.question.id)!;
+    const question = await prisma.question.findUniqueOrThrow({ where: { id: other.question.id }, include: { steps: { include: { options: true } } } });
     assert.equal((await api(`/api/diagnostics/${sb.id}/answers`, b.cookie, "POST", { submissionId: randomUUID(), revision: other.revision,
-      questionId: other.question.id, stepAnswers: [{ stepId: other.question.steps[0].id, answer: question.steps[0].expectedAnswer }] })).status, 200);
+      questionId: other.question.id, stepAnswers: question.steps.map(s => ({ stepId: s.id, answer: s.type === "multiple_choice" ? s.options.find(o => o.isCorrect)!.id : s.expectedAnswer })) })).status, 200);
   }
   const bReport = (await api(`/api/diagnostics/${sb.id}`, b.cookie)).data.result;
-  assert.equal(bReport.correctCount, 9); assert.ok(bReport.skills.every((s: any) => s.assessment === "no_gap_observed" && s.state !== "mastered"));
+  assert.equal(bReport.correctCount, sb.questionIds.length);
+  assert.ok(bReport.skills.every((s: any) => s.state !== "mastered" && s.evidence.every((e: any) => e.isCorrect)));
+  assert.ok(bReport.skills.filter((s: any) => s.distinctQuestions >= 3).every((s: any) => s.assessment === "no_gap_observed"));
+  assert.ok(bReport.skills.filter((s: any) => s.distinctQuestions < 3).every((s: any) => s.assessment === "insufficient"));
   const bProgress = (await api("/api/skills", b.cookie)).data;
   for (const mode of ["weak_topics", "mixed"]) {
     const selected = await api("/api/sessions", a.cookie, "POST", { mode, totalCount: 5 }); assert.equal(selected.status, 200);
@@ -162,7 +167,7 @@ async function main() {
   assert.deepEqual(await prisma.diagnosticAnswer.findMany({ where: { sessionId: sa.id } }), beforeAnswers);
   assert.equal(await prisma.question.count(), beforeQuestions);
   assert.deepEqual((await api(path, a.cookie)).data.result, completed.result);
-  console.log("PASS: isolated accounts, nine independent tasks, disabled hints/AI, delayed answer keys, saved drafts/cursor/report, concurrency and idempotency");
+  console.log("PASS: isolated accounts, original nine tasks plus mapped coverage, disabled hints/AI, delayed answer keys, saved drafts/cursor/report, concurrency and idempotency");
   console.log("PASS: explicitly mapped choice mistakes, binary practice scores, hints/retries, linked adaptive tasks, conservative evidence and additive repeatable migration");
 }
 async function cleanup() {

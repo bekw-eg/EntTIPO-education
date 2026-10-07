@@ -109,8 +109,8 @@ async function main() {
     await page.keyboard.press("Escape"); await expect(page.getByRole("dialog")).toHaveCount(0);
     results.push("PASS account menu and registration dialog (keyboard + 360px)");
     for (const route of staticProtected) {
-      const loaded = route === "/" ? () => expect(page.getByRole("button", { name: "Начать", exact: true }).first()).toBeVisible()
-        : route === "/learning-road" ? () => expect(page.locator("[data-road-node]").first()).toBeVisible()
+      const loaded = route === "/" ? () => expect(page.getByTestId("preparation-card").getByRole("link", { name: "Пройти диагностику", exact: true })).toBeVisible()
+        : route === "/learning-road" ? () => expect(page.getByTestId("preparation-stage")).toHaveText("Начните с оценки знаний")
         : route === "/practice" ? () => expect(page.getByRole("radio").first()).toBeVisible()
         : route === "/statistics" ? () => expect(page.getByText(interfaceText.ru.emptyProgress, { exact: true })).toBeVisible()
         : route === "/diagnostics" ? () => expect(page.getByRole("button", { name: "Начать входную диагностику", exact: true })).toBeVisible()
@@ -168,6 +168,11 @@ async function main() {
     results.push("PASS mobile menu, keyboard, practice setup → real session → back");
 
     await visit("/diagnostics", () => expect(page.getByRole("button", { name: "Начать входную диагностику", exact: true })).toBeVisible());
+    // Before screening, unobserved skills must remain in the collapsible group.
+    const otherSkills = page.locator("details").filter({ has: page.locator("summary", { hasText: /^Другие навыки/ }) });
+    await expect(otherSkills).not.toHaveAttribute("open", "");
+    await otherSkills.locator("summary").first().click(); await expect(otherSkills).toHaveAttribute("open", "");
+    await otherSkills.locator("summary").first().click();
     await page.getByRole("button", { name: "Начать входную диагностику", exact: true }).click();
     await expect(page.getByRole("button", { name: "Сохранить и продолжить", exact: true })).toBeVisible(); await capture("diagnostic-active");
     let diagnostic = (await api("/api/diagnostics", f.a.cookie)).data[0];
@@ -187,10 +192,9 @@ async function main() {
       assert.equal(sent.status, 200, JSON.stringify(sent.data)); snapshot = (await api(`/api/diagnostics/${diagnostic.id}`, f.a.cookie)).data;
     }
     await page.reload(); await expect(page.getByRole("heading", { name: "Результат входной диагностики", exact: true })).toBeVisible(); await capture("diagnostic-result");
-    const otherSkills = page.locator("details").filter({ has: page.locator("summary", { hasText: /^Другие навыки/ }) });
-    await expect(otherSkills).not.toHaveAttribute("open", "");
-    await otherSkills.locator("summary").first().click(); await expect(otherSkills).toHaveAttribute("open", "");
-    await otherSkills.locator("summary").first().click();
+    // Broad screening can cover the entire bank; only actually unobserved skills belong here.
+    const unobserved = (await api("/api/skills", f.a.cookie)).data.filter((skill: { observationCount: number }) => skill.observationCount === 0);
+    await expect(otherSkills).toHaveCount(unobserved.length ? 1 : 0);
     results.push("PASS /diagnostics (intro, active, completed report)");
 
     // An actual paper created by the existing exam generator, with a disposable owner.
@@ -221,12 +225,12 @@ async function main() {
     results.push("PASS /exam/[examId] (real paper, answer, keyboard dialog, finish, result)");
 
     // Existing language controls and theme on populated, mathematical screens.
-    await visit("/learning-road", () => expect(page.locator("[data-road-node]").first()).toBeVisible());
+    await visit("/learning-road", () => expect(page.getByTestId("preparation-node-SKILL").first()).toBeVisible());
     await page.setViewportSize({ width: 390, height: 844 }); await page.getByTitle("Қазақша", { exact: true }).click();
-    await expect(page.locator("h1")).toHaveText("Менің оқу жолым"); await fits(page,"Kazakh road");
+    await expect(page.locator("h1")).toHaveText("Менің дайындық бағдарламам"); await fits(page,"Kazakh road");
     await page.screenshot({ path: `${output}/road-kk.png`, fullPage: true });
-    await page.getByTitle("English", { exact: true }).click(); await expect(page.locator("h1")).toHaveText("Learning Road");
-    await page.reload(); await expect(page.locator("h1")).toHaveText("Learning Road");
+    await page.getByTitle("English", { exact: true }).click(); await expect(page.locator("h1")).toHaveText("My preparation programme");
+    await page.reload(); await expect(page.locator("h1")).toHaveText("My preparation programme");
     await page.getByTitle("Русский", { exact: true }).click(); await page.getByRole("button", { name: "Переключить тему оформления", exact: true }).click();
     await expect(page.locator("html")).toHaveClass(/dark/); await capture("road-dark");
     await page.getByRole("button", { name: "Переключить тему оформления", exact: true }).click();
@@ -257,6 +261,7 @@ async function main() {
     await writeFile(`${output}/report.json`, JSON.stringify({ baseUrl, widths, publicRoutes: ["/login"], protectedRoutes: [...staticProtected,...dynamicPatterns], dynamicRoutes: dynamicPatterns, results, errors }, null, 2));
   } catch (error) {
     console.error("Smoke failure:", error);
+    console.error("Formula errors:", await page.locator(".katex-error").evaluateAll(nodes => nodes.map(n => ({ text: n.textContent, title: n.getAttribute("title") }))));
     console.error("Overflow:", await page.locator("body *").evaluateAll(nodes => ({ width: innerWidth, scroll: document.documentElement.scrollWidth, nodes: nodes.filter(node => node.getBoundingClientRect().right > innerWidth + 1).map(node => ({ tag: node.tagName, id: node.id, class: node.getAttribute("class"), right: node.getBoundingClientRect().right })).slice(0, 30) })).catch(() => null));
     await page.screenshot({ path: `${output}/failure.png`, fullPage: true }).catch(() => {});
     console.error("URL:", page.url(), "Errors:", errors, "Body:", (await page.locator("body").innerText().catch(() => "Browser closed")).slice(0,7000)); throw error;

@@ -2,12 +2,13 @@
 export function choiceLatex(value: string): string {
   const fraction = outerFraction(value);
   if (fraction) return `\\frac{${choiceLatex(fraction[0])}}{${choiceLatex(fraction[1])}}`;
-  let text = value.replace(/\*\*/g, "^").replace(/−/g, "-").replace(/π|(?<!\\)\bpi\b/g, "\\pi")
+  let text = value.replace(/\*\*/g, "^").replace(/−/g, "-").replace(/π(?=[A-Za-z])/g, "\\pi ").replace(/π|(?<!\\)\bpi\b/g, "\\pi")
     .replace(/√(\d+)/g, "\\sqrt{$1}").replace(/±/g, "\\pm ").replace(/∪/g, "\\cup ")
     .replace(/²/g, "^{2}").replace(/³/g, "^{3}").replace(/⁴/g, "^{4}").replace(/₀/g, "_0").replace(/₁/g, "_1").replace(/₂/g, "_2")
     .replace(/≠/g, "\\ne ").replace(/≤/g, "\\le ").replace(/≥/g, "\\ge ")
     .replace(/∈/g, "\\in ").replace(/\bR\b/g, "\\mathbb{R}").replace(/′/g, "'").replace(/″/g, "''").replace(/°/g, "^{\\circ}");
   text = text.replace(/ln\(abs\(([^()]+)\)\)\)/g, "\\ln|$1|");
+  text = text.replace(/_(?:\{([\p{Script=Cyrillic}]+)\}|([\p{Script=Cyrillic}]+))/gu, (_, braced, plain) => `_{\\text{${braced ?? plain}}}`);
   text = text.replace(/√\(/g, "sqrt(");
   text = formatCalls(text, "sqrt", argument => `\\sqrt{${argument}}`);
   text = formatCalls(text, "exp", argument => `e^{${argument}}`);
@@ -59,7 +60,8 @@ function formatCalls(text: string, name: string, render: (argument: string) => s
 /** RU/KK authored stems: mark mathematical spans, retaining prose and existing math/diagrams. */
 export function choiceStem(value: string): string {
   return value.split(/(\$[^$]+\$|\[GEOMETRY:[\s\S]*?\])/g).map(part => part.startsWith("$") || part.startsWith("[GEOMETRY:") ? part :
-    part.replace(/[^\p{Script=Cyrillic}$]+/gu, span => {
+    // A Cyrillic subscript is part of the formula, not the surrounding prose.
+    part.replace(/(?:_(?:\{[\p{Script=Cyrillic}]+\}|[\p{Script=Cyrillic}]+)|[^\p{Script=Cyrillic}$])+/gu, span => {
       if (!/[A-Za-z0-9π√]/.test(span)) return span;
       const leading = span.match(/^[\s.,:!?—«»]+/)?.[0] ?? "";
       const trailing = span.match(/[\s.,:!?—«»]+$/)?.[0] ?? "";

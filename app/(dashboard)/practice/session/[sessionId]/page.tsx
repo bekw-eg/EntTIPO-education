@@ -266,7 +266,7 @@ function PracticeSessionContent() {
         onRetry={() => { void transition("retry"); }} onNext={() => { void transition("next"); }} onOpenAi={handleOpenAi} />}
       {phase === "summary" && snapshot && <><SessionSummary session={snapshot}
         onGoToDashboard={() => router.push("/")} onNewSession={() => router.push("/practice")} />
-        {snapshot.roadNodeId && <Button asChild className="w-full"><Link href="/learning-road">{roadText[locale].continue}</Link></Button>}
+        {snapshot.roadNodeId && <Button asChild className="w-full"><Link href={snapshot.roadProgramVersion === 0 ? "/learning-road?legacy=1" : "/learning-road"}>{roadText[locale].continue}</Link></Button>}
         <PracticeHistory sessionId={sessionId} /></>}
       <AiTutorPanel isOpen={isAiOpen} onClose={() => setIsAiOpen(false)} question={question}
         stepAnswers={stepAnswers} hasAttempted={phase === "result"} attemptId={snapshot?.result?.attemptId}

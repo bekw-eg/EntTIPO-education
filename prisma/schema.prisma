@@ -293,6 +293,11 @@ model LearningRoadBlock {
   userId String
   sequence Int
   diagnosticId String? // Initial completed screening snapshot; never rewrites started lessons.
+  programVersion Int @default(0) // 0: historical short road; 1+: preparation cycle.
+  policy Json @default("{}")
+  status String @default("active")
+  reason String @default("initial")
+  sourceExamId String? @unique
   createdAt DateTime @default(now())
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   nodes LearningRoadNode[]
@@ -314,6 +319,11 @@ model LearningRoadNode {
   completedAt DateTime?
   unavailable Boolean @default(false)
   skipped Boolean @default(false)
+  phase String @default("check") // check | repair | practice
+  skillIds String[] @default([])
+  repairSkillIds String[] @default([])
+  evidence Json?
+  assessments ExamSession[]
   block LearningRoadBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
   skill Skill @relation(fields: [skillId], references: [id])
   session PracticeSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
@@ -468,6 +478,7 @@ model DiagnosticSession {
   currentIndex Int @default(0)
   revision Int @default(0)
   draftAnswers Json @default("{}")
+  questionSnapshots Json @default("{}") // Private immutable diagnostic content.
   result Json?
   startedAt DateTime @default(now())
   completedAt DateTime?
@@ -520,11 +531,14 @@ model ExamSession {
   completedAt DateTime?
   completionReason String?
   result Json?
+  roadNodeId String?
+  roadNode LearningRoadNode? @relation(fields: [roadNodeId], references: [id], onDelete: SetNull)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   observations SkillObservation[]
   mistakes Mistake[]
   @@unique([userId, startRequestId])
   @@index([userId, status])
+  @@index([roadNodeId])
 }
 
 model DailyGoal {

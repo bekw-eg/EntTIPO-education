@@ -183,7 +183,8 @@ export async function submitAttempt(userId: string, data: SubmitAttemptInput, of
       }
       const priorHelp = await tx.questionHelp.findUnique({ where: { userId_questionId: { userId, questionId: question.id } } });
       const exposedExam = await tx.examSession.count({ where: { userId, status: "completed", questionIds: { has: question.id } } });
-      const usedHint = !!offline || data.usedHint || ownedSession.hintedQuestionIds.includes(question.id) || !!priorHelp || exposedExam > 0;
+      const exposedDiagnostic = await tx.diagnosticAnswer.count({ where: { questionId: question.id, session: { userId } } });
+      const usedHint = !!offline || data.usedHint || ownedSession.hintedQuestionIds.includes(question.id) || !!priorHelp || exposedExam > 0 || exposedDiagnostic > 0;
       const latestAttempt = await tx.userAttempt.findFirst({
         where: { userId }, orderBy: { createdAt: "desc" }, select: { createdAt: true },
       });

@@ -16,7 +16,8 @@ import { DashboardStats } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { contentText } from '@/lib/i18n/content';
 import { DailyLearningPlanCard } from "./DailyLearningPlanCard";
-import { LearningRoadCard } from "@/components/learning-road/LearningRoadCard";
+import { PreparationView } from "@/components/learning-road/PreparationView";
+import { preparationText } from "@/lib/i18n/preparation";
 
 interface DashboardViewProps {
   initialData: DashboardStats;
@@ -24,6 +25,7 @@ interface DashboardViewProps {
 
 export function DashboardView({ initialData: data }: DashboardViewProps) {
   const { t, locale, getTopicName } = useLanguage();
+  const [dailyOpen, setDailyOpen] = React.useState(false);
 
   const getGreeting = () => {
     const hour = Number(new Intl.DateTimeFormat("en", { timeZone: data.timeZone ?? "Asia/Qyzylorda", hour: "numeric", hourCycle: "h23" }).format(new Date()));
@@ -55,8 +57,8 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
       />
 
       <div className="page-content">
-        <DailyLearningPlanCard />
-        <LearningRoadCard />
+        <PreparationView compact />
+        <details className="border-b py-4" onToggle={event => setDailyOpen(event.currentTarget.open)}><summary className="cursor-pointer text-sm font-medium">{preparationText[locale].daily}</summary>{dailyOpen && <DailyLearningPlanCard />}</details>
         {/* Stats Grid */}
         <div className="metric-row">
           <StatsCard

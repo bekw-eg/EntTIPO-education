@@ -4,7 +4,6 @@ import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { api, prisma, noKeys, submission } from "./choice_test_fixture";
 import { roadFixture, road, startNode, completeSession } from "./road_test_fixture";
-import { DIAGNOSTIC_EXERCISES } from "../lib/skillCatalog";
 
 async function main() {
   assert.equal((await api("/api/learning-road")).status, 401);
@@ -80,24 +79,25 @@ async function main() {
     // Initial road built AFTER diagnosis uses only those skill observations.
     const beforeDiagnostic = await road(b.cookie);
     const diagnostic = await api("/api/diagnostics", b.cookie, "POST"); assert.equal(diagnostic.status, 200);
-    for (let index = 0; index < 9; index++) {
+    for (let index = 0; index < diagnostic.data.totalCount; index++) {
       snapshot = (await api(`/api/diagnostics/${diagnostic.data.id}`, b.cookie)).data;
-      const exercise = DIAGNOSTIC_EXERCISES.find(item => item.id === snapshot.question.id)!;
+      const exercise = await prisma.question.findUniqueOrThrow({ where: { id: snapshot.question.id }, include: { steps: { include: { options: true }, orderBy: { order: "asc" } } } });
       const result = await api(`/api/diagnostics/${diagnostic.data.id}/answers`, b.cookie, "POST", {
         submissionId: randomUUID(), revision: snapshot.revision, questionId: snapshot.question.id,
         stepAnswers: exercise.steps.map((step, position) => ({ stepId: snapshot.question.steps[position].id,
-          answer: exercise.id.startsWith("diag_power") ? "999999" : step.expectedAnswer })) });
+          answer: exercise.id.startsWith("diag_power") ? "999999" : step.type === "multiple_choice" ? step.options.find(o => o.isCorrect)!.id : step.expectedAnswer })) });
       assert.equal(result.status, 200, JSON.stringify(result.data));
     }
     const diagnosed = await road(b.cookie); assert.ok(!diagnosed.needsDiagnostic);
     assert.notEqual(diagnosed.id, beforeDiagnostic.id);
-    assert.equal(diagnosed.sequence, beforeDiagnostic.sequence + 1);
+    assert.equal(diagnosed.sequence, beforeDiagnostic.sequence + 2, "Completed diagnostic also creates the preparation cycle");
     const archivedPractice = beforeDiagnostic.nodes.find(node => node.type === "PRACTICE")!;
     assert.equal((await api("/api/learning-road", b.cookie, "POST", { action: "start", nodeId: archivedPractice.id })).status, 409);
     assert.equal(diagnosed.nodes[0].skillId, "power_properties");
     assert.notDeepEqual(diagnosed.nodes.map(node => node.key), first.nodes.map(node => node.key));
-    const covered = diagnosed.nodes.find(node => node.reason === "coverage")!;
-    assert.equal(covered.masteryScore, null);
+    const insufficientNodes = diagnosed.nodes.filter(node => node.reason === "coverage" || node.reason === "evidence");
+    assert.ok(insufficientNodes.length > 0);
+    assert.ok(insufficientNodes.every(node => node.masteryScore === null), "One broad-screening observation does not turn unknown skills into weak skills");
     // Exhausting independently available questions is honest and cannot fabricate success.
     const checkpoint = diagnosed.nodes.find(node => node.type === "CHECKPOINT")!;
     const exposed = await prisma.questionSkill.findMany({ where: { skillId: checkpoint.skillId }, select: { questionId: true } });

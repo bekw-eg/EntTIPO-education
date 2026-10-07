@@ -118,8 +118,8 @@ async function main() {
 
   // Diagnostic keys and assistance remain private; result, feedback and next-task conditions are bilingual.
   const diagnostic = await api('/api/diagnostics', a.cookie, 'POST', {});
-  assert.equal(diagnostic.status, 200); assert.equal(diagnostic.data.totalCount, 9);
-  for (let i = 0; i < 9; i++) {
+  assert.equal(diagnostic.status, 200); assert.ok(diagnostic.data.totalCount > 9);
+  for (let i = 0; i < diagnostic.data.totalCount; i++) {
     const d = (await api(`/api/diagnostics/${diagnostic.data.id}`, a.cookie)).data;
     privateQuestion(d.question); assert.ok(d.question.questionTextKk);
     const q = initial.find(q => q.id === d.question.id)!;
@@ -129,7 +129,7 @@ async function main() {
     assert.equal(r.status, 200, JSON.stringify(r.data));
   }
   const diagnosticResult = (await api(`/api/diagnostics/${diagnostic.data.id}`, a.cookie)).data.result;
-  assert.equal(diagnosticResult.totalCount, 9);
+  assert.equal(diagnosticResult.totalCount, diagnostic.data.totalCount);
   for (const skill of diagnosticResult.skills) {
     assert.ok(skill.nameKk && skill.ruleKk && skill.explanationKk);
     skill.evidence.forEach((e: any) => { assert.ok(e.questionTextKk && e.explanationKk); if (!e.isCorrect) assert.ok(e.feedback.kk); });
