@@ -11,6 +11,9 @@ node_modules/
 
 # Next.js
 /.next/
+/.next-smoke/
+/playwright-report/
+/test-results/
 /out/
 
 # Production

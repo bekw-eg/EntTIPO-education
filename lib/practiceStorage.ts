@@ -31,9 +31,9 @@ export async function lockAccount(tx: Prisma.TransactionClient, userId: string) 
 export async function recordHintUsage(userId: string, sessionId: string, questionId: string) {
   return prisma.$transaction(async (tx) => {
     await lockAccount(tx, userId);
-    await assertNoActiveExam(tx, userId);
     const session = await tx.practiceSession.findFirst({ where: { id: sessionId, userId } });
     if (!session) throw new PracticeError("Session not found", 404);
+    await assertNoActiveExam(tx, userId);
     if (session.status !== "active") throw new PracticeError("Session is already completed", 409);
     const question = await tx.question.findUnique({ where: { id: questionId }, select: { topicId: true, practiceChoice: true } });
     if (!question) throw new PracticeError("Question not found", 404);

@@ -1,263 +1,69 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  ArrowRight,
-  RotateCcw,
-  BookOpen,
-  Bot,
-  Sparkles,
-} from "lucide-react";
+import { useState } from "react";
+import Link from "next/link";
+import { Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { AttemptResult, PracticeQuestion, AiAction } from "@/types";
+import type { AttemptResult, PracticeQuestion, AiAction } from "@/types";
 import { learningText } from "@/lib/i18n/learning";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
-import { contentText, answerText } from '@/lib/i18n/content';
-import { MathText } from '@/components/ui/MathText';
+import { contentText } from "@/lib/i18n/content";
+import { choiceStem } from "@/lib/choiceDisplay";
+import { resultReview } from "@/lib/resultAnalysis";
+import { MathText } from "@/components/ui/MathText";
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 import { ChoiceMath } from "./ChoiceMath";
+import { ResultSummary } from "./ResultSummary";
+import { MistakeCard } from "./MistakeCard";
+import { RuleReviewCard } from "./RuleReviewCard";
+import { RetryCard } from "./RetryCard";
 
 interface ResultAnalysisProps {
-  result: AttemptResult;
-  question: PracticeQuestion;
-  isLoading?: boolean;
-  onRetry: () => void;
-  onNext: () => void;
-  onOpenAi?: (action?: AiAction) => void;
+  result: AttemptResult; question: PracticeQuestion; isLoading?: boolean;
+  onRetry: () => void; onNext: () => void; onOpenAi?: (action?: AiAction) => void;
+  questionNumber?: number; isLastQuestion?: boolean;
 }
 
-export default function ResultAnalysis({
-  result,
-  question,
-  onRetry,
-  onNext,
-  onOpenAi,
-  isLoading = false,
-}: ResultAnalysisProps) {
-  const { t, getErrorLabel, locale } = useLanguage();
+export default function ResultAnalysis({ result, question, onRetry, onNext, onOpenAi, isLoading = false,
+  questionNumber = 1, isLastQuestion = false }: ResultAnalysisProps) {
+  const { t, getTopicName, locale } = useLanguage();
   const learningCopy = learningText[locale === "kk" ? "kk" : "ru"];
-  const [showExplanation, setShowExplanation] = useState(!!result.choice);
   const [localAiOpen, setLocalAiOpen] = useState(false);
-  const isFull = result.isCorrect;
-  const isPartial = result.isPartial;
+  const review = resultReview(result, question, locale);
+  const questionText = contentText(question.questionText, question.questionTextKk, locale);
+  const items = result.isCorrect ? review.items : review.failed;
+  const topic = question.topic?.name ? getTopicName(question.topic.name) : contentText(question.title, question.titleKk, locale);
 
-  const handleOpenAi = (action?: AiAction) => {
-    if (onOpenAi) {
-      onOpenAi(action);
-    } else {
-      setLocalAiOpen(true);
-    }
-  };
-
-  return (
-    <Card className="shadow-md overflow-hidden border animate-slide-in">
-      {/* Status banner */}
-      <div
-        className={`p-6 text-center border-b ${
-          isFull
-            ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-            : isPartial
-            ? "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400"
-            : "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-400"
-        }`}
-      >
-        <div className="flex justify-center mb-3">
-          {isFull ? (
-            <CheckCircle2 className="w-14 h-14 text-emerald-500" />
-          ) : isPartial ? (
-            <AlertTriangle className="w-14 h-14 text-amber-500" />
-          ) : (
-            <XCircle className="w-14 h-14 text-rose-500" />
-          )}
-        </div>
-        <h2 className="text-2xl font-bold">
-          {isFull
-            ? t.result.greatJob
-            : isPartial
-            ? `${t.result.partialJob} (${result.score}%)`
-            : t.result.hasErrors}
-        </h2>
-        <p className="text-sm mt-1 text-muted-foreground">
-          {isFull ? t.result.allCorrectDesc : t.result.hasErrorsDesc}
-        </p>
-
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-          {result.errorType && (
-            <Badge variant="destructive" className="text-xs">
-              {t.result.errorTypeLabel}: {getErrorLabel(result.errorType)}
-            </Badge>
-          )}
-
-          {!isFull && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleOpenAi("analyze_error")}
-              className="h-7 text-xs border-primary/40 bg-background/90 hover:bg-primary/10 text-primary font-semibold shadow-2xs"
-            >
-              <Bot className="w-3.5 h-3.5 mr-1" />
-              {t.ai.reviewWithAi}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <CardContent className="p-4 sm:p-6 space-y-6">
-        {result.learningCheck && <div role="status" className="rounded-lg border p-4 text-sm space-y-2">
-          <p className="font-semibold">{result.learningCheck.status === "passed" ? learningCopy.success : learningCopy.failed}</p>
-          {result.learningCheck.status !== "passed" && <p>{learningCopy.retry}</p>}
-          {result.learningCheck.dueDay && <p>{learningCopy.next}: {result.learningCheck.dueDay}</p>}
-          <a className="text-primary underline" href="/">{learningCopy.home}</a>
-        </div>}
-        {result.choice && <div className="space-y-4">
-          {[{ title: t.result.yourAnswer, ids: result.choice.selectedOptionIds },
-            { title: t.result.correctAnswer, ids: result.choice.correctOptionIds }].map(group => <div key={group.title}>
-            <h3 className="font-semibold mb-2">{group.title}</h3>
-            {result.choice!.options.filter(o => group.ids.includes(o.id)).map(o => <div key={o.id} className="flex gap-3 items-center rounded-xl border p-3">
-              <strong>{String.fromCharCode(65 + result.choice!.options.findIndex(v => v.id === o.id))}.</strong>
-              <ChoiceMath text={contentText(o.text, o.textKk, locale)} />
-            </div>)}
-          </div>)}
-        </div>}
-        {/* Legacy step-by-step attempts remain reviewable. */}
-        {!result.choice && <div className="space-y-3">
-          <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
-            {t.result.stepAnalysis}
-          </h3>
-
-          <div className="space-y-3">
-            {result.stepResults?.map((sr) => {
-              const step = question.steps?.find((s) => s.id === sr.stepId);
-              return (
-                <div
-                  key={sr.stepId}
-                  className={`p-4 rounded-xl border flex items-start gap-3 transition-colors ${
-                    sr.isCorrect
-                      ? "bg-emerald-500/5 border-emerald-500/30"
-                      : "bg-rose-500/5 border-rose-500/30"
-                  }`}
-                >
-                  <div className="mt-0.5 shrink-0">
-                    {sr.isCorrect ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-rose-500" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <p className="text-sm font-medium">
-                      <span className="font-bold mr-1">
-                        {t.result.stepItem} {sr.stepOrder}:
-                      </span>
-                      {contentText(step?.prompt, step?.promptKk, locale) || '...'}
-                    </p>
-                    <div className="text-xs flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
-                      <span>
-                        {t.result.yourAnswer}{" "}
-                        <strong className="font-mono text-foreground">
-                          {sr.userAnswer ? answerText(sr.userAnswer, step, locale) : '—'}
-                        </strong>
-                      </span>
-                      {!sr.isCorrect && (
-                        <span className="text-rose-600 dark:text-rose-400">
-                          {t.result.correctAnswer}{" "}
-                          <strong className="font-mono">
-                            {answerText(sr.expectedAnswer, step, locale)}
-                          </strong>
-                        </span>
-                      )}
-                    </div>
-                    {sr.feedback && <p className="text-sm text-rose-700 dark:text-rose-300">{locale === "kk" ? sr.feedback.kk : sr.feedback.ru}</p>}
-                  </div>
-                </div>
-              );
-            })}
+  return <div className="analysis-content mx-auto min-w-0 max-w-2xl space-y-5 sm:space-y-6" data-result-analysis>
+    <ResultSummary topic={topic} isCorrect={result.isCorrect} isPartial={result.isPartial}
+      failedCount={review.failed.length} isChoice={!!result.choice} insight={review.sharedFeedback} hasUnclassified={review.hasUnclassified} />
+    {items.map(item => <MistakeCard key={item.id} item={item} questionNumber={questionNumber}
+      questionText={questionText} latex={question.latex} stepLabel={!result.choice ? `${t.result.stepItem} ${item.order}` : undefined}
+      explanation={item.feedback !== review.sharedFeedback ? item.feedback : undefined}>
+      {!!result.choice?.solutionSteps.length && <ol className="space-y-4" aria-label={t.session.solutionSteps}>
+        {result.choice.solutionSteps.map((step, index) => <li key={index} className="flex min-w-0 gap-3">
+          <span aria-hidden="true" className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold">{index + 1}</span>
+          <div className="min-w-0 flex-1 space-y-1">
+            <MathText className="analysis-copy" content={choiceStem(contentText(step.prompt, step.promptKk, locale))} />
+            <div className="overflow-x-auto py-2"><ChoiceMath text={step.answer} /></div>
           </div>
-        </div>}
-
-        {/* Explanation */}
-        <div className="rounded-xl border p-4 bg-muted/20 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-primary" />
-              <h4 className="font-semibold text-sm">
-                {t.result.solutionExplanation}
-              </h4>
-            </div>
-            {!showExplanation && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowExplanation(true)}
-              >
-                {t.result.show}
-              </Button>
-            )}
-          </div>
-
-          {(showExplanation || isFull) && (
-            <div className="text-sm text-foreground/90 whitespace-pre-line pt-2 border-t mt-2">
-              <MathText content={contentText(result.explanation, result.explanationKk, locale)} />
-            </div>
-          )}
-        </div>
-
-        {!!result.choice?.solutionSteps.length && <details className="rounded-xl border p-4">
-          <summary className="cursor-pointer font-semibold">{t.session.solutionSteps}</summary>
-          <ol className="mt-3 space-y-3">{result.choice.solutionSteps.map((step, index) => <li key={index}>
-            <MathText content={`${index + 1}. ${contentText(step.prompt, step.promptKk, locale)}`} />
-            <ChoiceMath text={step.answer} />
-          </li>)}</ol>
-        </details>}
-
-        {/* Action buttons */}
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-3">
-          {!isFull && (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleOpenAi("analyze_error")}
-                className="w-full sm:w-auto border-primary/40 text-primary hover:bg-primary/10 font-semibold"
-              >
-                <Bot className="w-4 h-4 mr-2" />
-                {t.ai.reviewWithAi}
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={onRetry}
-                disabled={isLoading}
-                className="w-full sm:w-auto"
-              >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                {t.result.tryAgain}
-              </Button>
-            </>
-          )}
-          <Button onClick={onNext} disabled={isLoading} className="w-full sm:w-auto px-6 font-semibold">
-            {t.result.nextTask}
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      </CardContent>
-
-      {!onOpenAi && (
-        <AiTutorPanel
-          isOpen={localAiOpen}
-          onClose={() => setLocalAiOpen(false)}
-          question={question}
-          attemptId={result.attemptId}
-          hasAttempted={true}
-          initialAction="analyze_error"
-        />
-      )}
-    </Card>
-  );
+        </li>)}
+      </ol>}
+    </MistakeCard>)}
+    <RuleReviewCard rules={review.rules} explanation={review.explanation} />
+    {result.learningCheck && <div role="status" className="space-y-2 rounded-lg border bg-card p-4 text-sm sm:p-5">
+      <p className="font-semibold">{result.learningCheck.status === "passed" ? learningCopy.success : learningCopy.failed}</p>
+      {result.learningCheck.status !== "passed" && <p>{learningCopy.retry}</p>}
+      {result.learningCheck.dueDay && <p>{learningCopy.next}: {result.learningCheck.dueDay}</p>}
+      <Link className="inline-flex min-h-11 items-center text-primary underline" href="/">{learningCopy.home}</Link>
+    </div>}
+    {!result.isCorrect && <Button type="button" variant="ghost" disabled={isLoading} className="min-h-11 w-full gap-2 whitespace-normal sm:w-auto"
+      onClick={() => onOpenAi ? onOpenAi("analyze_error") : setLocalAiOpen(true)}>
+      <Bot aria-hidden="true" className="h-4 w-4 shrink-0" />{t.ai.reviewWithAi}
+    </Button>}
+    <RetryCard questionText={questionText} isCorrect={result.isCorrect} isLoading={isLoading} isLastQuestion={isLastQuestion}
+      onRetry={onRetry} onNext={onNext} />
+    {!onOpenAi && <AiTutorPanel isOpen={localAiOpen} onClose={() => setLocalAiOpen(false)} question={question}
+      attemptId={result.attemptId} hasAttempted initialAction="analyze_error" />}
+  </div>;
 }

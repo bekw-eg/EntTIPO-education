@@ -1,5 +1,8 @@
 "use client";
-import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
+import Link from "next/link";
+import { preparationText } from "@/lib/i18n/preparation";
+import { Header } from "@/components/layout/Header";
+import { PageLoading } from "@/components/ui/page-state";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -24,7 +27,8 @@ function recoverySnapshot(data: DiagnosticSnapshot): PracticeSnapshot {
 export default function DiagnosticsPage() {
   const { user } = useAccount();
   const { locale } = useLanguage();
-  const copy = diagnosticText[locale === "kk" ? "kk" : "ru"];
+  const copy = diagnosticText[locale];
+  const prep = preparationText[locale];
   const router = useRouter();
   const userId = user?.id;
   const [snapshot, setSnapshot] = useState<DiagnosticSnapshot | null>(null);
@@ -169,13 +173,10 @@ export default function DiagnosticsPage() {
     } catch { toast.error(copy.error); }
     finally { busyRef.current = false; setBusy(false); }
   };
-  return <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6">
-    <div className="md:hidden flex justify-end"><LanguageSwitcher variant="compact" /></div>
-    <h1 className="text-2xl sm:text-3xl font-bold">{copy.title}</h1>
-    {loading ? <p role="status">…</p> : error ? <div role="alert" className="space-y-3"><p>{copy.error}</p><Button onClick={() => { void load(); }}>{copy.reload}</Button></div> : <>
+  return <><Header title={copy.title} /><div className="page-content reading-content">
+    {loading ? <PageLoading /> : error ? <div role="alert" className="space-y-3"><p>{copy.error}</p><Button onClick={() => { void load(); }}>{copy.reload}</Button></div> : <>
       {!snapshot && <div className="space-y-4"><p className="text-muted-foreground">{copy.intro}</p><Button disabled={busy} onClick={() => { void start(); }}>{copy.start}</Button></div>}
       {snapshot?.status === "active" && snapshot.question && <>
-        <p className="text-sm text-muted-foreground">{copy.intro}</p>
         <p role="status" className="text-xs text-right">{copy[saveStatus]}</p>
         {pending && !busy && <p role="alert" className="text-sm text-amber-600">{copy.pending}</p>}
         <QuestionCard question={snapshot.question} stepAnswers={answers} onStepAnswer={edit} onSubmit={() => { void submit(); }}
@@ -183,6 +184,14 @@ export default function DiagnosticsPage() {
           assistanceDisabled startedAt={draftRef.current?.startedAt}
           submitLabel={snapshot.currentIndex + 1 === snapshot.totalCount ? copy.finish : copy.next} />
       </>}
+      {snapshot?.result && <section className="space-y-3 rounded-lg border bg-card p-5">
+        <h2 className="text-lg font-semibold">{prep.stages.road_ready}</h2>
+        <p>{copy.checked}: {snapshot.result.correctCount} / {snapshot.result.totalCount}</p>
+        <p className="text-sm text-muted-foreground">{prep.unknown}</p>
+        <p className="text-sm"><strong>{prep.strengths}: </strong>{snapshot.result.skills.filter(s => s.evidence.length >= 3 && s.evidence.every(e => e.isCorrect)).map(s => locale === "kk" ? s.nameKk : s.nameRu).join(" · ") || copy.insufficient}</p>
+        <p className="text-sm"><strong>{prep.priorities}: </strong>{snapshot.result.skills.filter(s => s.evidence.some(e => !e.isCorrect)).map(s => locale === "kk" ? s.nameKk : s.nameRu).join(" · ") || copy.insufficient}</p>
+        <Button asChild><Link href="/learning-road">{prep.start}</Link></Button>
+      </section>}
       {snapshot?.result && <DiagnosticResults report={snapshot.result} />}
       {snapshot?.status === "completed" && <div className="space-y-2">
         <Button variant="outline" disabled={busy} onClick={() => { void start(snapshot.id); }}>{learningText[locale === "kk" ? "kk" : "ru"].retake}</Button>
@@ -190,5 +199,5 @@ export default function DiagnosticsPage() {
       </div>}
       {snapshot?.status !== "active" && <SkillProgressCards skills={skills} />}
     </>}
-  </div>;
+  </div></>;
 }

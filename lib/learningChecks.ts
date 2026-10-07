@@ -14,6 +14,7 @@ export async function similarQuestions(tx: Prisma.TransactionClient, userId: str
     difficulty: { gte: Math.max(1, targetDifficulty - 1), lte: Math.min(5, targetDifficulty + 1) },
     skills: { some: { skillId } }, steps: { some: { skills: { some: { skillId } } } },
     attempts: { none: { userId } }, questionHelp: { none: { userId } }, mistakes: { none: { userId } },
+    diagnosticAnswers: { none: { session: { userId } } },
     learningChecks: { none: { userId, status: "pending" } },
   }, select: { id: true, difficulty: true, purpose: true }, orderBy: [{ difficulty: "asc" }, { id: "asc" }] });
   return candidates.sort((a, b) => Math.abs(a.difficulty - targetDifficulty) - Math.abs(b.difficulty - targetDifficulty)
@@ -78,8 +79,9 @@ export async function recordLearningAttempt(tx: Prisma.TransactionClient, attemp
     const helped = await tx.questionHelp.findUnique({ where: { userId_questionId: { userId: attempt.userId, questionId: attempt.questionId } } });
     const hinted = await tx.practiceSession.count({ where: { userId: attempt.userId, hintedQuestionIds: { has: attempt.questionId } } });
     const exposedExam = await tx.examSession.count({ where: { userId: attempt.userId, status: "completed", questionIds: { has: attempt.questionId } } });
+    const exposedDiagnostic = await tx.diagnosticAnswer.count({ where: { questionId: attempt.questionId, session: { userId: attempt.userId } } });
     const passed = independentCheck({ isCorrect: attempt.isCorrect, usedHint: attempt.usedHint, priorAttempts,
-      priorHelp: !!helped || hinted > 0 || exposedExam > 0, questionId: attempt.questionId, originalQuestionId: check.mistake?.questionId,
+      priorHelp: !!helped || hinted > 0 || exposedExam > 0 || exposedDiagnostic > 0, questionId: attempt.questionId, originalQuestionId: check.mistake?.questionId,
       testsSkill: question.steps.some((s) => s.skills.some((link) => link.skillId === check.skillId)),
       difficulty: question.difficulty, targetDifficulty: check.targetDifficulty });
     await tx.learningCheck.update({ where: { id: check.id }, data: { status: passed ? "passed" : "failed",

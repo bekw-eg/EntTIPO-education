@@ -1,298 +1,98 @@
 "use client";
-
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Dices, AlertTriangle, Book, RotateCcw, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Download, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
+import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageLoading, LoadError } from "@/components/ui/page-state";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
-import Link from "next/link";
+import { interfaceText } from "@/lib/i18n/interface";
 import { diagnosticText } from "@/lib/i18n/diagnostics";
-import { errorText } from '@/lib/i18n/messages';
+import { errorText } from "@/lib/i18n/messages";
 
-interface UnfinishedSession {
-  id: string;
-  mode: "mixed" | "weak_topics" | "specific_topic" | "review_mistakes";
-  completedCount: number;
-  totalCount: number;
-}
-
+type Mode = "mixed" | "weak_topics" | "specific_topic" | "review_mistakes";
+interface UnfinishedSession { id: string; mode: Mode; completedCount: number; totalCount: number }
 function PracticeSetupContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const router = useRouter(), searchParams = useSearchParams();
   const { t, getTopicName, locale } = useLanguage();
   const skillId = searchParams.get("skillId") || undefined;
-
-  const initialMode = searchParams.get("mode") || "mixed";
-  const initialTopic = searchParams.get("topicId") || "";
-
-  const [totalCount, setTotalCount] = useState<number>(20);
-  const [mode, setMode] = useState<string>(initialMode);
-  const [topicId, setTopicId] = useState<string>(initialTopic);
+  const [totalCount, setTotalCount] = useState(20);
+  const [mode, setMode] = useState(searchParams.get("mode") || "mixed");
+  const [topicId, setTopicId] = useState(searchParams.get("topicId") || "");
   const [topics, setTopics] = useState<{ id: string; name: string }[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState(false);
   const [unfinishedSessions, setUnfinishedSessions] = useState<UnfinishedSession[]>([]);
-
-  useEffect(() => {
-    const fetchTopics = async () => {
-      try {
-        const res = await fetch("/api/topics");
-        if (res.ok) {
-          const data = await res.json();
-          setTopics(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch topics", err);
-      }
-    };
-    fetchTopics();
-    fetch("/api/sessions?status=active", { cache: "no-store" })
-      .then(async (res) => { if (res.ok) setUnfinishedSessions(await res.json()); })
-      .catch((error) => console.error("Could not load unfinished sessions", error));
+  const load = useCallback(async () => {
+    setLoading(true); setError(false);
+    try {
+      const [topicResponse, sessionResponse] = await Promise.all([fetch("/api/topics"), fetch("/api/sessions?status=active", { cache: "no-store" })]);
+      if (!topicResponse.ok || !sessionResponse.ok) throw new Error();
+      const [topicData, sessionData] = await Promise.all([topicResponse.json(), sessionResponse.json()]);
+      setTopics(topicData); setUnfinishedSessions(sessionData);
+    } catch { setError(true); } finally { setLoading(false); }
   }, []);
-
-  const counts = [10, 20, 30, 40, 50];
-  const modes = [
-    {
-      id: "mixed",
-      title: t.practice.modes.mixed.title,
-      desc: t.practice.modes.mixed.desc,
-      icon: Dices,
-    },
-    {
-      id: "weak_topics",
-      title: t.practice.modes.weak_topics.title,
-      desc: t.practice.modes.weak_topics.desc,
-      icon: AlertTriangle,
-    },
-    {
-      id: "specific_topic",
-      title: t.practice.modes.specific_topic.title,
-      desc: t.practice.modes.specific_topic.desc,
-      icon: Book,
-    },
-    {
-      id: "review_mistakes",
-      title: t.practice.modes.review_mistakes.title,
-      desc: t.practice.modes.review_mistakes.desc,
-      icon: RotateCcw,
-    },
-  ];
-
-  const handleSubmit = async () => {
-    if (mode === "specific_topic" && !topicId) {
-      toast.error(t.practice.selectTopicToast);
-      return;
-    }
-
+  useEffect(() => { void load(); }, [load]);
+  async function handleSubmit() {
+    if (mode === "specific_topic" && !topicId) { toast.error(t.practice.selectTopicToast); return; }
     setIsLoading(true);
     try {
-      const res = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode,
-          totalCount: Number(totalCount),
-          topicId: mode === "specific_topic" ? topicId : undefined,
-          skillId,
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Error creating session");
-      }
-
+      const res = await fetch("/api/sessions", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode, totalCount: Number(totalCount), topicId: mode === "specific_topic" ? topicId : undefined, skillId }) });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || t.session.loadError);
       router.push(`/practice/session/${data.id}`);
-    } catch (error: any) {
-      console.error(error);
-      toast.error(errorText(error.message, locale));
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-8 animate-slide-in">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          {t.practice.setupTitle}
-        </h1>
-        <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-          {t.practice.setupSubtitle}
-        </p>
-      </div>
-
-      <a href="/offline-practice.html" className="block rounded-xl border p-4 hover:bg-muted/50">
-        <span className="font-semibold">{locale === "kk" ? "Желісіз жаттығу" : "Офлайн-практика"}</span>
-        <p className="mt-1 text-sm text-muted-foreground">{locale === "kk" ? "Материалдар мен тапсырмаларды жүктеп, интернетсіз оқыңыз." : "Скачайте материалы и задания, занимайтесь без интернета и синхронизируйте ответы позже."}</p>
-      </a>
-
-      <Link href="/diagnostics" className="block rounded-xl border p-4 hover:bg-muted/50">
-        <span className="font-semibold">{diagnosticText[locale === "kk" ? "kk" : "ru"].title}</span>
-        <p className="mt-1 text-sm text-muted-foreground">{diagnosticText[locale === "kk" ? "kk" : "ru"].intro}</p>
-      </Link>
-
-      {unfinishedSessions.length > 0 && <section className="space-y-3">
-        <h2 className="text-lg font-semibold">{t.practice.unfinished}</h2>
-        {unfinishedSessions.map((session) => <Card key={session.id} className="p-4 flex items-center justify-between gap-4">
-          <div className="space-y-1">
-            <p className="text-sm font-medium">{t.practice.modes[session.mode]?.title}</p>
-            <p className="text-xs text-muted-foreground">{t.summary.solved}: {session.completedCount} / {session.totalCount}</p>
+    } catch (failure) { toast.error(errorText(failure instanceof Error ? failure.message : t.session.loadError, locale)); setIsLoading(false); }
+  }
+  return <><Header title={t.practice.setupTitle} subtitle={t.practice.setupSubtitle} />
+    <div className="page-content reading-content">
+      {loading ? <PageLoading /> : error ? <LoadError retry={() => void load()} /> : <>
+        {unfinishedSessions.length > 0 && <section className="space-y-3">
+          <h2 className="section-title">{t.practice.unfinished}</h2>
+          <div className="divide-y rounded-lg border bg-card px-4">
+            {unfinishedSessions.map(session => <div key={session.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+              <div><p className="text-sm font-medium">{t.practice.modes[session.mode]?.title}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t.summary.solved}: {session.completedCount} / {session.totalCount}</p></div>
+              <Button asChild variant="outline"><Link href={`/practice/session/${session.id}`}>{t.practice.resume}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" /></Link></Button>
+            </div>)}
           </div>
-          <Button variant="outline" onClick={() => router.push(`/practice/session/${session.id}`)}>
-            {t.practice.resume}<ArrowRight className="w-4 h-4 ml-2" />
-          </Button>
-        </Card>)}
-      </section>}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Count Selection */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">{t.practice.tasksCount}</CardTitle>
-            <CardDescription>{t.practice.tasksCountDesc}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {counts.map((count) => (
-                <Button
-                  key={count}
-                  type="button"
-                  variant={totalCount === count ? "default" : "outline"}
-                  onClick={() => setTotalCount(count)}
-                  className="flex-1 min-w-[60px]"
-                >
-                  {count}
-                </Button>
-              ))}
+        </section>}
+        <form className="space-y-8" onSubmit={event => { event.preventDefault(); void handleSubmit(); }}>
+          <fieldset className="space-y-3">
+            <legend className="section-title mb-3">{t.practice.trainingMode}</legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {(["mixed", "weak_topics", "specific_topic", "review_mistakes"] as Mode[]).map(id => <label key={id}
+                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 ${mode === id ? "border-primary bg-primary/5" : "bg-card hover:border-primary/50"}`}>
+                <input className="mt-1 h-4 w-4 shrink-0 accent-primary" type="radio" name="practice-mode" value={id} checked={mode === id} onChange={() => setMode(id)} />
+                <span><span className="block text-sm font-medium">{t.practice.modes[id].title}</span><span className="mt-1 block text-sm leading-relaxed text-muted-foreground">{t.practice.modes[id].desc}</span></span>
+              </label>)}
             </div>
-
-            <div className="space-y-1.5 pt-2">
-              <Label htmlFor="customCount" className="text-xs text-muted-foreground">
-                {t.practice.customVariant}
-              </Label>
-              <Input
-                id="customCount"
-                type="number"
-                min="1"
-                max="100"
-                value={totalCount}
-                onChange={(e) =>
-                  setTotalCount(
-                    Math.min(100, Math.max(1, parseInt(e.target.value) || 10))
-                  )
-                }
-                className="max-w-[140px]"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Mode Information & Topic selection if specific */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">{t.practice.modeDetails}</CardTitle>
-            <CardDescription>
-              {mode === "specific_topic"
-                ? t.practice.deepPractice
-                : t.practice.adaptiveSelection}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {mode === "specific_topic" ? (
-              <div className="space-y-2">
-                <Label htmlFor="topicSelect">{t.practice.topicLabel}</Label>
-                <select
-                  id="topicSelect"
-                  value={topicId}
-                  onChange={(e) => setTopicId(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border bg-background text-foreground text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                >
-                  <option value="">{t.practice.chooseTopicPlaceholder}</option>
-                  {topics.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {getTopicName(item.name)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div className="p-3 bg-muted/40 rounded-lg text-sm text-muted-foreground leading-relaxed">
-                {t.practice.adaptiveHint}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Mode Selection Cards */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold tracking-tight">{t.practice.trainingMode}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {modes.map((m) => {
-            const Icon = m.icon;
-            const isSelected = mode === m.id;
-            return (
-              <div
-                key={m.id}
-                onClick={() => setMode(m.id)}
-                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-4 ${
-                  isSelected
-                    ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary"
-                    : "border-border hover:border-primary/40 hover:bg-muted/30"
-                }`}
-              >
-                <div
-                  className={`p-2.5 rounded-xl shrink-0 ${
-                    isSelected
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="font-semibold text-sm sm:text-base">{m.title}</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground leading-normal">
-                    {m.desc}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Start Button */}
-      <div className="pt-4 flex justify-end">
-        <Button
-          onClick={handleSubmit}
-          disabled={isLoading}
-          size="lg"
-          className="w-full sm:w-auto px-8 font-semibold text-base shadow-md"
-        >
-          {isLoading ? (
-            t.practice.preparingTasks
-          ) : (
-            <>
-              {t.practice.startPracticeBtn} ({totalCount})
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </>
-          )}
-        </Button>
+          </fieldset>
+          {mode === "specific_topic" && <div className="space-y-2"><Label htmlFor="topicSelect">{t.practice.topicLabel}</Label>
+            <select id="topicSelect" value={topicId} onChange={e => setTopicId(e.target.value)} className="block w-full rounded-md border border-input bg-card px-3 text-sm">
+              <option value="">{t.practice.chooseTopicPlaceholder}</option>{topics.map(item => <option key={item.id} value={item.id}>{getTopicName(item.name)}</option>)}
+            </select></div>}
+          <fieldset className="space-y-3 border-t pt-6">
+            <legend className="section-title pr-3">{t.practice.tasksCount}</legend>
+            <p className="text-sm text-muted-foreground">{t.practice.tasksCountDesc}</p>
+            <div className="flex flex-wrap gap-2">{[10,20,30,40,50].map(count => <Button key={count} type="button" variant={totalCount === count ? "secondary" : "outline"}
+              aria-pressed={totalCount === count} onClick={() => setTotalCount(count)} className={totalCount === count ? "ring-1 ring-primary text-primary" : ""}>{count}</Button>)}</div>
+            <div className="space-y-2"><Label htmlFor="customCount" className="text-sm text-muted-foreground">{t.practice.customVariant}</Label>
+              <Input id="customCount" type="number" min="1" max="100" value={totalCount} onChange={e => setTotalCount(Math.min(100, Math.max(1, parseInt(e.target.value) || 10)))} className="max-w-32" /></div>
+          </fieldset>
+          <Button type="submit" disabled={isLoading} size="lg" className="w-full sm:w-auto">{isLoading ? t.practice.preparingTasks : `${t.practice.startPracticeBtn} (${totalCount})`}<ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" /></Button>
+        </form>
+      </>}
+      <div className="flex flex-col gap-1 border-t pt-4 text-sm">
+        <Link href="/diagnostics" className="flex min-h-11 items-center gap-2 text-muted-foreground hover:text-primary"><ClipboardCheck aria-hidden="true" className="h-4 w-4" />{diagnosticText[locale === "kk" ? "kk" : "ru"].title}</Link>
+        <a href="/offline-practice.html" className="flex min-h-11 items-center gap-2 text-muted-foreground hover:text-primary"><Download aria-hidden="true" className="h-4 w-4" />{interfaceText[locale].offline}</a>
       </div>
     </div>
-  );
+  </>;
 }
-
 export default function PracticeSetupPage() {
-  return (
-    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">...</div>}>
-      <PracticeSetupContent />
-    </Suspense>
-  );
+  return <Suspense fallback={<div className="page-content reading-content"><PageLoading /></div>}><PracticeSetupContent /></Suspense>;
 }

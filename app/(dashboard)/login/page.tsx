@@ -91,13 +91,13 @@ export default function LoginPage() {
     <div className="flex flex-col min-h-screen">
       <Header title={uiText("Вход и профиль", locale)} subtitle={uiText("Персональный кабинет ученика ЕНТ ТиПО", locale)} />
 
-      <main className="flex-1 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-lg border">
+      <div className="page-content flex flex-1 items-start justify-center">
+        <Card className="w-full max-w-md">
           <CardHeader className="text-center space-y-2 pb-4">
-            <div className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground mx-auto flex items-center justify-center shadow-md">
+            <div className="w-12 h-12 text-primary mx-auto flex items-center justify-center">
               <GraduationCap className="w-7 h-7" />
             </div>
-            <CardTitle className="text-2xl font-bold tracking-tight">
+            <CardTitle className="text-2xl font-semibold tracking-tight">
               {activeTab === "login" ? uiText("Авторизация", locale) : uiText("Новый профиль", locale)}
             </CardTitle>
             <CardDescription className="text-xs">
@@ -120,7 +120,7 @@ export default function LoginPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="page-login-email">Email</Label>
                     <Input
-                      id="page-login-email"
+                      id="page-login-email" autoComplete="email"
                       type="email"
                       required
                       placeholder="student@example.com"
@@ -131,7 +131,7 @@ export default function LoginPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="page-login-password">{uiText("Пароль", locale)}</Label>
                     <Input
-                      id="page-login-password"
+                      id="page-login-password" autoComplete="current-password"
                       type="password"
                       required
                       placeholder="••••••••"
@@ -152,7 +152,7 @@ export default function LoginPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="page-reg-name">{uiText("Имя и фамилия", locale)}</Label>
                     <Input
-                      id="page-reg-name"
+                      id="page-reg-name" autoComplete="name"
                       required
                       placeholder={uiText("Арман Ахметов", locale)}
                       value={name}
@@ -162,7 +162,7 @@ export default function LoginPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="page-reg-email">Email</Label>
                     <Input
-                      id="page-reg-email"
+                      id="page-reg-email" autoComplete="email"
                       type="email"
                       required
                       placeholder="arman@ent.kz"
@@ -173,7 +173,7 @@ export default function LoginPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="page-reg-password">{uiText("Пароль", locale)}</Label>
                     <Input
-                      id="page-reg-password"
+                      id="page-reg-password" autoComplete="new-password"
                       type="password"
                       required
                       minLength={4}
@@ -200,7 +200,7 @@ export default function LoginPage() {
             )}
           </CardContent>
         </Card>
-      </main>
+      </div>
     </div>
   );
 }

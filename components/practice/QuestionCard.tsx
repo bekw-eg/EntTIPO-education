@@ -15,6 +15,7 @@ import { GeometryViewer, GeometryConfig } from "@/components/ui/GeometryViewer";
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 import { toast } from "sonner";
 import { ChoiceMath } from "./ChoiceMath";
+import { choiceStem } from "@/lib/choiceDisplay";
 
 function tryParseGeometry(text: string): GeometryConfig | null {
   try {
@@ -119,7 +120,7 @@ export default function QuestionCard({
     : t.common.math;
 
   return (
-    <Card className="shadow-sm overflow-hidden border">
+    <Card className="overflow-hidden">
       {/* Session Progress bar */}
       <div className="h-1.5 w-full bg-secondary">
         <div
@@ -135,53 +136,15 @@ export default function QuestionCard({
             <Badge variant="secondary" className="font-medium text-xs">
               {topicDisplay}
             </Badge>
-            <div className="flex items-center gap-1 ml-2">
-              <span className="text-xs text-muted-foreground mr-1">
-                {t.session.difficulty}:
-              </span>
-              {[1, 2, 3, 4, 5].map((d) => (
-                <div
-                  key={d}
-                  className={`w-2 h-2 rounded-full ${
-                    d <= (question.difficulty || 1)
-                      ? "bg-amber-500"
-                      : "bg-muted"
-                  }`}
-                />
-              ))}
-            </div>
+
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* [💡 Подсказка] & [🤖 AI көмекші / AI помощник] */}
-            {!assistanceDisabled && <><Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleOpenAi("hint")}
-              disabled={isLoading || isRevealingHint}
-              className="h-8 text-xs font-semibold border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 text-amber-700 dark:text-amber-400"
-            >
-              <Lightbulb className="w-3.5 h-3.5 mr-1 text-amber-500" />
-              {t.ai.hintBtn}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleOpenAi()}
-              disabled={isLoading || isRevealingHint}
-              className="h-8 text-xs font-semibold border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary"
-            >
-              <Bot className="w-3.5 h-3.5 mr-1" />
-              {t.ai.assistantBtn}
-            </Button>
-            </>}
             <div className="flex items-center gap-2 text-xs text-muted-foreground ml-1">
               <span>
                 {t.session.taskOf} {currentIndex + 1} / {totalCount}
               </span>
-              <div className="flex items-center gap-1 font-mono bg-muted/60 px-2 py-1 rounded">
+              <div className="flex items-center gap-1 tabular-nums">
                 <Timer className="w-3.5 h-3.5 text-primary" />
                 {formatTime(elapsed)}
               </div>
@@ -191,12 +154,12 @@ export default function QuestionCard({
 
         {/* Question Title & Text */}
         <div className="space-y-3">
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight">
+          <h2 className="text-lg sm:text-xl font-semibold tracking-tight">
             {contentText(question.title, question.titleKk, locale)}
           </h2>
           {question.questionText && (
               <div className="text-sm sm:text-base text-foreground/90 whitespace-pre-line">
-                <MathText content={contentText(question.questionText, question.questionTextKk, locale).replace(/\[GEOMETRY:[\s\S]*?\]/g, '')} />
+                <MathText content={choiceStem(contentText(question.questionText, question.questionTextKk, locale).replace(/\[GEOMETRY:[\s\S]*?\]/g, ''))} />
               </div>
           )}
 
@@ -221,7 +184,7 @@ export default function QuestionCard({
           })()}
 
           {question.latex && !question.latex.startsWith("[GEOMETRY:") && (
-            <div className="my-3 p-4 bg-muted/30 rounded-xl border text-center overflow-x-auto">
+            <div className="math-block text-center">
               <MathDisplay math={question.latex} block />
             </div>
           )}
@@ -231,7 +194,7 @@ export default function QuestionCard({
         <div className="space-y-6 pt-2">
           <div className="flex items-center gap-2">
             <span className="h-5 w-1 bg-primary rounded-full inline-block" />
-            <h3 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
+            <h3 className="font-medium text-sm text-muted-foreground">
               {question.choiceFormat ? t.session.choiceAnswers : t.session.solutionSteps}
             </h3>
           </div>
@@ -245,7 +208,7 @@ export default function QuestionCard({
               return (
                 <div
                   key={step.id}
-                  className="p-4 rounded-xl border bg-card/60 space-y-3 transition-colors hover:border-primary/40"
+                  className="min-w-0 space-y-3"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-medium text-sm sm:text-base">
@@ -255,14 +218,14 @@ export default function QuestionCard({
                       {instruction}
                     </p>
                     {currentVal && (
-                      <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-1" />
+                      <CheckCircle aria-hidden="true" className="w-4 h-4 text-primary shrink-0 mt-1" />
                     )}
                   </div>
 
                   {revealedHints[step.id] ? (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 p-2 rounded-lg">
                       <Lightbulb className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      <span>{contentText(revealedHints[step.id], step.hintKk, locale)}</span>
+                      <MathText content={contentText(revealedHints[step.id], step.hintKk, locale)} />
                     </div>
                   ) : step.hasHint && !assistanceDisabled ? (
                     <Button type="button" variant="ghost" size="sm"
@@ -283,9 +246,9 @@ export default function QuestionCard({
                         return (
                           <label
                             key={opt.id}
-                            className={`flex items-center gap-3 min-h-14 p-4 cursor-pointer text-left rounded-xl text-sm border-2 transition-all ${
+                            className={`flex items-center gap-3 min-h-14 p-4 cursor-pointer text-left rounded-md text-sm border transition-colors ${
                               isSelected
-                                ? "border-primary bg-primary/10 text-primary font-medium shadow-xs"
+                                ? "border-primary bg-primary/5 text-primary font-medium"
                                 : "border-border hover:border-primary/30 hover:bg-muted/40"
                             }`}
                           >
@@ -297,7 +260,7 @@ export default function QuestionCard({
                             <span className="font-mono text-xs opacity-60 mr-2">
                               {String.fromCharCode(65 + optionIndex)}.
                             </span>
-                            <ChoiceMath text={contentText(opt.text, opt.textKk, locale)} />
+                            <div className="min-w-0 flex-1 overflow-x-auto py-1"><ChoiceMath text={contentText(opt.text, opt.textKk, locale)} /></div>
                           </label>
                         );
                       })}
@@ -308,6 +271,7 @@ export default function QuestionCard({
                   {step.type === "numeric_input" && (
                     <div className="pt-1 max-w-xs">
                       <Input
+                        aria-label={instruction}
                         type="text"
                         value={currentVal}
                         disabled={isLoading || answersLocked}
@@ -323,6 +287,7 @@ export default function QuestionCard({
                   {step.type === "expression_input" && (
                     <div className="pt-1 space-y-1.5">
                       <Input
+                        aria-label={instruction}
                         type="text"
                         value={currentVal}
                         disabled={isLoading || answersLocked}
@@ -350,29 +315,17 @@ export default function QuestionCard({
             <p className="text-xs text-muted-foreground hidden sm:block">
               {question.choiceFormat ? t.session.chooseBeforeCheck : t.session.fillAllSteps}
             </p>
-            {!assistanceDisabled && <><Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => handleOpenAi("hint")}
-              className="text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
-              disabled={isLoading || isRevealingHint}
-            >
-              <Lightbulb className="w-3.5 h-3.5 mr-1 text-amber-500" />
-              {t.ai.hintBtn}
-            </Button>
-            <Button
+            {!assistanceDisabled && <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => handleOpenAi()}
-              className="text-xs text-primary hover:bg-primary/10 font-medium"
+              className="text-xs text-muted-foreground"
               disabled={isLoading || isRevealingHint}
             >
               <Bot className="w-3.5 h-3.5 mr-1" />
               {t.ai.assistantBtn}
-            </Button>
-            </>}
+            </Button>}
           </div>
           <Button
             onClick={onSubmit}

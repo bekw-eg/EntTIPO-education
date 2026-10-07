@@ -1,5 +1,4 @@
-import { Sidebar } from "@/components/layout/Sidebar";
-import { MobileNav } from "@/components/layout/MobileNav";
+import { DashboardShell } from "@/components/layout/DashboardShell";
 import { AccountProvider } from "@/components/providers/AccountProvider";
 import { getSessionUserId, DEMO_USER_ID, isDemoEnabled } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -13,13 +12,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const user = profile ? { ...profile, isDemo: profile.id === DEMO_USER_ID } : null;
   return (
     <AccountProvider user={user} demoEnabled={isDemoEnabled()}>
-      <div className="flex min-h-screen">
-        <Sidebar />
-        <main className="flex-1 min-w-0 pb-20 md:pb-0">
-          {children}
-        </main>
-        <MobileNav />
-      </div>
+      <DashboardShell>{children}</DashboardShell>
     </AccountProvider>
   );
 }

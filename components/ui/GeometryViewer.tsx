@@ -53,17 +53,15 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
   const labels = config.labels || {};
 
   return (
-    <div className={`relative border rounded-xl overflow-hidden bg-card/50 shadow-sm ${className}`}>
+    <div className={`relative min-w-0 border rounded-lg overflow-hidden bg-card ${className}`}>
       {/* Top Header bar with title & controls */}
-      <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/40 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b bg-muted/40 text-xs">
         <div className="flex items-center gap-2">
           <Compass className="w-3.5 h-3.5 text-primary" />
           <span className="font-semibold text-foreground/90">
             {locale === 'kk' ? translateContent(config.title || getFigureTitle(config.type)) ?? uiText(config.title || getFigureTitle(config.type), locale) : config.title || getFigureTitle(config.type)}
           </span>
-          <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
-            SVG 2D/3D
-          </Badge>
+
         </div>
 
         <div className="flex items-center gap-1">
@@ -71,8 +69,8 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
             variant="ghost"
             size="icon"
             onClick={() => setShowLabels(!showLabels)}
-            className={`h-7 w-7 ${showLabels ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
-            title={uiText('Переключить подписи', locale)}
+            className={`h-11 w-11 ${showLabels ? "text-primary bg-primary/10" : "text-muted-foreground"}`}
+            title={uiText('Переключить подписи', locale)} aria-label={uiText('Переключить подписи', locale)}
           >
             <Eye className="w-3.5 h-3.5" />
           </Button>
@@ -80,8 +78,8 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
             variant="ghost"
             size="icon"
             onClick={handleZoomOut}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title={uiText('Уменьшить', locale)}
+            className="h-11 w-11 text-muted-foreground hover:text-foreground"
+            title={uiText('Уменьшить', locale)} aria-label={uiText('Уменьшить', locale)}
           >
             <ZoomOut className="w-3.5 h-3.5" />
           </Button>
@@ -89,8 +87,8 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
             variant="ghost"
             size="icon"
             onClick={handleZoomIn}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title={uiText('Увеличить', locale)}
+            className="h-11 w-11 text-muted-foreground hover:text-foreground"
+            title={uiText('Увеличить', locale)} aria-label={uiText('Увеличить', locale)}
           >
             <ZoomIn className="w-3.5 h-3.5" />
           </Button>
@@ -98,8 +96,8 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
             variant="ghost"
             size="icon"
             onClick={handleReset}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
-            title={uiText('Сброс', locale)}
+            className="h-11 w-11 text-muted-foreground hover:text-foreground"
+            title={uiText('Сброс', locale)} aria-label={uiText('Сброс', locale)}
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </Button>
@@ -107,7 +105,7 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
       </div>
 
       {/* SVG Canvas Container */}
-      <div className="relative flex items-center justify-center p-4 min-h-[220px] bg-gradient-to-b from-muted/10 to-muted/30 overflow-hidden">
+      <div className="relative flex items-center justify-center p-4 min-h-[220px] bg-muted/20 overflow-hidden">
         <div
           className="transition-transform duration-200 origin-center"
           style={{ transform: `scale(${zoom})` }}
@@ -122,7 +120,7 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
 
         {/* Floating Quick Badges / Parts Selector */}
         {getAvailableParts(config.type).length > 0 && (
-          <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-background/80 backdrop-blur px-2 py-1 rounded-md border text-[11px]">
+          <div className="absolute bottom-2 inset-x-2 flex flex-wrap items-center gap-1 bg-card px-2 py-1 rounded-md border text-xs">
             <Layers className="w-3 h-3 text-muted-foreground mr-1" />
             <span className="text-muted-foreground mr-1">{uiText('Выделить:', locale)}</span>
             {getAvailableParts(config.type).map((part) => (
@@ -131,7 +129,7 @@ export function GeometryViewer({ config, className = "" }: GeometryViewerProps) 
                 onClick={() =>
                   setActiveHighlight(activeHighlight === part.id ? undefined : part.id)
                 }
-                className={`px-1.5 py-0.5 rounded text-[10px] transition-colors ${
+                className={`min-h-11 px-2 py-1 rounded-md text-xs transition-colors ${
                   activeHighlight === part.id
                     ? "bg-primary text-primary-foreground font-semibold"
                     : "hover:bg-muted text-foreground/80"

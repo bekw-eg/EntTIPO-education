@@ -1,5 +1,8 @@
 "use client";
 
+import { ChoiceMath } from "@/components/practice/ChoiceMath";
+import { interfaceText } from "@/lib/i18n/interface";
+import { choiceStem } from "@/lib/choiceDisplay";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -14,7 +17,7 @@ import type { DiagnosticReport, SkillProgressView } from "@/types/diagnostics";
 
 export function SkillPracticeButton({ skill }: { skill: SkillProgressView }) {
   const { locale } = useLanguage();
-  const copy = diagnosticText[locale === "kk" ? "kk" : "ru"];
+  const copy = diagnosticText[locale];
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const recommendation = skill.recommendation;
@@ -32,30 +35,38 @@ export function SkillPracticeButton({ skill }: { skill: SkillProgressView }) {
   return <div className="space-y-2 border-t pt-4">
     <MathText className="text-sm font-medium" content={contentText(recommendation.questionText, recommendation.questionTextKk, locale)} />
     {recommendation.latex && <MathDisplay math={recommendation.latex} />}
-    <Button disabled={busy} onClick={() => { void start(); }}>{copy.practice}</Button>
+    <Button variant="outline" disabled={busy} onClick={() => { void start(); }}>{copy.practice}</Button>
   </div>;
 }
 
 export function SkillProgressCards({ skills }: { skills: SkillProgressView[] }) {
   const { locale } = useLanguage();
-  const copy = diagnosticText[locale === "kk" ? "kk" : "ru"];
-  return <section className="space-y-3">
-    <h2 className="text-xl font-semibold">{copy.progress}</h2>
-    <div className="grid gap-4 lg:grid-cols-3">{skills.map((skill) => <Card key={skill.id} className="p-5 space-y-3">
+  const copy = diagnosticText[locale];
+  const observed = skills.filter(skill => skill.observationCount > 0);
+  const remaining = skills.filter(skill => skill.observationCount === 0);
+  const renderSkill = (skill: SkillProgressView) => <Card key={skill.id} className="rounded-none border-0 bg-transparent py-5 space-y-3">
       <h3 className="font-semibold">{locale === "kk" ? skill.nameKk : skill.nameRu}</h3>
       <p className="text-sm">{copy[skill.state]}{skill.state !== "insufficient" ? ` · ${skill.masteryScore}%` : ""}</p>
       <p className="text-xs text-muted-foreground">{copy.observations}: {skill.observationCount} · {copy.unique}: {skill.distinctQuestions}</p>
       <p className="text-sm text-muted-foreground">{locale === "kk" ? skill.explanationKk : skill.explanationRu}</p>
       <details className="text-sm"><summary className="cursor-pointer font-medium">{copy.repeat}</summary>
-        <p className="mt-2">{locale === "kk" ? skill.ruleKk : skill.ruleRu}</p></details>
+        <MathText className="mt-2" content={choiceStem(locale === "kk" ? skill.ruleKk : skill.ruleRu)} /></details>
       <SkillPracticeButton skill={skill} />
-    </Card>)}</div>
+    </Card>;
+  return <section className="space-y-3">
+    <h2 className="text-xl font-semibold">{copy.progress}</h2>
+    {!observed.length && <p className="text-sm text-muted-foreground">{interfaceText[locale].noSkills}</p>}
+    <div className="divide-y">{observed.map(renderSkill)}</div>
+    {!!remaining.length && <details className="border-t pt-2">
+      <summary className="cursor-pointer text-sm font-medium">{interfaceText[locale].otherSkills} ({remaining.length})</summary>
+      <div className="divide-y">{remaining.map(renderSkill)}</div>
+    </details>}
   </section>;
 }
 
 export function DiagnosticResults({ report }: { report: DiagnosticReport }) {
   const { locale } = useLanguage();
-  const copy = diagnosticText[locale === "kk" ? "kk" : "ru"];
+  const copy = diagnosticText[locale];
   return <section className="space-y-5">
     <h2 className="text-2xl font-bold">{copy.result}</h2>
     <p>{copy.checked}: {report.totalCount} · {copy.correct}: {report.correctCount}</p>
@@ -68,12 +79,12 @@ export function DiagnosticResults({ report }: { report: DiagnosticReport }) {
         <summary className="text-sm font-medium cursor-pointer">{copy.evidence} ({skill.evidence.length})</summary>
         {skill.evidence.map((e) => <div key={e.stepId} className="p-3 rounded-lg bg-muted/50 space-y-2 text-sm">
           <MathText className="font-medium" content={contentText(e.questionText, e.questionTextKk, locale)} />
-          <p>{copy.yourAnswer}: <strong className="font-mono break-all">{e.userAnswer}</strong> · {e.isCorrect ? copy.correct : copy.incorrect}</p>
-          <p>{copy.expected}: <strong className="font-mono">{e.expectedAnswer}</strong></p>
+          <div className="flex flex-wrap items-baseline gap-1"><span>{copy.yourAnswer}:</span><div className="math-inline"><ChoiceMath text={locale === "kk" ? e.userAnswerTextKk ?? e.userAnswerText ?? e.userAnswer : e.userAnswerText ?? e.userAnswer} /></div><span>· {e.isCorrect ? copy.correct : copy.incorrect}</span></div>
+          <div className="flex flex-wrap items-baseline gap-1"><span>{copy.expected}:</span><div className="math-inline"><ChoiceMath text={locale === "kk" ? e.expectedAnswerTextKk ?? e.expectedAnswerText ?? e.expectedAnswer : e.expectedAnswerText ?? e.expectedAnswer} /></div></div>
           <MathText className="text-muted-foreground" content={contentText(e.explanation, e.explanationKk, locale)} />
         </div>)}
       </details>
-      <div className="space-y-2"><h4 className="text-sm font-semibold">{copy.repeat}</h4><p className="text-sm">{locale === "kk" ? skill.ruleKk : skill.ruleRu}</p></div>
+      <div className="space-y-2"><h4 className="text-sm font-semibold">{copy.repeat}</h4><MathText content={choiceStem(locale === "kk" ? skill.ruleKk : skill.ruleRu)} /></div>
       <SkillPracticeButton skill={skill} />
     </Card>)}
   </section>;

@@ -1,5 +1,5 @@
 "use client";
-import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
+import { Header } from "@/components/layout/Header";
 import { uiText, errorText } from "@/lib/i18n/messages";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 
@@ -53,24 +53,22 @@ export default function ExamStartPage() {
     finally { setBusy(false); }
   }
   const active = history.find((h) => h.status === "active");
-  return <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8">
-    <div className="md:hidden flex justify-end"><LanguageSwitcher variant="compact" /></div>
-    <h1 className="text-3xl font-bold">{uiText("Экзамен · математический блок", locale)}</h1>
-    <section className="space-y-4 rounded-2xl border bg-card p-5">
+  return <><Header title={uiText("Экзамен · математический блок", locale)} /><div className="page-content reading-content">
+    <section className="space-y-4 rounded-lg border bg-card p-4 sm:p-6">
       <h2 className="text-xl font-semibold">{uiText("Перед началом", locale)}</h2>
       <p><strong>{uiText("Профиль:", locale)}</strong> {profile.title}</p>
-      <p className="text-sm text-muted-foreground">{TIPO_MATH.id}@{TIPO_MATH.version}. {profile.audience}</p>
+      <p className="text-sm text-muted-foreground">{profile.audience}</p>
       <p>{uiText('Язык заданий', locale)}: <strong>{locale === 'kk' ? 'Қазақ тілі' : uiText('Русский', locale)}</strong></p>
       <p className="text-sm text-muted-foreground">{locale === 'kk' ? 'Тіл жоғарғы мәзірде таңдалады және емтихан басталғанда бекітіледі. Қазақша нұсқаға тек толық аударылған тапсырмалар кіреді.' : 'Язык выбирается в верхнем меню и фиксируется при запуске экзамена. В казахский вариант входят только полностью переведённые задания.'}</p>
       <p><strong>{uiText("Формат:", locale)}</strong> {uiText(" 20 заданий, один правильный ответ из четырёх. Сложность A — 5, B — 10, C — 5.", locale)}</p>
       <p><strong>{uiText("Оценивание НЦТ:", locale)}</strong> {uiText(" правильный ответ — 1 балл; неправильный ответ и пропуск — 0. Максимум — 20 баллов.", locale)}</p>
-      <label className="block font-medium">{uiText("Учебный лимит платформы ", locale)}<select aria-label={uiText("Учебный лимит платформы", locale)} value={duration} disabled={busy || !!active} onChange={(e) => setDuration(Number(e.target.value))} className="ml-3 rounded border bg-background p-2">
+      <label className="block font-medium">{uiText("Учебный лимит платформы ", locale)}<select aria-label={uiText("Учебный лимит платформы", locale)} value={duration} disabled={busy || !!active} onChange={(e) => setDuration(Number(e.target.value))} className="mt-2 block rounded-md border bg-background p-2">
         <option value={40}>{uiText("40 минут", locale)}</option><option value={30}>{uiText("30 минут", locale)}</option><option value={120}>{uiText("120 минут", locale)}</option>
       </select></label>
       <p className="text-sm text-muted-foreground">{uiText("Официального отдельного лимита математики не найдено. 120 минут НЦТ относятся ко всему ЕНТ из двух дисциплин, 60 заданий. Выбранное здесь время — учебная настройка.", locale)}</p>
-      <p className="text-sm">{uiText("По одному заданию на каждый из 20 пунктов — политика платформы из этапа 6.1. Официальные тематические квоты не опубликованы. Задания авторские, уровни сложности ещё не калиброваны на результатах учеников.", locale)}</p>
+      <details className="text-sm text-muted-foreground"><summary className="cursor-pointer font-medium">{uiText("Спецификация, источники и покрытие банка", locale)}</summary><div className="space-y-3 pt-3"><p className="text-sm">{uiText("По одному заданию на каждый из 20 пунктов — политика платформы из этапа 6.1. Официальные тематические квоты не опубликованы. Задания авторские, уровни сложности ещё не калиброваны на результатах учеников.", locale)}</p>
       <p className="text-sm">{uiText("Можно переходить между заданиями, менять ответы и отмечать «вернуться позже» до завершения. Время идёт по серверу, включая выход и потерю связи. Подсказки, AI и проверка ответа недоступны. Сохраняйте ответы при наличии сети; после срока новые ответы не принимаются.", locale)}</p>
-      <Link href="/exam-coverage" className="inline-block text-primary underline">{uiText("Спецификация, источники и покрытие банка", locale)}</Link>
+      <Link href="/exam-coverage" className="inline-block text-primary underline">{uiText("Спецификация, источники и покрытие банка", locale)}</Link></div></details>
       {availability && !availability.canGenerate && !active && <div role="alert" className="rounded border border-amber-500 p-3">{uiText("Банк не позволяет собрать корректный полный вариант с квотами 5/10/5. ", locale)}{availability.missing.join("; ")} <Link href="/exam-coverage" className="underline">{uiText("Подробности нехватки", locale)}</Link></div>}
       {active ? <Button asChild><Link href={`/exam/${active.id}`}>{uiText("Продолжить сохранённый экзамен", locale)}</Link></Button> :
         <Button disabled={busy || loading || !availability?.canGenerate} onClick={start}>{busy ? uiText("Создаём вариант…", locale) : uiText("Начать экзамен", locale)}</Button>}
@@ -80,5 +78,5 @@ export default function ExamStartPage() {
       {loading ? <p>{uiText("Загрузка…", locale)}</p> : !history.length ? <p className="text-muted-foreground">{uiText("Здесь появятся ваши результаты.", locale)}</p> : history.map((h) =>
         <Link key={h.id} href={`/exam/${h.id}`} className="flex justify-between rounded-lg border p-4 hover:bg-muted"><span>{new Date(h.startedAt).toLocaleString("ru-RU", { timeZone: "Asia/Qyzylorda" })}</span><span>{h.status === "active" ? uiText("В процессе", locale) : uiText(`${h.points}/20 баллов`, locale)}</span></Link>)}
     </section>
-  </div>;
+  </div></>;
 }

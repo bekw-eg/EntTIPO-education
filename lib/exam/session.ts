@@ -9,6 +9,8 @@ import { assessExamReadiness } from "./readiness";
 import { getExamProfile, type ExamProfile } from "./profile";
 import { gradeExamQuestion, publicExamQuestion, remainingSeconds, saveExamSchema, startExamSchema, type PaperQuestion } from "./mode";
 import { hasContentTranslation } from '../i18n/content';
+import { completeProgramAssessment } from "../learning-road/program-data";
+import { assertNoActiveDiagnostic } from "./guard";
 
 const json = (v: unknown) => JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
 const hash = (v: unknown) => createHash("sha256").update(JSON.stringify(v)).digest("hex");
@@ -108,7 +110,8 @@ async function finalizeExam(tx: Prisma.TransactionClient, exam: ExamSession, now
       explanation: kk ? 'Қате жауап тіркелді. Оның себебін өздігінен тексеру қажет.' : "Зафиксирован неверный ответ. Его причина требует самостоятельной проверки.", description: q.explanation,
     } });
   }
-  const result = { points: questions.reduce((s, q) => s + q.points, 0), maxPoints: profile.official.maxPoints,
+  const preparation = await completeProgramAssessment(tx, exam, paper, questions, completedAt);
+  const result = { preparation, points: questions.reduce((s, q) => s + q.points, 0), maxPoints: profile.official.maxPoints,
     skipped: questions.filter((q) => q.skipped).length, completionReason: reason, completedAt,
     topics: [...new Set(paper.map((q) => q.topicId))].map((topicId) => {
       const related = questions.filter((q) => q.topicId === topicId);
@@ -122,12 +125,13 @@ async function finalizeExam(tx: Prisma.TransactionClient, exam: ExamSession, now
     completedAt, completionReason: reason, revision: { increment: 1 } } });
 }
 async function snapshot(tx: Prisma.TransactionClient, exam: ExamSession, now: Date) {
+  await assertNoActiveDiagnostic(tx, exam.userId);
   if (exam.status === "active" && now >= exam.deadlineAt) exam = await finalizeExam(tx, exam, now, "timeout");
   // Opening an older report during a new exam must not disclose a recycled answer key.
   if (exam.status === "completed" && await tx.examSession.count({ where: { userId: exam.userId, status: "active" } })) {
     throw new PracticeError("Разбор предыдущего экзамена доступен после завершения текущего", 403);
   }
-  return { id: exam.id, status: exam.status, profile: exam.profileSnapshot,
+  return { id: exam.id, status: exam.status, profile: exam.profileSnapshot, roadNodeId: exam.roadNodeId,
     language: exam.language, durationMinutes: exam.durationMinutes, timePolicy: "platform_training",
     startedAt: exam.startedAt, deadlineAt: exam.deadlineAt, serverNow: now,
     remainingSeconds: exam.status === "active" ? remainingSeconds(exam.deadlineAt, now) : 0,
@@ -140,6 +144,7 @@ export async function startExam(userId: string, data: z.infer<typeof startExamSc
   if (!profile || profile.version !== data.profileVersion) throw new PracticeError("Неизвестный профиль или версия", 404);
   return prisma.$transaction(async (tx) => {
     await lockAccount(tx, userId);
+    await assertNoActiveDiagnostic(tx, userId);
     const startHash = hash({ profileId: data.profileId, profileVersion: data.profileVersion,
       language: data.language, durationMinutes: data.durationMinutes });
     const replay = await tx.examSession.findUnique({ where: { userId_startRequestId: { userId, startRequestId: data.requestId } } });
@@ -178,6 +183,10 @@ export async function saveExam(userId: string, id: string, data: z.infer<typeof 
     if (exam.revision !== data.revision) throw new PracticeError("Состояние изменено в другой вкладке. Загрузите сохранённую версию.", 409);
     if (data.currentIndex >= exam.questionIds.length || [...Object.keys(data.answers), ...data.flaggedQuestionIds].some((id) => !exam.questionIds.includes(id))) {
       throw new PracticeError("Ответ или позиция не принадлежат варианту", 400);
+    }
+    const paper = exam.paper as unknown as PaperQuestion[];
+    if (Object.entries(data.answers).some(([id, answer]) => answer >= paper.find(q => q.id === id)!.options.length)) {
+      throw new PracticeError("Invalid exam answer", 400);
     }
     const saved = await tx.examSession.update({ where: { id }, data: { answers: data.answers,
       currentIndex: data.currentIndex, flaggedQuestionIds: data.flaggedQuestionIds,

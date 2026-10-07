@@ -54,9 +54,11 @@ async function answer(account: Account, sessionId: string, questionId: string, c
 }
 async function finishDiagnostic(account: Account, wrongPower = false, restartFromId?: string) {
   const started = await api("/api/diagnostics", account.cookie, "POST", restartFromId ? { restartFromId } : undefined); assert.equal(started.status, 200);
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < started.data.totalCount; i++) {
     const state = (await api(`/api/diagnostics/${started.data.id}`, account.cookie)).data;
-    const body = await payload("", state.question.id, !(wrongPower && state.question.id.startsWith("diag_power")));
+    const q = await prisma.question.findUniqueOrThrow({ where: { id: state.question.id }, include: { steps: { include: { options: true } } } });
+    const body = { submissionId: randomUUID(), questionId: q.id, stepAnswers: q.steps.map(s => ({ stepId: s.id,
+      answer: wrongPower && q.id.startsWith("diag_power") ? "999999" : s.type === "multiple_choice" ? s.options.find(o => o.isCorrect)!.id : s.expectedAnswer })) };
     const result = await api(`/api/diagnostics/${started.data.id}/answers`, account.cookie, "POST", {
       submissionId: body.submissionId, questionId: body.questionId, stepAnswers: body.stepAnswers, revision: state.revision,
     }); assert.equal(result.status, 200, JSON.stringify(result.data));

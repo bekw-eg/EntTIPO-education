@@ -10,8 +10,12 @@ export async function GET(request: Request) {
   const userId = getCurrentUserId(request);
   if (!userId) return unauthorizedResponse(request);
   try {
-    await assertNoActiveExam(prisma, userId);
+    await assertNoActiveExam(prisma, userId, true);
     const skills = await readUserSkills(prisma, userId);
+    // Diagnostics reloads the progress summary; do not disclose learning material during screening.
+    if (await prisma.diagnosticSession.count({ where: { userId, status: "active" } })) {
+      return localizedJson(request, skills.map(skill => ({ ...skill, ruleRu: "", ruleKk: "", explanationRu: "", explanationKk: "", recommendation: null })));
+    }
     return localizedJson(request, await Promise.all(skills.map(async (skill) => ({ ...skill,
       recommendation: await recommendSkillQuestion(prisma, userId, skill.id) }))));
   } catch (error) {

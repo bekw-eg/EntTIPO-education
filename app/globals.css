@@ -4,34 +4,38 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 40 20% 98%;
+    --foreground: 218 25% 17%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 218 25% 17%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 218 58% 40%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
+    --secondary: 216 16% 94%;
     --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
+    --muted: 216 16% 94%;
+    --muted-foreground: 216 12% 43%;
+    --accent: 216 20% 93%;
     --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 61% 45%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.75rem;
+    --border: 216 15% 87%;
+    --input: 216 15% 78%;
+    --ring: 218 58% 40%;
+    --success: 155 44% 33%;
+    --warning: 35 80% 35%;
+    --radius: 0.625rem;
+    --page-width: 70rem;
+    --reading-width: 48rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 220 23% 10%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 220 21% 13%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 220 21% 13%;
     --popover-foreground: 210 40% 98%;
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
@@ -46,6 +50,8 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 224.3 76.3% 48%;
+    --success: 155 48% 64%;
+    --warning: 38 80% 65%;
   }
 }
 
@@ -56,7 +62,32 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    line-height: 1.6;
   }
+  :focus-visible {
+    @apply outline outline-2 outline-offset-4 outline-ring;
+  }
+  select {
+    @apply min-h-11 max-w-full;
+  }
+  summary {
+    @apply py-2;
+  }
+}
+
+@layer components {
+  .page-content {
+    @apply mx-auto w-full min-w-0 space-y-8 px-4 py-6 sm:px-6 sm:py-8 lg:px-8;
+    max-width: var(--page-width);
+  }
+  .reading-content { max-width: var(--reading-width); }
+  .page-title { @apply text-2xl font-semibold leading-tight tracking-tight sm:text-3xl; }
+  .section-title { @apply text-lg font-semibold leading-snug tracking-tight; }
+  .metric-row { @apply grid grid-cols-2 gap-x-6 gap-y-5 border-y py-5 lg:grid-cols-4; }
+  .lesson-section { @apply min-w-0 space-y-4 border-t pt-6; }
+  .math-copy { @apply min-w-0 max-w-full space-y-2 break-words text-sm leading-relaxed sm:text-base; }
+  .math-inline { @apply mx-0.5 inline-block max-w-full overflow-x-auto align-middle; }
+  .math-block { @apply my-3 max-w-full overflow-x-auto py-2; }
 }
 
 /* KaTeX custom styles */
@@ -66,6 +97,18 @@
 
 .katex {
   font-size: 1.1em;
+}
+
+/* Keep the lesson readable and let individual formulae scroll on narrow screens. */
+.analysis-content .analysis-copy > div,
+.analysis-content .analysis-question > div {
+  @apply max-w-full overflow-x-auto break-words border-0 bg-transparent p-0 font-normal shadow-none;
+}
+.analysis-content .analysis-copy > div {
+  @apply text-sm leading-relaxed sm:text-base;
+}
+.analysis-content .analysis-question > div {
+  @apply text-base font-medium leading-relaxed sm:text-lg;
 }
 
 /* Scrollbar */
@@ -97,6 +140,14 @@
 
 .animate-slide-in {
   animation: slide-in-from-bottom 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Mobile bottom nav safe area */

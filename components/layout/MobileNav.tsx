@@ -1,54 +1,38 @@
 "use client";
-
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, BookOpen, Library, AlertCircle, BarChart3, Compass, GraduationCap } from "lucide-react";
+import { Menu, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
+import { interfaceText } from "@/lib/i18n/interface";
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useNavigation, isCurrentRoute } from "./useNavigation";
 
 export function MobileNav() {
-  const pathname = usePathname();
-  const { t, locale } = useLanguage();
-
-  const navItems = [
-    { name: t.nav.home, href: "/", icon: LayoutDashboard },
-    { name: t.nav.practice, href: "/practice", icon: BookOpen },
-    { name: locale === 'kk' ? 'Емтихан' : locale === 'en' ? 'Exam' : 'Экзамен', href: "/exam", icon: GraduationCap },
-    { name: "Диагностика", href: "/diagnostics", icon: AlertCircle },
-    { name: t.nav.topics, href: "/topics", icon: Library },
-    { name: "3D", href: "/geometry", icon: Compass },
-    { name: t.nav.mistakes, href: "/mistakes", icon: AlertCircle },
-    { name: t.nav.statistics, href: "/statistics", icon: BarChart3 },
-  ];
-
-  return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur z-50 mobile-nav-safe">
-      <nav className="flex justify-around items-center h-16 px-1">
-        {navItems.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname === item.href || pathname?.startsWith(item.href + "/");
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors",
-                isActive
-                  ? "text-primary font-bold"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <item.icon className={cn("h-5 w-5", isActive && "stroke-[2.5]")} />
-              <span className="text-[10px] leading-tight truncate max-w-[56px] text-center">
-                {item.name}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
-  );
+  const pathname = usePathname(), items = useNavigation();
+  const { locale } = useLanguage(), copy = interfaceText[locale];
+  const [open, setOpen] = useState(false);
+  if (pathname === "/login") return null;
+  return <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-card md:hidden mobile-nav-safe">
+    <nav aria-label={copy.navigation} className="grid h-16 grid-cols-5 px-1">
+      {items.slice(0, 4).map(item => <Link key={item.href} href={item.href} aria-current={isCurrentRoute(pathname, item.href) ? "page" : undefined}
+        className={cn("flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-center text-[11px] leading-tight", isCurrentRoute(pathname, item.href) ? "font-medium text-primary" : "text-muted-foreground")}>
+        <item.icon aria-hidden="true" className="h-5 w-5" /><span>{item.name}</span>
+      </Link>)}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild><button type="button" className={cn("flex flex-col items-center justify-center gap-1 text-[11px]", items.slice(4).some(item => isCurrentRoute(pathname, item.href)) ? "text-primary" : "text-muted-foreground")}><Menu aria-hidden="true" className="h-5 w-5" />{copy.more}</button></DialogTrigger>
+        <DialogContent closeLabel={copy.close}>
+          <DialogTitle className="pr-10">{copy.navigation}</DialogTitle><DialogDescription className="sr-only">ENT TIPO</DialogDescription>
+          <nav className="grid gap-1" aria-label={copy.more}>
+            {items.slice(4).map(item => <Link key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={isCurrentRoute(pathname, item.href) ? "page" : undefined}
+              className={cn("flex min-h-12 items-center gap-3 rounded-md px-3 text-sm hover:bg-muted", isCurrentRoute(pathname, item.href) && "bg-primary/10 text-primary")}>
+              <item.icon aria-hidden="true" className="h-5 w-5 shrink-0" />{item.name}
+            </Link>)}
+            <a href="/offline-practice.html" className="mt-2 flex min-h-12 items-center gap-3 border-t px-3 text-sm"><Download aria-hidden="true" className="h-5 w-5" />{copy.offline}</a>
+          </nav>
+        </DialogContent>
+      </Dialog>
+    </nav>
+  </div>;
 }

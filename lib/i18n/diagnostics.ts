@@ -1,6 +1,6 @@
 export const diagnosticText = {
   ru: {
-    title: "Диагностика навыков", intro: "9 коротких заданий на свойства степеней, цепное правило и знаки при раскрытии скобок. Решай самостоятельно. Подсказки отключены; ответы и разбор появятся после завершения.",
+    title: "Диагностика навыков", intro: "Короткие задания по основным направлениям размеченного банка. Решай самостоятельно. Количество и порядок сохранятся при запуске; ответы и разбор появятся после завершения.",
     start: "Начать входную диагностику", next: "Сохранить и продолжить", finish: "Завершить диагностику", resume: "Продолжить диагностику",
     result: "Результат входной диагностики", evidence: "На каких ответах основан вывод", repeat: "Что повторить", practice: "Решить это задание",
     checked: "Проверено заданий", yourAnswer: "Твой ответ", expected: "Эталонный ответ", correct: "Верно", incorrect: "Есть ошибка",
@@ -12,7 +12,7 @@ export const diagnosticText = {
     pending: "Отправка не подтверждена. Нажми кнопку ещё раз: повторная отправка не создаст новую попытку.",
   },
   kk: {
-    title: "Дағдылар диагностикасы", intro: "Дәрежелердің қасиеттері, күрделі функцияның туындысы және жақшаларды ашудағы таңбалар бойынша 9 қысқа тапсырма. Өз бетіңше шеш. Көмек өшірілген; жауаптар мен талдау аяқтағаннан кейін көрсетіледі.",
+    title: "Дағдылар диагностикасы", intro: "Белгіленген қордың негізгі бағыттары бойынша қысқа тапсырмалар. Өз бетіңше шеш. Саны мен реті бастағанда сақталады; жауаптар мен талдау аяқтағаннан кейін көрсетіледі.",
     start: "Бастапқы диагностиканы бастау", next: "Сақтап, жалғастыру", finish: "Диагностиканы аяқтау", resume: "Диагностиканы жалғастыру",
     result: "Бастапқы диагностика нәтижесі", evidence: "Қорытындыға негіз болған жауаптар", repeat: "Нені қайталау керек", practice: "Осы тапсырманы шешу",
     checked: "Тексерілген тапсырмалар", yourAnswer: "Сенің жауабың", expected: "Дұрыс жауап", correct: "Дұрыс", incorrect: "Қате бар",
@@ -22,5 +22,17 @@ export const diagnosticText = {
     observations: "Бақылаулар", unique: "90 күндегі әртүрлі тапсырмалар", progress: "Дағдылар бойынша ілгерілеу", saved: "Жауап сақталды", saving: "Жауап сақталып жатыр…",
     local: "Жауап осы құрылғыда сақталды. Байланыс орнағанда қайта сақтаймыз.", error: "Деректерді жүктеу мүмкін болмады. Қайта көр.", reload: "Жаңарту",
     pending: "Жіберу расталмады. Батырманы қайта бас: қайталап жіберу жаңа талпыныс қоспайды.",
+  },
+  en: {
+    title: "Skill diagnostics", intro: "Short tasks across the main areas of the mapped question bank. Work independently. The task list is saved at the start; answers and explanations appear after completion.",
+    start: "Start entrance diagnostic", next: "Save and continue", finish: "Finish diagnostic", resume: "Resume diagnostic",
+    result: "Entrance diagnostic result", evidence: "Evidence behind this assessment", repeat: "What to review", practice: "Practise this task",
+    checked: "Tasks checked", yourAnswer: "Your answer", expected: "Expected answer", correct: "Correct", incorrect: "Incorrect",
+    gap_observed: "Difficulty observed in these answers", no_gap_observed: "No errors in these tasks", insufficient: "Not enough evidence",
+    weak: "Review needed", developing: "Developing", good: "Good", mastered: "Mastered",
+    limited: "This screening describes specific answers. Three correct answers do not establish full mastery.",
+    observations: "Observations", unique: "Distinct tasks in 90 days", progress: "Skill progress", saved: "Answer saved", saving: "Saving answer…",
+    local: "Saved on this device. Saving will retry when connected.", error: "Could not load data. Please retry.", reload: "Refresh",
+    pending: "Submission not confirmed. Press again to retry without creating another attempt.",
   },
 };

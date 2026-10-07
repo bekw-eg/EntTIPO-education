@@ -36,23 +36,23 @@ export function TopicsView({ topics }: TopicsViewProps) {
   const weakCount = topics.filter((item) => item.masteryScore < 40).length;
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0">
       <Header
         title={t.topics.catalogTitle}
         subtitle={t.topics.catalogSubtitle}
       />
 
-      <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+      <div className="page-content">
         <p className="text-sm text-muted-foreground">
           {locale === "kk" ? "Тақырыптар тізімі емтиханды толық қамтуды растамайды." : locale === "en" ? "The topic list does not confirm complete exam coverage." : "Список тем не подтверждает полное покрытие экзамена."}{" "}
           <Link href="/exam-coverage" className="underline">{locale === "kk" ? "Қамтуды тексеру" : locale === "en" ? "Check coverage" : "Проверить покрытие"}</Link>
         </p>
         {/* Progress summary banner */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="bg-emerald-500/5 border-emerald-500/20">
+          <Card className="border-0 bg-transparent">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase font-semibold">
+                <p className="text-sm text-muted-foreground">
                   {t.topics.mastered}
                 </p>
                 <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
@@ -63,10 +63,10 @@ export function TopicsView({ topics }: TopicsViewProps) {
             </CardContent>
           </Card>
 
-          <Card className="bg-blue-500/5 border-blue-500/20">
+          <Card className="border-0 bg-transparent">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase font-semibold">
+                <p className="text-sm text-muted-foreground">
                   {t.topics.inProgress}
                 </p>
                 <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -77,10 +77,10 @@ export function TopicsView({ topics }: TopicsViewProps) {
             </CardContent>
           </Card>
 
-          <Card className="bg-rose-500/5 border-rose-500/20">
+          <Card className="border-0 bg-transparent">
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground uppercase font-semibold">
+                <p className="text-sm text-muted-foreground">
                   {t.topics.needsAttention}
                 </p>
                 <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">
@@ -93,7 +93,7 @@ export function TopicsView({ topics }: TopicsViewProps) {
         </div>
 
         {/* Topics grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {topics.map((topic, index) => {
             const barColor =
               topic.masteryScore < 40
@@ -111,7 +111,7 @@ export function TopicsView({ topics }: TopicsViewProps) {
             return (
               <Card
                 key={topic.id}
-                className="overflow-hidden border transition-all duration-200 hover:shadow-md hover:border-primary/40 flex flex-col justify-between"
+                className="border transition-colors hover:border-primary/40 flex flex-col justify-between"
               >
                 <CardContent className="p-5 space-y-4">
                   <div className="space-y-2">
@@ -128,10 +128,10 @@ export function TopicsView({ topics }: TopicsViewProps) {
                       </span>
                     </div>
 
-                    <h3 className="font-bold text-base leading-snug line-clamp-1">
+                    <h3 className="font-semibold text-base leading-snug">
                       {translatedName}
                     </h3>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed">
                       {translatedDesc}
                     </p>
                   </div>
@@ -167,7 +167,7 @@ export function TopicsView({ topics }: TopicsViewProps) {
                         {t.topics.theory}
                       </Link>
                     </Button>
-                    <Button asChild size="sm" className="flex-1 text-xs">
+                    <Button asChild variant="ghost" size="sm" className="flex-1 text-xs">
                       <Link
                         href={`/practice?mode=specific_topic&topicId=${topic.id}`}
                       >

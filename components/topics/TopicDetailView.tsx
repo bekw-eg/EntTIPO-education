@@ -21,6 +21,8 @@ import {
 import { getMasteryBadgeColor, AiAction } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { getLocalizedLesson } from "@/lib/i18n/lessons";
+import { choiceStem } from "@/lib/choiceDisplay";
+import { interfaceText } from "@/lib/i18n/interface";
 import { contentText } from '@/lib/i18n/content';
 import { AiTutorPanel } from "@/components/ai/AiTutorPanel";
 
@@ -53,7 +55,7 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0">
       <Header
         title={translatedName}
         subtitle={description}
@@ -67,9 +69,9 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
         }
       />
 
-      <div className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto">
+      <div className="page-content reading-content">
         {/* Back Link & Mastery */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Button asChild variant="ghost" size="sm">
             <Link href="/topics">
               <ArrowLeft className="w-4 h-4 mr-1.5" />
@@ -93,7 +95,7 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
           <div className="space-y-6">
             {/* 1. Что это такое */}
             {whatIsIt && (
-              <Card>
+              <Card className="border-0 bg-transparent">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <HelpCircle className="w-4 h-4 text-primary" />
@@ -101,16 +103,16 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm sm:text-base leading-relaxed text-foreground/90 whitespace-pre-line">
-                    {whatIsIt}
-                  </p>
+                  <div className="text-sm sm:text-base leading-relaxed text-foreground/90">
+                    <MathText content={choiceStem(whatIsIt)} />
+                  </div>
                 </CardContent>
               </Card>
             )}
 
             {/* 2. Когда это используется */}
             {whenUsed && (
-              <Card>
+              <Card className="border-0 bg-transparent">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Lightbulb className="w-4 h-4 text-amber-500" />
@@ -118,16 +120,16 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm sm:text-base leading-relaxed text-foreground/90 whitespace-pre-line">
-                    {whenUsed}
-                  </p>
+                  <div className="text-sm sm:text-base leading-relaxed text-foreground/90">
+                    <MathText content={choiceStem(whenUsed)} />
+                  </div>
                 </CardContent>
               </Card>
             )}
 
             {/* 3. Основная формула */}
             {(formulaLatex || formula) && (
-              <Card className="border-primary/30 bg-primary/5">
+              <Card className="border-0 border-l-2 border-l-primary rounded-none bg-transparent">
                 <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
                   <CardTitle className="text-base flex items-center gap-2 text-primary">
                     <BookOpen className="w-4 h-4" />
@@ -146,14 +148,12 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {formulaLatex && (
-                    <div className="py-3 px-4 bg-background/80 rounded-xl border text-center overflow-x-auto shadow-xs">
+                    <div className="math-block text-center">
                       <MathDisplay math={formulaLatex} block />
                     </div>
                   )}
-                  {formula && (
-                    <p className="text-xs text-muted-foreground text-center font-mono">
-                      {formula}
-                    </p>
+                  {formula && !formulaLatex && (
+                    <MathText content={formula} />
                   )}
                 </CardContent>
               </Card>
@@ -161,15 +161,15 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
 
             {/* 4. Простой пример */}
             {example && (
-              <Card>
+              <Card className="border-0 bg-transparent">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
                     <CheckCircle className="w-4 h-4" />
                     {t.lesson.example}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="p-4 bg-muted/30 rounded-xl border">
+                  <div className="min-w-0">
                     <MathText content={example} />
                   </div>
                 </CardContent>
@@ -178,30 +178,28 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
 
             {/* 5. Типичные ошибки */}
             {commonErrors && (
-              <Card className="border-rose-500/20 bg-rose-500/5">
+              <Card className="border-0 bg-transparent">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
                     <AlertTriangle className="w-4 h-4" />
                     {t.lesson.commonErrors}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-line">
-                    {commonErrors}
-                  </p>
+                  <MathText content={choiceStem(commonErrors)} />
                 </CardContent>
               </Card>
             )}
           </div>
         ) : (
           <Card className="p-8 text-center text-muted-foreground">
-            {t.common.loading}
+            {interfaceText[locale].noLesson}
           </Card>
         )}
 
         {/* 6. Тренировочные задания */}
         <div className="space-y-4 pt-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-lg font-bold">{t.lesson.trainingTasks}</h3>
             <span className="text-xs text-muted-foreground">
               {t.lesson.inDatabase} {topic.questions?.length || 0}
@@ -210,7 +208,7 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
 
           <div className="space-y-3">
             {topic.questions?.map((q: any, idx: number) => (
-              <Card key={q.id} className="p-4">
+              <Card key={q.id} className="rounded-none border-0 border-b bg-transparent py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-2 flex-1 min-w-0">
                     <div className="flex items-center gap-2">
@@ -239,7 +237,7 @@ export function TopicDetailView({ topic, masteryScore }: TopicDetailViewProps) {
           </div>
 
           <div className="pt-4 flex justify-center">
-            <Button asChild size="lg" className="px-8 font-semibold shadow-md">
+            <Button asChild size="lg" className="px-5">
               <Link href={`/practice?mode=specific_topic&topicId=${topic.id}`}>
                 <Zap className="w-5 h-5 mr-2" />
                 {t.lesson.startTrainingTopic} «{translatedName}»

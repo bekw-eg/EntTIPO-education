@@ -9,6 +9,8 @@ import { GeometryViewer, GeometryFigureType } from "@/components/ui/GeometryView
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { MathText } from "@/components/ui/MathText";
+import { choiceStem } from "@/lib/choiceDisplay";
 import { MathDisplay } from "@/components/ui/MathDisplay";
 import { Box, Triangle, Circle, Layers, BookOpen } from "lucide-react";
 
@@ -108,7 +110,7 @@ export default function GeometryPage() {
         subtitle={uiText("Чертежи, сечения, формулы объёмов и площадей для заданий ЕНТ", locale)}
       />
 
-      <main className="flex-1 p-4 md:p-6 max-w-7xl mx-auto w-full space-y-6">
+      <div className="page-content">
         {/* Top category tabs */}
         <div className="flex items-center justify-between flex-wrap gap-4 border-b pb-4">
           <Tabs
@@ -129,7 +131,7 @@ export default function GeometryPage() {
           </Tabs>
 
           <span className="text-xs text-muted-foreground">
-            {uiText(" Интерактивный векторный SVG-рендеринг ", locale)}</span>
+            {uiText(" Выберите фигуру для изучения ", locale)}</span>
         </div>
 
         {/* Main Content: Interactive Canvas + Figures List */}
@@ -158,21 +160,21 @@ export default function GeometryPage() {
                     title: selectedFigure.name,
                     labels: selectedFigure.defaultLabels,
                   }}
-                  className="shadow-inner"
+
                 />
 
                 {/* Key Formulas Section */}
-                <div className="space-y-3 p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <div className="min-w-0 space-y-3 border-t pt-5">
                   <div className="flex items-center gap-2 text-primary font-semibold text-sm">
                     <BookOpen className="w-4 h-4" />
                     <span>{uiText("Ключевые формулы ЕНТ:", locale)}</span>
                   </div>
-                  <div className="p-3 bg-card rounded-lg border text-center overflow-x-auto shadow-xs">
+                  <div className="math-block text-center">
                     <MathDisplay math={selectedFigure.formula} block />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                     {uiText(selectedFigure.formulaDescription, locale)}
-                  </p>
+                  <div className="text-sm text-muted-foreground">
+                     <MathText content={choiceStem(uiText(selectedFigure.formulaDescription, locale))} />
+                  </div>
                 </div>
 
                 {/* Properties list */}
@@ -183,7 +185,7 @@ export default function GeometryPage() {
                     {selectedFigure.properties.map((prop, idx) => (
                       <li key={idx} className="flex items-start gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0" />
-                         <span>{uiText(prop, locale)}</span>
+                         <MathText content={choiceStem(uiText(prop, locale))} />
                       </li>
                     ))}
                   </ul>
@@ -194,7 +196,7 @@ export default function GeometryPage() {
 
           {/* Right: Quick Selection Catalog */}
           <div className="lg:col-span-4 space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider px-1">
+            <h3 className="text-sm font-medium text-muted-foreground px-1">
               {uiText(" Каталог фигур ", locale)}</h3>
             <div className="space-y-2">
               {filtered.map((fig) => {
@@ -216,7 +218,7 @@ export default function GeometryPage() {
                         ) : (
                           <Triangle className="w-4 h-4 text-emerald-500 shrink-0" />
                         )}
-                        <span className="text-sm font-medium leading-tight truncate">
+                        <span className="text-sm font-medium leading-snug">
                            {uiText(fig.name, locale)}
                         </span>
                       </div>
@@ -233,7 +235,7 @@ export default function GeometryPage() {
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

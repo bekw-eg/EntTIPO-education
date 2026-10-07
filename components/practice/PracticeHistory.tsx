@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MathText } from "@/components/ui/MathText";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { contentText } from "@/lib/i18n/content";
+import { interfaceText } from "@/lib/i18n/interface";
 import { ChoiceMath } from "./ChoiceMath";
 import type { AttemptResult } from "@/types";
 
@@ -28,9 +29,10 @@ export function PracticeHistory({ sessionId }: { sessionId: string }) {
       {locale === "kk" ? "Жауаптар тарихын қарау" : "Просмотреть историю ответов"}
     </Button>}
     {failed && <p role="alert">{t.session.loadError}</p>}
+    {attempts?.length === 0 && <p className="text-sm text-muted-foreground">{interfaceText[locale].noHistory}</p>}
     {attempts?.map(attempt => {
       const result = attempt.submissionResult, choice = result?.choice;
-      return <details key={attempt.id} className="border rounded-xl p-4 space-y-3">
+      return <details key={attempt.id} className="border-b p-4 space-y-3">
         <summary className="cursor-pointer font-semibold">{attempt.isCorrect ? "✓" : "✗"} {contentText(attempt.question.title, attempt.question.titleKk, locale)} · {attempt.attemptNumber}</summary>
         {choice ? [
           { title: t.result.yourAnswer, ids: choice.selectedOptionIds }, { title: t.result.correctAnswer, ids: choice.correctOptionIds },
