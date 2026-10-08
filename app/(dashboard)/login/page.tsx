@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GraduationCap, ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
+import { SynaqLogo } from "@/components/brand/SynaqLogo";
 import { toast } from "sonner";
 import { useAccount } from "@/components/providers/AccountProvider";
 import { navigateAfterAuth } from "@/lib/client-auth";
@@ -94,9 +95,7 @@ export default function LoginPage() {
       <div className="page-content flex flex-1 items-start justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center space-y-2 pb-4">
-            <div className="w-12 h-12 text-primary mx-auto flex items-center justify-center">
-              <GraduationCap className="w-7 h-7" />
-            </div>
+            <SynaqLogo className="mx-auto mb-3" markClassName="w-12" wordmarkClassName="text-3xl" />
             <CardTitle className="text-2xl font-semibold tracking-tight">
               {activeTab === "login" ? uiText("Авторизация", locale) : uiText("Новый профиль", locale)}
             </CardTitle>
