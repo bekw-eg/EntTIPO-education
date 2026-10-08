@@ -1,5 +1,5 @@
 /**
- * Gemini API client for ENT TiPO AI Tutor.
+ * Gemini API client for Synaq AI Tutor.
  * Securely calls Google Gemini API exclusively from the server side.
  */
 

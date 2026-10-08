@@ -1,5 +1,5 @@
 /**
- * Prompts and context builders for ENT TiPO AI Tutor.
+ * Prompts and context builders for Synaq AI Tutor.
  */
 
 export interface QuestionContext {

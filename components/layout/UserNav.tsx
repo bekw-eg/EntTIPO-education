@@ -177,7 +177,7 @@ export function UserNav() {
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
-              {authTab === "login" ? uiText("Вход в ENT TIPO", locale) : uiText("Регистрация ученика", locale)}
+              {authTab === "login" ? uiText("Вход в Synaq", locale) : uiText("Регистрация ученика", locale)}
             </DialogTitle>
             <DialogDescription className="text-xs">
               {uiText(" Личный прогресс, история ошибок и персональный рейтинг ЕНТ. ", locale)}</DialogDescription>

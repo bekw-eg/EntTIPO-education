@@ -1,6 +1,6 @@
 {
-  "name": "ENT TIPO — Математика",
-  "short_name": "ENT TIPO",
+  "name": "Synaq — Математика",
+  "short_name": "Synaq",
   "description": "Персональный тренажёр математики для подготовки к ЕНТ ТиПО",
   "start_url": "/",
   "display": "standalone",

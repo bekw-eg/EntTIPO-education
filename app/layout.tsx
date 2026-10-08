@@ -10,9 +10,10 @@ import { PwaRegister } from "@/components/providers/PwaRegister";
 const inter = Inter({ subsets: ["latin", "cyrillic", "cyrillic-ext"] });
 
 export const metadata: Metadata = {
+  applicationName: "Synaq",
   title: {
-    default: "ENT TIPO — Подготовка к ЕНТ | ҰБТ-ға дайындық",
-    template: "%s | ENT TIPO",
+    default: "Synaq — Подготовка к ЕНТ | ҰБТ-ға дайындық",
+    template: "%s | Synaq",
   },
   description:
     "Персональный тренажёр математики для подготовки к ЕНТ ТиПО. ТжКБ ҰБТ математикасына арналған дербес жаттықтырушы.",
