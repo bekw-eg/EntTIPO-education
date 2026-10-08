@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Офлайн режим — ENT TIPO</title>
+  <title>Офлайн режим — Synaq</title>
   <link rel="icon" href="/icon.svg">
   <style>
     * { box-sizing: border-box; }
@@ -74,14 +74,14 @@
       const locale = localStorage.getItem('ent_tipo_locale');
       if (locale === 'kk') {
         document.documentElement.lang = 'kk';
-        document.title = 'Желісіз режим — ENT TIPO';
+        document.title = 'Желісіз режим — Synaq';
         document.querySelector('h1').textContent = 'Желіге қосылу жоқ';
         document.querySelector('p').textContent = 'Жүктелген материалдар желісіз жаттығуда қолжетімді. Басқа жеке беттер үшін интернет қажет.';
         document.querySelector('#practice-link').textContent = 'Жүктелген жаттығуларды ашу';
         document.querySelector('button').textContent = 'Қайталап көру';
       } else if (locale === 'en') {
         document.documentElement.lang = 'en';
-        document.title = 'Offline — ENT TIPO';
+        document.title = 'Offline — Synaq';
         document.querySelector('h1').textContent = 'No network connection';
         document.querySelector('p').textContent = 'Downloaded materials are available in offline practice. Other personal pages require internet.';
         document.querySelector('#practice-link').textContent = 'Open downloaded practice';

@@ -23,7 +23,7 @@ export function MobileNav() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild><button type="button" className={cn("flex flex-col items-center justify-center gap-1 text-[11px]", items.slice(4).some(item => isCurrentRoute(pathname, item.href)) ? "text-primary" : "text-muted-foreground")}><Menu aria-hidden="true" className="h-5 w-5" />{copy.more}</button></DialogTrigger>
         <DialogContent closeLabel={copy.close}>
-          <DialogTitle className="pr-10">{copy.navigation}</DialogTitle><DialogDescription className="sr-only">ENT TIPO</DialogDescription>
+          <DialogTitle className="pr-10">{copy.navigation}</DialogTitle><DialogDescription className="sr-only">Synaq</DialogDescription>
           <nav className="grid gap-1" aria-label={copy.more}>
             {items.slice(4).map(item => <Link key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={isCurrentRoute(pathname, item.href) ? "page" : undefined}
               className={cn("flex min-h-12 items-center gap-3 rounded-md px-3 text-sm hover:bg-muted", isCurrentRoute(pathname, item.href) && "bg-primary/10 text-primary")}>

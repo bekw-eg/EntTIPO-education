@@ -328,7 +328,7 @@ async function auditPracticeFlow() {
 }
 
 async function main() {
-  console.log("Starting comprehensive operational audit of ENT TIPO platform...");
+  console.log("Starting comprehensive operational audit of Synaq platform...");
   await auditTranslations();
   await auditLessonsAndFormulas();
   await auditMathService();

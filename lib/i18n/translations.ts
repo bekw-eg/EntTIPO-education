@@ -3,7 +3,7 @@ import { TranslationSchema, Locale } from "./types";
 export const translations: Record<Locale, TranslationSchema> = {
   ru: {
     common: {
-      appName: "ENT TIPO",
+      appName: "Synaq",
       math: "Математика",
       loading: "Загрузка...",
       save: "Сохранить",
@@ -294,7 +294,7 @@ export const translations: Record<Locale, TranslationSchema> = {
 
   kk: {
     common: {
-      appName: "ENT TIPO",
+      appName: "Synaq",
       math: "Математика",
       loading: "Жүктелуде...",
       save: "Сақтау",
@@ -587,7 +587,7 @@ export const translations: Record<Locale, TranslationSchema> = {
 
   en: {
     common: {
-      appName: "ENT TIPO",
+      appName: "Synaq",
       math: "Mathematics",
       loading: "Loading...",
       save: "Save",
@@ -595,7 +595,7 @@ export const translations: Record<Locale, TranslationSchema> = {
       back: "Back",
       profile: "Profile",
       user: "User",
-      ent2025: "ENT TIPO · learning practice",
+      ent2025: "TVET UNT · learning practice",
       mathPrep: "Math Exam Preparation",
     },
     nav: {

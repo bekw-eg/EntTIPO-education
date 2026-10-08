@@ -317,7 +317,7 @@ async function exportWork(pack: OfflinePackage) {
   const state = await getWork(pack.userId, pack.sessionId), queue = await queueFor(pack.userId, pack.sessionId);
   const blob = new Blob([JSON.stringify({ format: 1, package: pack, work: state, queue,
     ...(dirty ? { unsavedVisibleAnswers: visibleAnswers } : {}) }, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob), link = e("a"); link.href = url; link.download = `enttipo-offline-${pack.id}.json`; link.click(); URL.revokeObjectURL(url);
+  const url = URL.createObjectURL(blob), link = e("a"); link.href = url; link.download = `synaq-offline-${pack.id}.json`; link.click(); URL.revokeObjectURL(url);
 }
 async function refresh() {
   const owner = await activeAccount();

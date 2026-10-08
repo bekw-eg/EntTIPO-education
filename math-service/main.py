@@ -24,7 +24,7 @@ from sympy.parsing.sympy_parser import (
     standard_transformations,
 )
 
-app = FastAPI(title="ENT TIPO Math Validation Service", version="1.0.0")
+app = FastAPI(title="Synaq Math Validation Service", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

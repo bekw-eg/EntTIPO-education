@@ -1,9 +1,10 @@
 /**
- * Service Worker for ENT TIPO PWA.
+ * Service Worker for Synaq PWA.
  * Caches public static assets; personal pages and API responses stay on the network.
  */
 
-const CACHE_NAME = "ent-tipo-static-v4";
+// Keep the storage namespace compatible; refresh the public shell for the new brand.
+const CACHE_NAME = "ent-tipo-static-v5";
 const OFFLINE_CACHE = "ent-tipo-static-offline-v1";
 const PRECACHE_ASSETS = [
   "/manifest.json",

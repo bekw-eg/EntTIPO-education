@@ -1,6 +1,6 @@
 # UI consistency and route smoke tests
 
-Scope: existing ENT TIPO application, preserving authentication, Prisma schema,
+Scope: existing Synaq application, preserving authentication, Prisma schema,
 choice IDs/snapshots, grading, UUID idempotency, mastery, diagnostic selection,
 exam generation and offline synchronization. Work starts from `f3de4aa` on
 `feature/ui-polish-and-smoke-tests`.
