@@ -8,6 +8,7 @@ import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { interfaceText } from "@/lib/i18n/interface";
 import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useNavigation, isCurrentRoute } from "./useNavigation";
+import { SynaqLogo } from "@/components/brand/SynaqLogo";
 
 export function MobileNav() {
   const pathname = usePathname(), items = useNavigation();
@@ -23,6 +24,7 @@ export function MobileNav() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild><button type="button" className={cn("flex flex-col items-center justify-center gap-1 text-[11px]", items.slice(4).some(item => isCurrentRoute(pathname, item.href)) ? "text-primary" : "text-muted-foreground")}><Menu aria-hidden="true" className="h-5 w-5" />{copy.more}</button></DialogTrigger>
         <DialogContent closeLabel={copy.close}>
+          <SynaqLogo className="pr-10" markClassName="w-9" />
           <DialogTitle className="pr-10">{copy.navigation}</DialogTitle><DialogDescription className="sr-only">Synaq</DialogDescription>
           <nav className="grid gap-1" aria-label={copy.more}>
             {items.slice(4).map(item => <Link key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={isCurrentRoute(pathname, item.href) ? "page" : undefined}

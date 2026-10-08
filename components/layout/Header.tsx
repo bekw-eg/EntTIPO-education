@@ -1,5 +1,7 @@
 "use client";
 import { useAccount } from "@/components/providers/AccountProvider";
+import Link from "next/link";
+import { SynaqMark } from "@/components/brand/SynaqLogo";
 import { ReactNode } from "react";
 import { Sun, Moon } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -14,6 +16,9 @@ export function Header({ title, subtitle, actions }: { title: string; subtitle?:
   const { user } = useAccount();
   return <header className="mx-auto w-full max-w-[var(--page-width)] px-4 pt-4 sm:px-6 sm:pt-6 lg:px-8">
     <div className="mb-6 flex min-h-11 items-center justify-end gap-2">
+      <Link href="/" aria-label="Synaq" className="mr-auto rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary md:hidden">
+        <SynaqMark decorative className="w-8" />
+      </Link>
       <LanguageSwitcher variant="compact" />{user && <UserNav />}
       <Button variant="ghost" size="icon" onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
         aria-label={locale === "kk" ? "Түсті режимді ауыстыру" : locale === "ru" ? "Переключить тему оформления" : "Toggle theme"}>

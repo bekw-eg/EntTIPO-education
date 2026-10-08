@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Офлайн режим — Synaq</title>
-  <link rel="icon" href="/icon.svg">
+  <link rel="icon" href="/icon.svg?v=synaq">
   <style>
     * { box-sizing: border-box; }
     body {
@@ -28,6 +28,8 @@
       border-radius: 10px;
       border: 1px solid #d8e2ed;
     }
+    .brand { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; font-size: 30px; font-weight: 700; letter-spacing: -0.055em; }
+    .brand img { width: 48px; height: auto; }
     h1 {
       font-size: 20px;
       margin-bottom: 8px;
@@ -62,6 +64,7 @@
 </head>
 <body>
   <main class="card">
+    <div class="brand"><img src="/brand/synaq-mark.svg" width="408" height="378" alt=""><span>Synaq</span></div>
     <h1>Нет подключения к сети</h1>
     <p>
       Скачанные материалы доступны в офлайн-практике. Для остальных личных страниц требуется интернет.

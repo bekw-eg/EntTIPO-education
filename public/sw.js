@@ -4,11 +4,15 @@
  */
 
 // Keep the storage namespace compatible; refresh the public shell for the new brand.
-const CACHE_NAME = "ent-tipo-static-v5";
+const CACHE_NAME = "ent-tipo-static-v6";
 const OFFLINE_CACHE = "ent-tipo-static-offline-v1";
 const PRECACHE_ASSETS = [
   "/manifest.json",
   "/icon.svg",
+  "/brand/synaq-mark.svg",
+  "/icon-192.png",
+  "/icon-512.png",
+  "/icon-maskable-512.png",
   "/offline.html",
 ];
 
@@ -80,7 +84,9 @@ self.addEventListener("fetch", (event) => {
     PRECACHE_ASSETS.includes(url.pathname)
   ) {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
+      // Brand URLs include a version query to refresh browser/PWA icons.
+      // These known public assets also remain available offline under their cached path.
+      caches.match(request, { ignoreSearch: PRECACHE_ASSETS.includes(url.pathname) }).then((cachedResponse) => {
         if (cachedResponse) {
           return cachedResponse;
         }
