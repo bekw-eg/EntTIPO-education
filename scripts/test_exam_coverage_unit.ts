@@ -5,9 +5,30 @@ import { CONTENT_REVIEWS, validateReviewReferences } from "../lib/exam/reviews";
 import { auditCoverage } from "../lib/exam/coverage";
 import { examFormat } from "../lib/exam/fingerprint";
 import { assessExamReadiness, type ExamCandidate } from "../lib/exam/readiness";
+import { nonRepeatingCapacity } from "../lib/exam/capacity";
+import { questionLocalizationSource } from '../lib/i18n/content';
 import { generateStereometry, generateLogarithms, generateTrigonometry, generateDiffEq2, generateTangent } from "../lib/questionGenerator";
 
 validateReviewReferences();
+// Exhaustively enumerate tiny two-topic banks and compare flow capacity with
+// independent recursive packing, including a topic/band bottleneck.
+const tinyProfile={...TIPO_MATH, points:TIPO_MATH.points.slice(0,2),
+  official:{...TIPO_MATH.official,questionCount:2,difficultyCounts:{A:1,B:1,C:0}}};
+for(let mask=0;mask<81;mask++) {
+  let value=mask; const tiny:ExamCandidate[]=[];
+  for(const pointCode of ['01','02']) for(const band of ['A','B'] as const) {
+    const count=value%3; value=Math.floor(value/3);
+    for(let i=0;i<count;i++) {const id=`${pointCode}${band}${i}`;tiny.push({id,pointCode,band,family:`family${pointCode}`,contentHash:id,mathKey:id});}
+  }
+  function pack(rows:ExamCandidate[]):number {
+    let best=0;
+    for(const a of rows.filter(q=>q.pointCode==='01')) for(const b of rows.filter(q=>q.pointCode==='02'&&q.band!==a.band))
+      best=Math.max(best,1+pack(rows.filter(q=>q.id!==a.id&&q.id!==b.id)));
+    return best;
+  }
+  assert.equal(nonRepeatingCapacity(tinyProfile,tiny).maximumPapers,pack(tiny));
+  if(tiny.length) assert.equal(nonRepeatingCapacity(tinyProfile,[...tiny,{...tiny[0],id:'duplicate'}]).maximumPapers,pack(tiny));
+}
 assert.equal(TIPO_MATH.documentYear, 2023);
 assert.equal(TIPO_MATH.official.mathBlockMinutes, null);
 assert.equal(TIPO_MATH.official.topicQuotas, null);
@@ -20,6 +41,19 @@ assert.throws(() => validateReviewReferences([{ ...first, skillIds: ["nonexisten
 assert.throws(() => validateReviewReferences([first, first]), /Duplicate content review/);
 assert.throws(() => validateReviewReferences([{ ...CONTENT_REVIEWS.find((r) => r.quality === "direct")!, skillIds: [] }]), /Invalid point skill/);
 const bank = EXAM_EXERCISES.map(exerciseQuestion);
+const bilingual=structuredClone(bank.find(q=>q.id==='exam_v2_01_horizontal_001')!);
+bilingual.titleKk='Дробно-сызықтық функция';
+bilingual.steps[0].promptKk='Бір дұрыс жауапты таңдаңыз';
+bilingual.steps[0].options.forEach(o=>{o.textKk=o.text;});
+bilingual.localizationSource=questionLocalizationSource(bilingual);
+assert.equal(auditCoverage(TIPO_MATH,[bilingual],undefined,'kk').totals.eligible,1);
+for(const field of ['questionTextKk','explanationKk'] as const) {
+  const changed={...bilingual,[field]:'Тексерілмеген басқа мәтін'};
+  assert.equal(auditCoverage(TIPO_MATH,[changed],undefined,'kk').totals.eligible,0);
+  assert.equal(auditCoverage(TIPO_MATH,[changed],undefined,'ru').totals.eligible,1);
+}
+const changedOption=structuredClone(bilingual);changedOption.steps[0].options[0].textKk='99999';
+assert.equal(auditCoverage(TIPO_MATH,[changedOption],undefined,'kk').totals.eligible,0);
 bank.forEach((q) => assert.equal(examFormat(q), "single_choice_4", q.id));
 const report = auditCoverage(TIPO_MATH, bank);
 assert.equal(report.totals.databaseQuestions, EXAM_EXERCISES.length);
@@ -27,7 +61,7 @@ assert.equal(report.totals.direct, EXAM_EXERCISES.length);
 assert.equal(report.totals.eligible, EXAM_EXERCISES.length);
 assert.equal(report.points.reduce((n, p) => n + p.direct, 0), EXAM_EXERCISES.length);
 assert.equal(report.readiness.oneVariant.canGenerate, true);
-assert.equal(report.readiness.multipleVariants.canGenerate, false);
+assert.equal(report.readiness.multipleVariants.canGenerate, true);
 assert.equal(report.readiness.balancedVariant.canGenerate, true);
 const originalBank = bank.filter((q) => !["12", "15", "16"].some((p) => q.skills.some((s) => TIPO_MATH.points.find((point) => point.code === p)!.skills.includes(s.skillId))));
 const originalReport = auditCoverage(TIPO_MATH, originalBank);

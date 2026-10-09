@@ -33,7 +33,8 @@ for (const singles of [0, 1, 19, 20, 35, 38, 39, 40, 70, 95]) for (const percent
     `A reduced denominator must respect the configured ceiling (${singles} single questions, ${percent}%)`);
 }
 assert.equal(capChoiceQuestions(Array.from({length:20}, (_,i) => ({ id:`${i}`, practiceChoice:single })),20).length,20);
-for (const formula of ["sqrt(3)/2", "x^12", "ln(abs(x))+C", "3*x^2", "exp(2*x)+C", "{0; pi; 2*pi}", "√((−7)²)", "exp((x+1)^2)", "sqrt(1+sqrt(2))"]) {
+assert.equal(choiceLatex('log_(1/3)(x-4)'), '\\log_{\\frac{1}{3}}(x-4)');
+for (const formula of ["log_(1/3)(x-4)", "sqrt(3)/2", "x^12", "ln(abs(x))+C", "3*x^2", "exp(2*x)+C", "{0; pi; 2*pi}", "√((−7)²)", "exp((x+1)^2)", "sqrt(1+sqrt(2))"]) {
   assert.ok(!katex.renderToString(choiceLatex(formula), { throwOnError: true }).includes("katex-error"));
 }
 for (const stem of ["Упрости −(x^2 · x^3 + 4)","Найдите f′(4), если f(x)=x^(3/2) при x>0.","√((−7)²) неге тең?", "Решите sin(x)>1/2 на [0; 2π].", "S_бок=πrl. 3πl=30π, значит l=10 см.", "Площадь основания S_{осн} = a^2."]) {

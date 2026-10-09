@@ -11,4 +11,5 @@ export interface ContentReview {
   questionId: string; contentHash: string; profileId: string; profileVersion: string;
   pointCode: string | null; quality: MatchQuality; rationale: string;
   family: string; band: DifficultyBand | null; reviewedAt: string; skillIds: string[];
+  mathKey?: string; source?: string; verification?: unknown; subtopic?:string;
 }

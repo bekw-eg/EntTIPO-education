@@ -12,6 +12,7 @@ export function choiceLatex(value: string): string {
   text = text.replace(/√\(/g, "sqrt(");
   text = formatCalls(text, "sqrt", argument => `\\sqrt{${argument}}`);
   text = formatCalls(text, "exp", argument => `e^{${argument}}`);
+  text = formatCalls(text, "log_", argument => `\\log_{${choiceLatex(argument)}}`);
   text = formatCalls(text, "^", argument => `^{${choiceLatex(argument)}}`);
   text = text.replace(/\^\(([^()]+)\)/g, "^{$1}").replace(/\^(\d+)/g, "^{$1}")
     .replace(/(?<!\\)\b(sin|cos|tan|arcsin|arccos|arctan|ln)\b/g, "\\$1")

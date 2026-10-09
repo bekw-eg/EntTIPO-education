@@ -1,6 +1,6 @@
 import type { DifficultyBand, ExamProfile } from "./profile";
 
-export interface ExamCandidate { id: string; pointCode: string; band: DifficultyBand; family: string; contentHash: string }
+export interface ExamCandidate { id: string; pointCode: string; band: DifficultyBand; family: string; contentHash: string; mathKey?: string }
 
 /** Capacity check for a future generator. Never fills a gap with an unreviewed task or reuses a family.
  * Difficulty quotas are official; one task per content point is an optional platform blueprint.
@@ -8,7 +8,7 @@ export interface ExamCandidate { id: string; pointCode: string; band: Difficulty
  */
 export function assessExamReadiness(profile: ExamProfile, candidates: ExamCandidate[], variants = 1, balanced = false) {
   if (!Number.isInteger(variants) || variants < 1 || variants > 10) throw new Error("Variants must be 1..10");
-  const unique = [...new Map(candidates.map((q) => [q.contentHash, q])).values()];
+  const unique = [...new Map(candidates.map((q) => [q.mathKey ?? q.contentHash, q])).values()];
   const bands: DifficultyBand[] = ["A", "B", "C"];
   if (unique.some((q) => !profile.points.some((p) => p.code === q.pointCode) || !bands.includes(q.band))) throw new Error("Invalid exam candidate");
   const families = [...new Set(unique.map((q) => q.family))];

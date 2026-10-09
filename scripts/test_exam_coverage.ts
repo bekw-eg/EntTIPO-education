@@ -32,9 +32,9 @@ async function main() {
   assert.equal(report.totals.databaseQuestions, once);
   assert.equal(report.totals.direct + report.totals.supporting + report.totals.outside + report.totals.needsReview, once);
   assert.equal(report.questions.length, once);
-  assert.equal(report.questions.filter((q) => q.id.startsWith("exam_v1_") && q.eligible).length, EXAM_EXERCISES.length);
+  assert.equal(report.questions.filter((q) => q.id.startsWith("exam_v") && q.eligible).length, EXAM_EXERCISES.length);
   assert.equal(report.questions.filter((q) => q.id.startsWith("exam_v1_") && q.missingSkills.length > 0).length, 0);
-  assert.equal(report.readiness.multipleVariants.canGenerate, false);
+  assert.equal(report.readiness.multipleVariants.canGenerate, true);
   // An unknown DB task is included in live totals but never silently approved by its topic.
   await prisma.question.create({ data: { id: fixtureId, topicId: "t13", title: "Audit fixture", questionText: "2+2", answerType: "number", correctAnswer: "4", explanation: "4" } });
   const withFixture = await readCoverage(prisma, TIPO_MATH);

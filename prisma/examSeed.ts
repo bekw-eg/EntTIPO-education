@@ -7,6 +7,8 @@ import { EXAM_RULES } from "../lib/exam/rules";
 import { examPointsKk } from '../lib/i18n/exam-content';
 import { seedKazakhContent } from './kazakhSeed';
 import { seedPracticeChoices } from './practiceChoiceSeed';
+import { VERIFIED_EXERCISES, VERIFIED_BY_ID } from '../lib/exam/generated-bank';
+import { questionLocalizationSource } from '../lib/i18n/content';
 
 /** Additive, serialized, stable IDs. Preserve every existing question and its attempt history. */
 export async function seedExamBank(prisma: PrismaClient) {
@@ -25,7 +27,7 @@ export async function seedExamBank(prisma: PrismaClient) {
         ruleKk: examPointsKk[p.code].rule,
       } });
     }
-    for (const exercise of EXAM_EXERCISES) {
+    for (const exercise of EXAM_EXERCISES.filter(q => !VERIFIED_BY_ID.has(q.id))) {
       const q = exerciseQuestion(exercise);
       const existing = await tx.question.findUnique({ where: { id: q.id }, include: { skills: true, steps: { include: { options: true } } } });
       if (existing && questionFingerprint(existing) !== questionFingerprint(q)) throw new Error(`Seed content conflict: ${q.id}; review existing content before upgrading`);
@@ -53,5 +55,37 @@ export async function seedExamBank(prisma: PrismaClient) {
     }
   }, { maxWait: 10000, timeout: 60000 });
   await seedKazakhContent(prisma);
+  // Each batch commits independently. Stable IDs resume an interrupted import;
+  // advisory locks serialize competing importers, and content conflicts abort.
+  for (let offset = 0; offset < VERIFIED_EXERCISES.length; offset += 25) {
+    await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(410043)::text`;
+      for (const exercise of VERIFIED_EXERCISES.slice(offset, offset + 25)) {
+        const q = exerciseQuestion(exercise);
+        q.titleKk = examPointsKk[exercise.pointCode].title;
+        q.steps[0].promptKk = 'Бір дұрыс жауапты таңдаңыз';
+        q.steps[0].options.forEach(o => { o.textKk = o.text; });
+        const existing = await tx.question.findUnique({ where: { id: q.id }, include: { skills: true, steps: { include: { options: true } } } });
+        if (existing) {
+          // A reviewed difficulty correction does not rewrite historical papers.
+          // All other source fields must still match before this narrow update.
+          if (questionFingerprint({ ...existing, difficulty:q.difficulty }) !== questionFingerprint(q) || existing.questionTextKk !== q.questionTextKk || existing.explanationKk !== q.explanationKk) throw new Error(`Seed content conflict: ${q.id}`);
+          if (existing.difficulty !== q.difficulty) await tx.question.update({ where:{id:q.id}, data:{difficulty:q.difficulty} });
+          continue;
+        }
+        await tx.question.create({ data: {
+          id: q.id, topicId: q.topicId, title: q.title, titleKk: q.titleKk,
+          questionText: q.questionText, questionTextKk: q.questionTextKk,
+          explanation: q.explanation, explanationKk: q.explanationKk,
+          localizationSource: questionLocalizationSource(q), answerType: q.answerType,
+          correctAnswer: q.correctAnswer, difficulty: q.difficulty, purpose: q.purpose,
+          skills: { create: q.skills }, steps: { create: q.steps.map(s => ({ ...s, id: `${q.id}_step_1`,
+            skills: { create: q.skills }, options: { create: s.options.map(o => ({ ...o, id: `${q.id}_option_${o.order}` })) } })) },
+        } });
+      }
+    }, { maxWait: 15000, timeout: 30000 });
+    if ((offset + 25) % 250 === 0 || offset + 25 >= VERIFIED_EXERCISES.length)
+      console.log(`Verified exam import: ${Math.min(offset + 25, VERIFIED_EXERCISES.length)}/${VERIFIED_EXERCISES.length}`);
+  }
   await seedPracticeChoices(prisma);
 }

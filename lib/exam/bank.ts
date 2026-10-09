@@ -1,11 +1,13 @@
 import { TIPO_MATH, type DifficultyBand } from "./profile";
 import type { BankQuestion, ContentReview } from "./types";
 import { questionFingerprint } from "./fingerprint";
+import { VERIFIED_EXERCISES } from './generated-bank';
 
 export interface ExamExercise {
   id: string; pointCode: string; band: DifficultyBand; family: string;
   text: string; options: [string, string, string, string]; correctIndex: number; explanation: string;
-  scope: string; reviewedAt?: string;
+  scope: string; reviewedAt?: string; textKk?: string; explanationKk?: string;
+  mathKey?: string; source?: string; verification?: unknown;
 }
 function task(id: string, pointCode: string, band: DifficultyBand, family: string, text: string,
   options: ExamExercise["options"], correctIndex: number, explanation: string, scope: string, reviewedAt?: string): ExamExercise {
@@ -113,12 +115,14 @@ export const EXAM_EXERCISES: ExamExercise[] = [
   task("cone_frustum", "20", "C", "cone_frustum_volume", "Усечённый круговой конус имеет радиусы оснований 4 и 2 см, высоту 3 см. Найдите объём.",
     ["20π см³", "48π см³", "28π см³", "12π см³"], 2,
     "V=πh(R²+Rr+r²)/3=π·3(16+8+4)/3=28π см³.", "Объём усечённого конуса."),
+  ...VERIFIED_EXERCISES,
 ];
 
 export function exerciseQuestion(q: ExamExercise): BankQuestion {
   const point = TIPO_MATH.points.find((p) => p.code === q.pointCode)!;
   return { id: q.id, topicId: point.topicId, title: point.title, questionText: q.text, latex: null,
     correctAnswer: q.options[q.correctIndex], explanation: q.explanation, answerType: "multiple_choice",
+    ...(q.textKk ? { questionTextKk: q.textKk, explanationKk: q.explanationKk } : {}),
     difficulty: { A: 1, B: 2, C: 3 }[q.band], purpose: "practice", skills: point.skills.map((skillId) => ({ skillId })),
     steps: [{ order: 1, type: "multiple_choice", prompt: "Выберите один правильный ответ", expectedAnswer: q.options[q.correctIndex],
       options: q.options.map((text, i) => ({ text, isCorrect: i === q.correctIndex, order: i + 1 })) }] };
@@ -128,5 +132,7 @@ export function exerciseReview(q: ExamExercise): ContentReview {
   const question = exerciseQuestion(q);
   return { questionId: q.id, contentHash: questionFingerprint(question), profileId: TIPO_MATH.id, profileVersion: TIPO_MATH.version,
     pointCode: q.pointCode, quality: "direct", rationale: `${q.scope} Уровень ${q.band} назначен внутренней содержательной проверкой; эмпирическая калибровка не проведена.`,
-    family: q.family, band: q.band, reviewedAt: q.reviewedAt ?? TIPO_MATH.checkedAt, skillIds: question.skills.map((s) => s.skillId) };
+    family: q.family, band: q.band, reviewedAt: q.reviewedAt ?? (q.verification ? '2026-10-10' : TIPO_MATH.checkedAt),
+    mathKey: q.mathKey, source: q.source, verification: q.verification, subtopic:q.scope,
+    skillIds: question.skills.map((s) => s.skillId) };
 }

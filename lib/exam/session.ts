@@ -10,6 +10,9 @@ import { getExamProfile, type ExamProfile } from "./profile";
 import { gradeExamQuestion, publicExamQuestion, remainingSeconds, saveExamSchema, startExamSchema, type PaperQuestion } from "./mode";
 import { hasContentTranslation } from '../i18n/content';
 import { completeProgramAssessment } from "../learning-road/program-data";
+import { mathematicalStemKey, unusedCandidates } from './history';
+import type { ExamCandidate } from './readiness';
+import { GENERATED_IDENTITIES, LEGACY_MATH_ALIASES } from './generated-bank';
 
 
 const json = (v: unknown) => JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
@@ -30,19 +33,35 @@ async function ownedExam(tx: Prisma.TransactionClient, userId: string, id: strin
   if (!exam) throw new PracticeError("Экзамен не найден", 404);
   return exam;
 }
-export async function readExamAvailability(tx: Prisma.TransactionClient, profile: ExamProfile, language: 'ru' | 'kk' = 'ru') {
+export async function readExamAvailability(tx: Prisma.TransactionClient, profile: ExamProfile, language: 'ru' | 'kk' = 'ru', userId?: string) {
   const bank = await tx.question.findMany({ orderBy: { id: "asc" }, include: {
     topic: true, skills: { include: { skill: true } }, steps: { orderBy: { order: "asc" }, include: { options: { orderBy: { order: "asc" } }, skills: true } },
   } });
   const coverage = auditCoverage(profile, bank, undefined, language);
+  const byId = new Map(bank.map(q => [q.id, q]));
   // Require both whole-task and actual tested-step skill mappings for mastery evidence.
-  const candidates = shuffled(coverage.questions.filter((q) => {
-    const source = bank.find(b => b.id === q.id)!;
+  let candidates: ExamCandidate[] = coverage.questions.filter((q) => {
+    const source = byId.get(q.id)!;
     return q.eligible && (language !== 'kk' || hasContentTranslation(source.topic.name, source.topic.nameKk) &&
       source.skills.every(s => hasContentTranslation(s.skill.nameRu, s.skill.nameKk))) &&
       q.skillIds.every(s => source.steps[0].skills.some(link => link.skillId === s));
   })
-    .map((q) => ({ id: q.id, contentHash: q.contentHash, pointCode: q.pointCode!, band: q.band!, family: q.family! })));
+    .map((q) => ({ id: q.id, contentHash: q.contentHash, mathKey: q.mathKey, pointCode: q.pointCode!, band: q.band!, family: q.family! }));
+  // Keep the first stable representative (legacy IDs sort first); aliases are
+  // still recorded below so old history reserves the whole equivalence class.
+  const distinct = new Map<string,ExamCandidate>();
+  for(const q of candidates) if(!distinct.has(q.mathKey!)) distinct.set(q.mathKey!,q);
+  candidates=shuffled([...distinct.values()]);
+  if (userId) {
+    // No status/profile/language filter: every created paper reserves its tasks,
+    // including historical snapshots made before this mechanism existed.
+    const history = await tx.examSession.findMany({ where: { userId }, select: { questionIds: true, paper: true } });
+    const identities = new Map([...GENERATED_IDENTITIES.values()].map(q=>[q.id,
+      { mathKey:q.mathKey,stemKey:mathematicalStemKey(q.text) }]));
+    for(const [id,mathKey] of LEGACY_MATH_ALIASES) identities.set(id,{mathKey,stemKey:''});
+    for(const q of coverage.questions) identities.set(q.id,{mathKey:q.mathKey,stemKey:mathematicalStemKey(q.questionText,q.latex)});
+    candidates = unusedCandidates(candidates, history, identities);
+  }
   const readiness = assessExamReadiness(profile, candidates, 1, true);
   const shortages = readiness.points.filter((p) => p.missingInPlan).map((p) => ({
     pointCode: p.pointCode, title: profile.points.find((s) => s.code === p.pointCode)!.title, missing: p.missingInPlan,
@@ -51,7 +70,7 @@ export async function readExamAvailability(tx: Prisma.TransactionClient, profile
 }
 
 export async function prepareExam(tx: Prisma.TransactionClient, profile: ExamProfile, userId: string, language: 'ru' | 'kk' = 'ru') {
-  const { bank, candidates, readiness, shortages } = await readExamAvailability(tx, profile, language);
+  const { bank, candidates, readiness, shortages } = await readExamAvailability(tx, profile, language, userId);
   if (!readiness.canGenerate) return { paper: null, readiness, shortages };
   const paper: PaperQuestion[] = [];
   for (const id of shuffled(readiness.selectedQuestionIds)) {
@@ -146,7 +165,7 @@ async function snapshot(tx: Prisma.TransactionClient, exam: ExamSession, now: Da
 export async function startExam(userId: string, data: z.infer<typeof startExamSchema>) {
   const profile = getExamProfile(data.profileId);
   if (!profile || profile.version !== data.profileVersion) throw new PracticeError("Неизвестный профиль или версия", 404);
-  return prisma.$transaction(async (tx) => {
+  const outcome = await prisma.$transaction(async (tx) => {
     await lockAccount(tx, userId);
     const startHash = hash({ profileId: data.profileId, profileVersion: data.profileVersion,
       language: data.language, durationMinutes: data.durationMinutes });
@@ -155,10 +174,21 @@ export async function startExam(userId: string, data: z.infer<typeof startExamSc
       if (replay.startHash !== startHash) throw new PracticeError("Этот идентификатор запуска уже использован с другими настройками", 409);
       return snapshot(tx, replay, await examServerNow(tx));
     }
+    const [resumedRequest] = await tx.$queryRaw<{ examId: string; startHash: string }[]>`
+      SELECT "examId", "startHash" FROM "ExamStartRequest"
+      WHERE "userId"=${userId} AND "requestId"=${data.requestId}`;
+    if (resumedRequest) {
+      if (resumedRequest.startHash !== startHash) throw new PracticeError("Этот идентификатор запуска уже использован с другими настройками", 409);
+      return snapshot(tx, await ownedExam(tx,userId,resumedRequest.examId), await examServerNow(tx));
+    }
     const active = await tx.examSession.findFirst({ where: { userId, status: "active" } });
-    if (active) return snapshot(tx, active, await examServerNow(tx));
+    if (active) {
+      await tx.$executeRaw`INSERT INTO "ExamStartRequest" ("userId","requestId","examId","startHash")
+        VALUES (${userId},${data.requestId},${active.id},${startHash})`;
+      return snapshot(tx, active, await examServerNow(tx));
+    }
     const prepared = await prepareExam(tx, profile, userId, data.language);
-    if (!prepared.paper) throw new PracticeError(data.language === 'kk' ? `Толық аударылған тапсырмалар қоры 20 тапсырмалық A/B/C=5/10/5 нұсқасын құрастыруға жеткіліксіз. Жетіспейтін тапсырмалар: ${prepared.readiness.shortage}. Тармақтар: ${prepared.shortages.map(s => s.pointCode).join(', ')}.` : `Банк не позволяет собрать вариант 20 заданий, A/B/C=5/10/5, по одному на каждый пункт. Не хватает ${prepared.readiness.shortage}. Пункты: ${prepared.shortages.map((s) => `${s.pointCode} — ${s.title}`).join("; ")}. Дефицит сложности: ${prepared.readiness.difficulty.filter((d) => d.missingInPlan).map((d) => `${d.band}: ${d.missingInPlan}`).join(", ") || "нет"}.`, 422);
+    if (!prepared.paper) return { unavailable: true as const, readiness: prepared.readiness, shortages: prepared.shortages };
     const now = await examServerNow(tx);
     const exam = await tx.examSession.create({ data: { userId, startRequestId: data.requestId, startHash,
       profileId: profile.id, profileVersion: profile.version, language: data.language, profileSnapshot: json(profile),
@@ -166,6 +196,17 @@ export async function startExam(userId: string, data: z.infer<typeof startExamSc
       startedAt: now, deadlineAt: new Date(now.getTime() + data.durationMinutes * 60000), durationMinutes: data.durationMinutes } });
     return snapshot(tx, exam, now);
   }, options);
+  if ('unavailable' in outcome) {
+    // Commit the refusal outside the generation transaction: throwing an HTTP
+    // error must not roll back the internal shortage audit.
+    const details = JSON.stringify({ requestId:data.requestId, readiness:outcome.readiness, shortages:outcome.shortages });
+    await prisma.$executeRaw`INSERT INTO "ExamBankAudit" ("userId","profileId","language","details")
+      VALUES (${userId},${profile.id},${data.language},${details}::jsonb)`;
+    throw new PracticeError(data.language==='kk'
+      ? `Жаңа тапсырмалар жеткіліксіз. Қайталанған тапсырмалар берілмейді. Нәтижелерді ашуға болады. Тармақтар: ${outcome.shortages.map(s=>s.pointCode).join(', ')}.`
+      : `Доступные новые варианты исчерпаны: не хватает ${outcome.readiness.shortage} заданий для структуры 20, A/B/C=5/10/5. Повторы не подставляются. Результаты прежних попыток доступны. Пункты: ${outcome.shortages.map(s=>`${s.pointCode} — ${s.title}`).join('; ')}. Дефицит сложности: ${outcome.readiness.difficulty.filter(d=>d.missingInPlan).map(d=>`${d.band}: ${d.missingInPlan}`).join(', ')||'нет'}.`,422);
+  }
+  return outcome;
 }
 export async function readExam(userId: string, id: string) {
   return prisma.$transaction(async (tx) => {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { spawnSync } from "node:child_process";
+import { readExamAvailability } from "../lib/exam/session";
 import { TIPO_MATH } from "../lib/exam/profile";
 import type { PaperQuestion } from "../lib/exam/mode";
 import { parseChoice, choiceStepId } from "../lib/practiceChoice";
@@ -57,7 +58,7 @@ async function main() {
   assert.equal(new Date(state.deadlineAt).getTime() - new Date(state.startedAt).getTime(), 40 * 60000);
   const record = await prisma.examSession.findUniqueOrThrow({ where: { id } }), paper = record.paper as unknown as PaperQuestion[];
   assert.equal(new Set(paper.map((q) => q.contentHash)).size, 20);
-  assert.equal(paper.find((q) => q.id === practiceQuestion.id)!.previouslyExposed, true);
+  if (paper.some(q=>q.id===practiceQuestion.id)) assert.equal(paper.find(q=>q.id===practiceQuestion.id)!.previouslyExposed,true);
   // Owner scope for every read and mutation.
   for (const [method, body, route] of [["GET", undefined, path], ["PATCH", { requestId: randomUUID(), revision: 0, currentIndex: 0, answers: {}, flaggedQuestionIds: [] }, path], ["POST", {}, `${path}/finish`]] as const) assert.equal((await api(route, b.cookie, method, body)).status, 404);
   assert.equal((await api("/api/exams", a.cookie, "POST", { ...settings(), language: "kk" })).data.id, id, 'Changing the requested language resumes the existing paper');
@@ -164,12 +165,14 @@ async function main() {
   assert.ok(skipPlan.data.actions.some((action: any) => action.kind === "rule" && action.reasons.includes("exam_gap")));
   assert.equal(await prisma.skillObservation.count({ where: { examSessionId: unattended.data.id } }), 0, "Planning a skipped skill must not fabricate mastery evidence");
   console.log("PASS: old report protected during next exam, replayed start does not extend time, expired browser-independent finish, rejected late answer, zero-point all-skip result.");
-  // Deliberately invalidate a reviewed question: the real start endpoint must reject the paper.
-  changedQuestion = await prisma.question.findUniqueOrThrow({ where: { id: "exam_v1_ode_repeated_initial" }, select: { id: true, explanation: true } });
-  await prisma.question.update({ where: { id: changedQuestion.id }, data: { explanation: "Invalidated review fixture" } });
-  const unavailable = await api("/api/exams", c.cookie, "POST", settings());
-  assert.equal(unavailable.status, 422); assert.match(unavailable.data.error, /16/);
-  await prisma.question.update({ where: { id: changedQuestion.id }, data: { explanation: changedQuestion.explanation } }); changedQuestion = null;
+  // Exhaust point 16 through this test user's legacy history, preserving bank data.
+  const remaining = await prisma.$transaction(tx=>readExamAvailability(tx,TIPO_MATH,'ru',c.id));
+  await prisma.examSession.create({data:{userId:c.id,startRequestId:randomUUID(),startHash:'legacy',
+    profileId:TIPO_MATH.id,profileVersion:TIPO_MATH.version,profileSnapshot:JSON.parse(JSON.stringify(TIPO_MATH)),
+    language:'ru',status:'completed',startedAt:new Date(0),deadlineAt:new Date(1),durationMinutes:40,
+    paper:[],questionIds:remaining.candidates.filter(q=>q.pointCode==='16').map(q=>q.id),result:{points:0,maxPoints:20}}});
+  const unavailable = await api('/api/exams',c.cookie,'POST',settings());
+  assert.equal(unavailable.status,422); assert.match(unavailable.data.error,/16/);
   const sql = spawnSync("npx.cmd", ["prisma", "db", "execute", "--file", "prisma/updates/20261004_exam_mode.sql", "--schema", "prisma/schema.prisma"], { shell: true, encoding: "utf8", timeout: 60000 });
   assert.equal(sql.status, 0, sql.stderr); assert.deepEqual((await api(path, a.cookie)).data.result, result);
   console.log("PASS: live shortage refusal with missing point, additive migration replay preserves frozen papers and saved results.");
@@ -178,6 +181,7 @@ main().catch((e) => { console.error(e); process.exitCode = 1; }).finally(async (
   if (changedQuestion) await prisma.question.update({ where: { id: changedQuestion.id }, data: { explanation: changedQuestion.explanation } });
   for (const user of users) if (await prisma.user.findFirst({ where: { id: user.id, email: user.email } })) {
     await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`DELETE FROM "ExamBankAudit" WHERE "userId"=${user.id}`;
       await tx.mistake.deleteMany({ where: { userId: user.id } });
       await tx.userStepAnswer.deleteMany({ where: { attempt: { userId: user.id } } });
       await tx.userAttempt.deleteMany({ where: { userId: user.id } });

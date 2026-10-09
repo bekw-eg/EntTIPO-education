@@ -1,0 +1,487 @@
+{
+  "checkedAt": "2026-10-10",
+  "generatedCandidates": 240,
+  "passed": 216,
+  "excludedDuplicates": 24,
+  "generatorFamilies": 60,
+  "languages": [
+    {
+      "language": "ru",
+      "databaseQuestions": 724,
+      "direct": 404,
+      "supporting": 275,
+      "outside": 17,
+      "needsReview": 28,
+      "eligible": 249,
+      "uniqueEligible": 249,
+      "topicMismatches": 267,
+      "uncoveredPoints": 0,
+      "missingFormatPoints": 0,
+      "serverUniqueEligible": 249,
+      "families": 89,
+      "simulatedPapers": 6,
+      "topicUpperBound": 6,
+      "points": [
+        {
+          "code": "01",
+          "title": "Дробно-линейная функция",
+          "eligible": 14,
+          "families": 5,
+          "difficulty": {
+            "A": 0,
+            "B": 14,
+            "C": 0
+          }
+        },
+        {
+          "code": "02",
+          "title": "Уравнения с обратными тригонометрическими функциями",
+          "eligible": 14,
+          "families": 5,
+          "difficulty": {
+            "A": 13,
+            "B": 1,
+            "C": 0
+          }
+        },
+        {
+          "code": "03",
+          "title": "Простейшие тригонометрические уравнения",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 13,
+            "C": 0
+          }
+        },
+        {
+          "code": "04",
+          "title": "Тригонометрические неравенства",
+          "eligible": 14,
+          "families": 5,
+          "difficulty": {
+            "A": 0,
+            "B": 1,
+            "C": 13
+          }
+        },
+        {
+          "code": "05",
+          "title": "Многочлены нескольких переменных; стандартный вид, однородность и симметрия",
+          "eligible": 14,
+          "families": 5,
+          "difficulty": {
+            "A": 0,
+            "B": 14,
+            "C": 0
+          }
+        },
+        {
+          "code": "06",
+          "title": "Корень n-й степени и свойства",
+          "eligible": 9,
+          "families": 4,
+          "difficulty": {
+            "A": 9,
+            "B": 0,
+            "C": 0
+          }
+        },
+        {
+          "code": "07",
+          "title": "Преобразование иррациональных выражений",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 1,
+            "C": 12
+          }
+        },
+        {
+          "code": "08",
+          "title": "Показательная функция: свойства и график",
+          "eligible": 14,
+          "families": 5,
+          "difficulty": {
+            "A": 13,
+            "B": 1,
+            "C": 0
+          }
+        },
+        {
+          "code": "09",
+          "title": "Логарифмическая функция: свойства и график в зависимости от основания",
+          "eligible": 10,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 10,
+            "C": 0
+          }
+        },
+        {
+          "code": "10",
+          "title": "Определение, правила производной, степень с действительным показателем",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 13,
+            "C": 0
+          }
+        },
+        {
+          "code": "11",
+          "title": "Уравнение касательной к графику",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 13,
+            "C": 0
+          }
+        },
+        {
+          "code": "12",
+          "title": "Первообразная, неопределённый интеграл и его свойства",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 13,
+            "C": 0
+          }
+        },
+        {
+          "code": "13",
+          "title": "Интеграл степенной и показательной функций",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 13,
+            "C": 0
+          }
+        },
+        {
+          "code": "14",
+          "title": "Мнимые и комплексные числа, действия с ними",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 12,
+            "B": 1,
+            "C": 0
+          }
+        },
+        {
+          "code": "15",
+          "title": "Первый порядок: разделяющиеся переменные",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 0,
+            "C": 13
+          }
+        },
+        {
+          "code": "16",
+          "title": "Линейные однородные ДУ второго порядка с постоянными коэффициентами",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 0,
+            "C": 13
+          }
+        },
+        {
+          "code": "17",
+          "title": "Цилиндр: элементы, развёртка, боковая и полная поверхность",
+          "eligible": 11,
+          "families": 5,
+          "difficulty": {
+            "A": 9,
+            "B": 2,
+            "C": 0
+          }
+        },
+        {
+          "code": "18",
+          "title": "Конус: элементы, развёртка, боковая и полная поверхность",
+          "eligible": 12,
+          "families": 6,
+          "difficulty": {
+            "A": 0,
+            "B": 11,
+            "C": 1
+          }
+        },
+        {
+          "code": "19",
+          "title": "Объёмы призмы, пирамиды и усечённой пирамиды",
+          "eligible": 6,
+          "families": 3,
+          "difficulty": {
+            "A": 0,
+            "B": 5,
+            "C": 1
+          }
+        },
+        {
+          "code": "20",
+          "title": "Объёмы цилиндра, конуса и усечённого конуса",
+          "eligible": 14,
+          "families": 6,
+          "difficulty": {
+            "A": 1,
+            "B": 0,
+            "C": 13
+          }
+        }
+      ]
+    },
+    {
+      "language": "kk",
+      "databaseQuestions": 724,
+      "direct": 404,
+      "supporting": 275,
+      "outside": 17,
+      "needsReview": 28,
+      "eligible": 249,
+      "uniqueEligible": 249,
+      "topicMismatches": 267,
+      "uncoveredPoints": 0,
+      "missingFormatPoints": 0,
+      "serverUniqueEligible": 249,
+      "families": 89,
+      "simulatedPapers": 6,
+      "topicUpperBound": 6,
+      "points": [
+        {
+          "code": "01",
+          "title": "Дробно-линейная функция",
+          "eligible": 14,
+          "families": 5,
+          "difficulty": {
+            "A": 0,
+            "B": 14,
+            "C": 0
+          }
+        },
+        {
+          "code": "02",
+          "title": "Уравнения с обратными тригонометрическими функциями",
+          "eligible": 14,
+          "families": 5,
+          "difficulty": {
+            "A": 13,
+            "B": 1,
+            "C": 0
+          }
+        },
+        {
+          "code": "03",
+          "title": "Простейшие тригонометрические уравнения",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 13,
+            "C": 0
+          }
+        },
+        {
+          "code": "04",
+          "title": "Тригонометрические неравенства",
+          "eligible": 14,
+          "families": 5,
+          "difficulty": {
+            "A": 0,
+            "B": 1,
+            "C": 13
+          }
+        },
+        {
+          "code": "05",
+          "title": "Многочлены нескольких переменных; стандартный вид, однородность и симметрия",
+          "eligible": 14,
+          "families": 5,
+          "difficulty": {
+            "A": 0,
+            "B": 14,
+            "C": 0
+          }
+        },
+        {
+          "code": "06",
+          "title": "Корень n-й степени и свойства",
+          "eligible": 9,
+          "families": 4,
+          "difficulty": {
+            "A": 9,
+            "B": 0,
+            "C": 0
+          }
+        },
+        {
+          "code": "07",
+          "title": "Преобразование иррациональных выражений",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 1,
+            "C": 12
+          }
+        },
+        {
+          "code": "08",
+          "title": "Показательная функция: свойства и график",
+          "eligible": 14,
+          "families": 5,
+          "difficulty": {
+            "A": 13,
+            "B": 1,
+            "C": 0
+          }
+        },
+        {
+          "code": "09",
+          "title": "Логарифмическая функция: свойства и график в зависимости от основания",
+          "eligible": 10,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 10,
+            "C": 0
+          }
+        },
+        {
+          "code": "10",
+          "title": "Определение, правила производной, степень с действительным показателем",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 13,
+            "C": 0
+          }
+        },
+        {
+          "code": "11",
+          "title": "Уравнение касательной к графику",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 13,
+            "C": 0
+          }
+        },
+        {
+          "code": "12",
+          "title": "Первообразная, неопределённый интеграл и его свойства",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 13,
+            "C": 0
+          }
+        },
+        {
+          "code": "13",
+          "title": "Интеграл степенной и показательной функций",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 13,
+            "C": 0
+          }
+        },
+        {
+          "code": "14",
+          "title": "Мнимые и комплексные числа, действия с ними",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 12,
+            "B": 1,
+            "C": 0
+          }
+        },
+        {
+          "code": "15",
+          "title": "Первый порядок: разделяющиеся переменные",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 0,
+            "C": 13
+          }
+        },
+        {
+          "code": "16",
+          "title": "Линейные однородные ДУ второго порядка с постоянными коэффициентами",
+          "eligible": 13,
+          "families": 4,
+          "difficulty": {
+            "A": 0,
+            "B": 0,
+            "C": 13
+          }
+        },
+        {
+          "code": "17",
+          "title": "Цилиндр: элементы, развёртка, боковая и полная поверхность",
+          "eligible": 11,
+          "families": 5,
+          "difficulty": {
+            "A": 9,
+            "B": 2,
+            "C": 0
+          }
+        },
+        {
+          "code": "18",
+          "title": "Конус: элементы, развёртка, боковая и полная поверхность",
+          "eligible": 12,
+          "families": 6,
+          "difficulty": {
+            "A": 0,
+            "B": 11,
+            "C": 1
+          }
+        },
+        {
+          "code": "19",
+          "title": "Объёмы призмы, пирамиды и усечённой пирамиды",
+          "eligible": 6,
+          "families": 3,
+          "difficulty": {
+            "A": 0,
+            "B": 5,
+            "C": 1
+          }
+        },
+        {
+          "code": "20",
+          "title": "Объёмы цилиндра, конуса и усечённого конуса",
+          "eligible": 14,
+          "families": 6,
+          "difficulty": {
+            "A": 1,
+            "B": 0,
+            "C": 13
+          }
+        }
+      ]
+    }
+  ]
+}

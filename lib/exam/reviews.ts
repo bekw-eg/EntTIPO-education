@@ -2,8 +2,11 @@ import legacy from "./legacy-reviews.json";
 import { EXAM_EXERCISES, exerciseReview } from "./bank";
 import { EXAM_PROFILES } from "./profile";
 import type { ContentReview } from "./types";
+import { SUPPORTING_EXERCISES } from './generated-bank';
 
-export const CONTENT_REVIEWS: ContentReview[] = [...legacy as ContentReview[], ...EXAM_EXERCISES.map(exerciseReview)];
+export const CONTENT_REVIEWS: ContentReview[] = [...legacy as ContentReview[], ...EXAM_EXERCISES.map(exerciseReview),
+  ...SUPPORTING_EXERCISES.map(q=>({ ...exerciseReview(q), quality:'supporting' as const,
+    rationale:'Ответы проверены SymPy, но вычисление отдельного значения функции недостаточно проверяет свойства и график. В экзамен не допускается.' }))];
 export function validateReviewReferences(reviews = CONTENT_REVIEWS) {
   const hashes = new Set<string>(), ids = new Set<string>();
   for (const r of reviews) {

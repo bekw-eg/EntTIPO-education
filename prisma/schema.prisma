@@ -536,9 +536,30 @@ model ExamSession {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   observations SkillObservation[]
   mistakes Mistake[]
+  startRequests ExamStartRequest[]
   @@unique([userId, startRequestId])
   @@index([userId, status])
   @@index([roadNodeId])
+}
+
+model ExamStartRequest {
+  userId String
+  requestId String
+  examId String
+  startHash String
+  exam ExamSession @relation(fields: [examId], references: [id], onDelete: Cascade)
+  @@id([userId, requestId])
+  @@index([examId])
+}
+
+model ExamBankAudit {
+  id BigInt @id @default(autoincrement())
+  userId String
+  profileId String
+  language String
+  details Json
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  @@index([userId, createdAt])
 }
 
 model DailyGoal {

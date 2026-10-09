@@ -7,12 +7,13 @@ import { examError } from "@/lib/exam/http";
 
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
-  if (!getCurrentUserId(request)) return unauthorizedResponse(request);
+  const userId = getCurrentUserId(request);
+  if (!userId) return unauthorizedResponse(request);
   try {
     const languages = await prisma.$transaction(async tx => {
       const summaries = [];
       for (const language of ["ru", "kk"] as const) {
-        const { readiness, shortages } = await readExamAvailability(tx, TIPO_MATH, language);
+        const { readiness, shortages } = await readExamAvailability(tx, TIPO_MATH, language, userId);
         summaries.push({ language, canGenerate: readiness.canGenerate,
           missingPointCodes: shortages.map(point => point.pointCode) });
       }

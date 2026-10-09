@@ -13,6 +13,7 @@ export const finishExamSchema = z.object({}).strict();
 
 export interface PaperQuestion {
   id: string; contentHash: string; pointCode: string; band: DifficultyBand; family: string;
+  mathKey?: string;
   topicId: string; topicName: string; skillIds: string[]; skillNames: string[];
   title: string; questionText: string; latex: string | null; options: string[];
   correctIndex: number; explanation: string; difficulty: number; previouslyExposed: boolean;
