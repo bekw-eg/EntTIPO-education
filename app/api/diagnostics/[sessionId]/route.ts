@@ -1,3 +1,4 @@
+import { retiredServiceResponse } from "@/lib/retiredService";
 import { localizedJson } from "@/lib/i18n/http";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
@@ -14,7 +15,7 @@ function failure(error: unknown) {
   console.error("Diagnostic state failed", error);
   return NextResponse.json({ error: "Could not load diagnostic" }, { status: 500 });
 }
-export async function GET(request: Request, context: Context) {
+async function archivedGET(request: Request, context: Context) {
   const userId = getCurrentUserId(request);
   if (!userId) return unauthorizedResponse(request);
   try {
@@ -25,7 +26,7 @@ export async function GET(request: Request, context: Context) {
     }, { maxWait: 10000, timeout: 10000 }));
   } catch (error) { return failure(error); }
 }
-export async function PATCH(request: Request, context: Context) {
+async function archivedPATCH(request: Request, context: Context) {
   const userId = getCurrentUserId(request);
   if (!userId) return unauthorizedResponse(request);
   try {
@@ -46,3 +47,6 @@ export async function PATCH(request: Request, context: Context) {
     return localizedJson(request, result);
   } catch (error) { return failure(error); }
 }
+
+export async function GET() { return retiredServiceResponse(); }
+export async function PATCH() { return retiredServiceResponse(); }

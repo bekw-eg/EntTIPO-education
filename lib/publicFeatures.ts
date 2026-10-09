@@ -1,5 +1,5 @@
 /** Retired public surfaces. Data and internal learning code remain available. */
-export const retiredPages = ["/learning-road"];
+export const retiredPages = ["/learning-road", "/diagnostics"];
 
 export function isRetiredPage(href: string) {
   const path = href.split(/[?#]/)[0];

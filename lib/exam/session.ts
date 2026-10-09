@@ -10,7 +10,7 @@ import { getExamProfile, type ExamProfile } from "./profile";
 import { gradeExamQuestion, publicExamQuestion, remainingSeconds, saveExamSchema, startExamSchema, type PaperQuestion } from "./mode";
 import { hasContentTranslation } from '../i18n/content';
 import { completeProgramAssessment } from "../learning-road/program-data";
-import { assertNoActiveDiagnostic } from "./guard";
+
 
 const json = (v: unknown) => JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
 const hash = (v: unknown) => createHash("sha256").update(JSON.stringify(v)).digest("hex");
@@ -125,7 +125,6 @@ async function finalizeExam(tx: Prisma.TransactionClient, exam: ExamSession, now
     completedAt, completionReason: reason, revision: { increment: 1 } } });
 }
 async function snapshot(tx: Prisma.TransactionClient, exam: ExamSession, now: Date) {
-  await assertNoActiveDiagnostic(tx, exam.userId);
   if (exam.status === "active" && now >= exam.deadlineAt) exam = await finalizeExam(tx, exam, now, "timeout");
   // Opening an older report during a new exam must not disclose a recycled answer key.
   if (exam.status === "completed" && await tx.examSession.count({ where: { userId: exam.userId, status: "active" } })) {
@@ -144,7 +143,6 @@ export async function startExam(userId: string, data: z.infer<typeof startExamSc
   if (!profile || profile.version !== data.profileVersion) throw new PracticeError("Неизвестный профиль или версия", 404);
   return prisma.$transaction(async (tx) => {
     await lockAccount(tx, userId);
-    await assertNoActiveDiagnostic(tx, userId);
     const startHash = hash({ profileId: data.profileId, profileVersion: data.profileVersion,
       language: data.language, durationMinutes: data.durationMinutes });
     const replay = await tx.examSession.findUnique({ where: { userId_startRequestId: { userId, startRequestId: data.requestId } } });

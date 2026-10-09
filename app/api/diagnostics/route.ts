@@ -1,3 +1,4 @@
+import { retiredServiceResponse } from "@/lib/retiredService";
 import { localizedJson, requestLocale } from "@/lib/i18n/http";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
@@ -6,7 +7,7 @@ import { PracticeError } from "@/lib/practiceStorage";
 import { z, ZodError } from "zod";
 
 export const dynamic = "force-dynamic";
-export async function POST(request: Request) {
+async function archivedPOST(request: Request) {
   const userId = getCurrentUserId(request);
   if (!userId) return unauthorizedResponse(request);
   try {
@@ -21,10 +22,13 @@ export async function POST(request: Request) {
     return localizedJson(request, { error: "Could not start diagnostic" }, { status: 500 });
   }
 }
-export async function GET(request: Request) {
+async function archivedGET(request: Request) {
   const userId = getCurrentUserId(request);
   if (!userId) return unauthorizedResponse(request);
   const sessions = await prisma.diagnosticSession.findMany({ where: { userId }, orderBy: { startedAt: "desc" },
     select: { id: true, status: true, currentIndex: true, startedAt: true, completedAt: true } });
   return localizedJson(request, sessions);
 }
+
+export async function POST() { return retiredServiceResponse(); }
+export async function GET() { return retiredServiceResponse(); }

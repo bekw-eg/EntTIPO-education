@@ -41,8 +41,12 @@ async function main() {
   const beforeObservations = await prisma.skillObservation.count({ where: { userId: a.id } });
   const counters = { attempts: await prisma.userAttempt.count({ where: { userId: a.id } }),
     topic: await prisma.userTopicProgress.findMany({ where: { userId: a.id } }), goals: await prisma.dailyGoal.findMany({ where: { userId: a.id } }) };
+  // A previously unfinished diagnostic must not block the standalone exam.
+  const retiredDiagnostic = await prisma.diagnosticSession.create({ data: { userId: a.id, questionIds: [] } });
   const starts = await Promise.all(Array.from({ length: 4 }, () => api("/api/exams", a.cookie, "POST", settings())));
   starts.forEach((r) => { assert.equal(r.status, 200, JSON.stringify(r.data)); assert.equal(r.data.id, starts[0].data.id); });
+  assert.equal((await prisma.diagnosticSession.findUniqueOrThrow({ where: { id: retiredDiagnostic.id } })).status, "active");
+  await prisma.diagnosticSession.delete({ where: { id: retiredDiagnostic.id } });
   let state = starts[0].data; const id = state.id, path = `/api/exams/${id}`;
   assert.match(starts[0].response.headers.get("cache-control") ?? "", /no-store/);
   assert.equal(await prisma.examSession.count({ where: { userId: a.id } }), 1);

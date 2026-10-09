@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/layout/PublicLink";
 import { ArrowRight, Download, ClipboardCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Header } from "@/components/layout/Header";
