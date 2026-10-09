@@ -1,4 +1,4 @@
-# Dependencies
+    # Dependencies
 node_modules/
 .pnp
 .pnp.js
@@ -54,3 +54,4 @@ prisma/migrations/
 # IDE
 .vscode/
 .idea/
+AGENTS.md/
