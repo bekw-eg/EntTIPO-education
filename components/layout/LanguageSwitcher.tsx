@@ -2,7 +2,7 @@
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { Locale } from "@/lib/i18n/types";
 export const languages: { code: Locale; label: string; short: string }[] = [
-  { code: "kk", label: "Қазақша", short: "ҚАЗ" }, { code: "ru", label: "Русский", short: "РУС" }, { code: "en", label: "English", short: "ENG" },
+  { code: "kk", label: "Қазақша", short: "ҚАЗ" }, { code: "ru", label: "Русский", short: "РУС" },
 ];
 export function LanguageSwitcher({ variant = "buttons", className = "" }: { variant?: "buttons" | "compact"; className?: string }) {
   const { locale, setLocale } = useLanguage();

@@ -1,24 +1,14 @@
 "use client";
-import { LayoutDashboard, BookOpen, Library, RotateCcw, BarChart3, GraduationCap, Compass, ClipboardCheck, ListChecks } from "lucide-react";
+import { GraduationCap, History, User } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
-import { roadText } from "@/lib/i18n/learning-road";
-import { isRetiredPage } from "@/lib/publicFeatures";
-
 export function useNavigation() {
-  const { t, locale } = useLanguage();
+  const { locale } = useLanguage(), kk = locale === "kk";
   return [
-    { name: t.nav.home, href: "/", icon: LayoutDashboard },
-    { name: roadText[locale].title, href: "/learning-road", icon: Compass },
-    { name: t.nav.practice, href: "/practice", icon: BookOpen },
-    { name: locale === "kk" ? "Емтихан" : locale === "en" ? "Exam" : "Экзамен", href: "/exam", icon: GraduationCap },
-    { name: locale === "en" ? "Diagnostics" : locale === "kk" ? "Диагностика" : "Диагностика навыков", href: "/diagnostics", icon: ClipboardCheck },
-    { name: t.nav.topics, href: "/topics", icon: Library },
-    { name: t.nav.mistakes, href: "/mistakes", icon: RotateCcw },
-    { name: t.nav.statistics, href: "/statistics", icon: BarChart3 },
-    { name: locale === "en" ? "Geometry" : "Геометрия", href: "/geometry", icon: Compass },
-    { name: locale === "kk" ? "Емтиханды қамту" : locale === "en" ? "Exam coverage" : "Покрытие экзамена", href: "/exam-coverage", icon: ListChecks },
-  ].filter(item => !isRetiredPage(item.href));
+    { name: kk ? "Сынақ" : "Пробник", href: "/", icon: GraduationCap },
+    { name: kk ? "Менің нәтижелерім" : "Мои результаты", href: "/results", icon: History },
+    { name: "Аккаунт", href: "/account", icon: User },
+  ];
 }
 export function isCurrentRoute(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");
+  return href === "/" ? pathname === "/" || pathname === "/exam" || pathname.startsWith("/exam/") : pathname === href;
 }

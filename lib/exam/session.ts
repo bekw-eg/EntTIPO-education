@@ -209,9 +209,10 @@ export async function listExams(userId: string) {
     await lockAccount(tx, userId);
     const now = await examServerNow(tx), active = await tx.examSession.findFirst({ where: { userId, status: "active" } });
     if (active && now >= active.deadlineAt) await finalizeExam(tx, active, now, "timeout");
-    const exams = await tx.examSession.findMany({ where: { userId }, orderBy: { startedAt: "desc" }, take: 30 });
+    const exams = await tx.examSession.findMany({ where: { userId }, orderBy: { startedAt: "desc" } });
     return exams.map((exam) => ({ id: exam.id, status: exam.status, profileId: exam.profileId, profileVersion: exam.profileVersion,
       language: exam.language, startedAt: exam.startedAt, completedAt: exam.completedAt,
+      maxPoints: exam.status === "completed" ? Number((exam.result as Record<string, Prisma.JsonValue>).maxPoints) : exam.questionIds.length,
       points: exam.status === "completed" ? (exam.result as Record<string, Prisma.JsonValue>).points : null }));
   }, options);
 }

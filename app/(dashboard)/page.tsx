@@ -1,7 +1,7 @@
 import { requirePageUserId } from "@/lib/user";
-import { DashboardView } from "@/components/dashboard/DashboardView";
+import { ExamStart } from "@/components/exam/ExamStart";
 export const dynamic = "force-dynamic";
-export default async function DashboardPage() {
+export default async function HomePage() {
   await requirePageUserId();
-  return <DashboardView />;
+  return <ExamStart />;
 }

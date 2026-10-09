@@ -23,7 +23,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     // Read persisted locale from localStorage
     let saved: Locale | null = null;
     try { saved = localStorage.getItem("ent_tipo_locale") as Locale | null; } catch { /* Use the default when browser storage is disabled. */ }
-    if (saved && (saved === "ru" || saved === "kk" || saved === "en")) {
+    if (saved === "en") saved = "ru";
+    if (saved && (saved === "ru" || saved === "kk")) {
       setLocaleState(saved);
       document.documentElement.lang = saved;
       document.cookie = `ent_tipo_locale=${saved}; Path=/; SameSite=Lax; Max-Age=31536000`;
@@ -31,6 +32,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setLocale = (newLocale: Locale) => {
+    if (newLocale === "en") newLocale = "ru";
     setLocaleState(newLocale);
     try { localStorage.setItem("ent_tipo_locale", newLocale); } catch { /* Locale still changes when storage is disabled. */ }
     document.documentElement.lang = newLocale;

@@ -128,7 +128,7 @@ export function UserNav() {
                 {currentUser?.isDemo ? uiText("Демонстрационный профиль", locale) : currentUser?.name || uiText("Гость", locale)}
               </p>
               <p className="text-xs text-muted-foreground leading-none truncate mt-0.5">
-                {currentUser?.isDemo ? uiText("Общие демонстрационные данные", locale) : currentUser?.email || uiText("Войдите, чтобы сохранять прогресс", locale)}
+                {currentUser?.isDemo ? uiText("Общие демонстрационные данные", locale) : currentUser?.email || uiText("Войдите, чтобы сохранять результаты", locale)}
               </p>
             </div>
           </DropdownMenuLabel>

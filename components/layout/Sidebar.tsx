@@ -26,7 +26,7 @@ export function Sidebar() {
           <item.icon aria-hidden="true" className="h-4 w-4 shrink-0" /><span>{item.name}</span>
         </Link>)}
       </nav>
-      <div className="border-t px-6 py-5"><p className="truncate text-sm font-medium">{user?.name || t.common.user}</p><p className="mt-1 text-xs text-muted-foreground">{t.common.ent2025}</p></div>
+      <div className="border-t px-6 py-5"><p className="truncate text-sm font-medium">{user?.name || t.common.user}</p><p className="mt-1 text-xs text-muted-foreground">{locale === "kk" ? "ТжКБ ҰБТ · B057" : "ЕНТ ТиПО · B057"}</p></div>
     </aside>
   </>;
 }

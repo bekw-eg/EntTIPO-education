@@ -12,11 +12,11 @@ const inter = Inter({ subsets: ["latin", "cyrillic", "cyrillic-ext"] });
 export const metadata: Metadata = {
   applicationName: "Synaq",
   title: {
-    default: "Synaq — Подготовка к ЕНТ | ҰБТ-ға дайындық",
+    default: "Synaq — Пробник по математике ЕНТ ТиПО · B057",
     template: "%s | Synaq",
   },
   description:
-    "Персональный тренажёр математики для подготовки к ЕНТ ТиПО. ТжКБ ҰБТ математикасына арналған дербес жаттықтырушы.",
+    "Пробный тест по математике ЕНТ ТиПО: B057, сокращённый срок обучения. Баллы, разбор заданий и сохранённые результаты.",
   keywords: ["ЕНТ", "ҰБТ", "математика", "подготовка", "ТиПО", "ТжКБ", "қазақстан"],
   icons: { icon: "/icon.svg?v=synaq", apple: "/icon-192.png?v=synaq" },
 };

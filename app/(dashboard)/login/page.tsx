@@ -90,7 +90,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Header title={uiText("Вход и профиль", locale)} subtitle={uiText("Персональный кабинет ученика ЕНТ ТиПО", locale)} />
+      <Header title={uiText("Вход и профиль", locale)} subtitle={uiText("Математика ЕНТ ТиПО · B057 · сокращённый срок обучения", locale)} />
 
       <div className="page-content flex flex-1 items-start justify-center">
         <Card className="w-full max-w-md">
@@ -194,7 +194,7 @@ export default function LoginPage() {
                 <Button variant="outline" className="w-full" disabled={loading} onClick={handleDemoLogin}>
                   {uiText(" Попробовать демоверсию ", locale)}</Button>
                 <p className="text-xs text-muted-foreground text-center">
-                  {uiText(" В демоверсии используются общие учебные данные. Для личного прогресса создайте аккаунт. ", locale)}</p>
+                  {uiText(" В демоверсии используются общие учебные данные. Для сохранения личных результатов создайте аккаунт. ", locale)}</p>
               </div>
             )}
           </CardContent>

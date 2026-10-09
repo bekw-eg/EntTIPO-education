@@ -119,7 +119,7 @@ async function main() {
   assert.equal((await api("/api/user", `${a.cookie}broken`)).status, 401);
   assert.equal((await api("/api/sessions", undefined, "POST", {})).status, 401);
   assert.equal((await api("/api/attempts", undefined, "POST", {})).status, 401);
-  assert.equal((await api("/api/ai/tutor", undefined, "POST", { action: "chat" })).status, 401);
+  assert.equal((await api("/api/ai/tutor", undefined, "POST", { action: "chat" })).status, 410);
   assert.equal((await api(`/api/mistakes/${mistakeId}`, undefined, "PATCH", { isReviewed: true })).status, 401);
   assert.equal((await api(`/api/sessions/${sessionA}`, b.cookie)).status, 404);
   assert.equal((await api(`/api/sessions/${sessionA}`, b.cookie, "PATCH", {})).status, 404);
@@ -127,10 +127,10 @@ async function main() {
   assert.equal((await api(`/api/sessions/${sessionA}/next-question?questionIds=${question.id}&index=0`, b.cookie)).status, 404);
   assert.equal((await answer(b.cookie, sessionA, "2")).status, 404);
   assert.equal((await api(`/api/mistakes/${mistakeId}`, b.cookie, "PATCH", { isReviewed: true })).status, 404);
-  // Ownership rejection happens before an external AI request can be made.
+  // The retired AI service refuses every request before an external provider call.
   assert.equal((await api("/api/ai/tutor", b.cookie, "POST", {
     action: "analyze_error", attemptId: attemptA.data.attemptId, questionId: question.id,
-  })).status, 404);
+  })).status, 410);
   assert.equal((await prisma.practiceSession.findUniqueOrThrow({ where: { id: sessionA } })).status, "active");
   assert.equal((await prisma.mistake.findUniqueOrThrow({ where: { id: mistakeId } })).isReviewed, false);
   assert.equal(await prisma.userAttempt.count({ where: { userId: { in: [a.id, b.id] } } }), 2);
