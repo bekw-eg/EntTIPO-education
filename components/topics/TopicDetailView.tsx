@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/layout/PublicLink";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

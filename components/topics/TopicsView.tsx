@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+import Link from "@/components/layout/PublicLink";
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
