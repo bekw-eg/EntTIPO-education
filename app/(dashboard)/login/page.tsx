@@ -100,7 +100,7 @@ export default function LoginPage() {
               {activeTab === "login" ? uiText("Авторизация", locale) : uiText("Новый профиль", locale)}
             </CardTitle>
             <CardDescription className="text-xs">
-              {uiText(" Сохраняйте серию тренировок (Streak), статистику и персональный разбор ошибок. ", locale)}</CardDescription>
+              {uiText(" Проходите пробный тест по математике и сохраняйте результаты и разбор. ", locale)}</CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">

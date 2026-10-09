@@ -180,7 +180,7 @@ export function UserNav() {
               {authTab === "login" ? uiText("Вход в Synaq", locale) : uiText("Регистрация ученика", locale)}
             </DialogTitle>
             <DialogDescription className="text-xs">
-              {uiText(" Личный прогресс, история ошибок и персональный рейтинг ЕНТ. ", locale)}</DialogDescription>
+              {uiText(" Пробный тест по математике, результаты и разбор заданий. ", locale)}</DialogDescription>
           </DialogHeader>
 
           <Tabs

@@ -132,13 +132,8 @@ export default function ExamPage({ params }: { params: Promise<{ examId: string 
     {!snapshot ? <PageLoading /> : result ? <>
 
       <p>{result.completionReason === "timeout" ? uiText("Время истекло.", locale) : uiText("Экзамен завершён.", locale)} {uiText(" Пропущено: ", locale)}{result.skipped} · {snapshot.roadNodeId ? prep.policy : `${uiText("Профиль ", locale)}${snapshot.profile.id}@${snapshot.profile.version}`} · {snapshot.language === 'kk' ? 'Қазақ тілі' : uiText('Русский', locale)}.</p>
-      <p className="text-sm text-muted-foreground">{result.masteryPolicy}</p>
-      {result.previouslyExposedCount > 0 && <p className="text-sm">{uiText("Ранее встречались ", locale)}{result.previouslyExposedCount} {uiText(" заданий. Они учитываются в баллах блока, но не дают независимого подтверждения навыков.", locale)}</p>}
       <section className="rounded-lg border p-4"><h2 className="mb-3 text-xl font-semibold">{uiText("Результат по темам", locale)}</h2>
         <ul className="space-y-2">{result.topics.map((t) => <li key={t.topicId} className="flex justify-between gap-4"><span>{t.name}</span><strong>{t.points}/{t.maxPoints}</strong></li>)}</ul>
-      </section>
-      <section className="rounded-lg border p-4"><h2 className="mb-3 text-xl font-semibold">{uiText("Навыки и Mastery Score", locale)}</h2><p className="mb-3 text-sm text-muted-foreground">{uiText("Для вывода об освоении нужно несколько разных заданий. Пропуск показывает нехватку ответа, а не доказанную причину ошибки.", locale)}</p>
-        <ul className="space-y-2">{result.skills.map((s) => <li key={s.skillId}>{s.name}: <strong>{s.points}/{s.maxPoints}</strong> · {s.state === "insufficient" ? uiText("Недостаточно данных об освоении", locale) : `Mastery Score: ${s.masteryScore}`}</li>)}</ul>
       </section>
       <section className="space-y-3 rounded-lg border p-4"><h2 className="text-xl font-semibold">{uiText("Пробелы и дальнейшие действия", locale)}</h2>
         {result.gaps.length ? result.gaps.map((g) => <div key={g.questionId} className="border-b pb-3"><p className="font-medium">{g.title} · {g.reason === "skipped" ? uiText("Нет ответа", locale) : uiText("Неверный ответ", locale)}</p><p className="my-2 text-sm">{g.action}</p><div className="flex flex-wrap gap-4 text-primary underline"><Link href={g.ruleHref}>{uiText("Повторить правило", locale)}</Link><Link href={g.practiceHref}>{uiText("Тренировка темы", locale)}</Link></div></div>) : <p>{uiText("В этом блоке ошибок нет. Продолжайте подготовку на новых заданиях.", locale)}</p>}
