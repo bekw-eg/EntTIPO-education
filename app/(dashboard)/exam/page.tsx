@@ -22,13 +22,13 @@ export default function ExamStartPage() {
   useEffect(() => {
     if (!user) return;
     let alive = true;
-    void Promise.all([fetch("/api/exams", { cache: "no-store" }), fetch(`/api/exam-coverage?profile=${TIPO_MATH.id}&language=${locale === 'kk' ? 'kk' : 'ru'}`, { cache: "no-store" })])
+    void Promise.all([fetch("/api/exams", { cache: "no-store" }), fetch("/api/exams/availability", { cache: "no-store" })])
       .then(async ([sessions, audit]) => {
         if (!sessions.ok || !audit.ok) throw new Error(uiText("Не удалось загрузить экзамены и проверить банк.", locale));
         const saved = await sessions.json(), report = await audit.json();
-        if (alive) { setHistory(saved); setAvailability({ canGenerate: report.readiness.balancedVariant.canGenerate,
-          missing: report.readiness.balancedVariant.points.filter((p: { missingInPlan: number }) => p.missingInPlan)
-            .map((p: { pointCode: string }) => uiText(`Пункт ${p.pointCode}: ${report.points.find((s: { code: string }) => s.code === p.pointCode).title}`, locale)) }); }
+        const language = report.languages.find((item: { language: string }) => item.language === (locale === 'kk' ? 'kk' : 'ru'));
+        if (alive) { setHistory(saved); setAvailability({ canGenerate: !!language?.canGenerate,
+          missing: language?.missingPointCodes.map((code: string) => code) ?? [] }); }
       }).catch((e) => { if (alive) setError(e.message); }).finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [user, locale]);
@@ -66,10 +66,8 @@ export default function ExamStartPage() {
         <option value={40}>{uiText("40 минут", locale)}</option><option value={30}>{uiText("30 минут", locale)}</option><option value={120}>{uiText("120 минут", locale)}</option>
       </select></label>
       <p className="text-sm text-muted-foreground">{uiText("Официального отдельного лимита математики не найдено. 120 минут НЦТ относятся ко всему ЕНТ из двух дисциплин, 60 заданий. Выбранное здесь время — учебная настройка.", locale)}</p>
-      <details className="text-sm text-muted-foreground"><summary className="cursor-pointer font-medium">{uiText("Спецификация, источники и покрытие банка", locale)}</summary><div className="space-y-3 pt-3"><p className="text-sm">{uiText("По одному заданию на каждый из 20 пунктов — политика платформы из этапа 6.1. Официальные тематические квоты не опубликованы. Задания авторские, уровни сложности ещё не калиброваны на результатах учеников.", locale)}</p>
-      <p className="text-sm">{uiText("Можно переходить между заданиями, менять ответы и отмечать «вернуться позже» до завершения. Время идёт по серверу, включая выход и потерю связи. Подсказки, AI и проверка ответа недоступны. Сохраняйте ответы при наличии сети; после срока новые ответы не принимаются.", locale)}</p>
-      <Link href="/exam-coverage" className="inline-block text-primary underline">{uiText("Спецификация, источники и покрытие банка", locale)}</Link></div></details>
-      {availability && !availability.canGenerate && !active && <div role="alert" className="rounded border border-amber-500 p-3">{uiText("Банк не позволяет собрать корректный полный вариант с квотами 5/10/5. ", locale)}{availability.missing.join("; ")} <Link href="/exam-coverage" className="underline">{uiText("Подробности нехватки", locale)}</Link></div>}
+
+      {availability && !availability.canGenerate && !active && <div role="alert" className="rounded border border-amber-500 p-3">{uiText("Банк не позволяет собрать корректный полный вариант с квотами 5/10/5. ", locale)}{availability.missing.join("; ")}</div>}
       {active ? <Button asChild><Link href={`/exam/${active.id}`}>{uiText("Продолжить сохранённый экзамен", locale)}</Link></Button> :
         <Button disabled={busy || loading || !availability?.canGenerate} onClick={start}>{busy ? uiText("Создаём вариант…", locale) : uiText("Начать экзамен", locale)}</Button>}
       {error && <p role="alert" className="text-red-600">{errorText(error, locale)}</p>}

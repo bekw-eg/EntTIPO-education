@@ -30,7 +30,7 @@ async function ownedExam(tx: Prisma.TransactionClient, userId: string, id: strin
   if (!exam) throw new PracticeError("Экзамен не найден", 404);
   return exam;
 }
-export async function prepareExam(tx: Prisma.TransactionClient, profile: ExamProfile, userId: string, language: 'ru' | 'kk' = 'ru') {
+export async function readExamAvailability(tx: Prisma.TransactionClient, profile: ExamProfile, language: 'ru' | 'kk' = 'ru') {
   const bank = await tx.question.findMany({ orderBy: { id: "asc" }, include: {
     topic: true, skills: { include: { skill: true } }, steps: { orderBy: { order: "asc" }, include: { options: { orderBy: { order: "asc" } }, skills: true } },
   } });
@@ -47,6 +47,11 @@ export async function prepareExam(tx: Prisma.TransactionClient, profile: ExamPro
   const shortages = readiness.points.filter((p) => p.missingInPlan).map((p) => ({
     pointCode: p.pointCode, title: profile.points.find((s) => s.code === p.pointCode)!.title, missing: p.missingInPlan,
   }));
+  return { bank, candidates, readiness, shortages };
+}
+
+export async function prepareExam(tx: Prisma.TransactionClient, profile: ExamProfile, userId: string, language: 'ru' | 'kk' = 'ru') {
+  const { bank, candidates, readiness, shortages } = await readExamAvailability(tx, profile, language);
   if (!readiness.canGenerate) return { paper: null, readiness, shortages };
   const paper: PaperQuestion[] = [];
   for (const id of shuffled(readiness.selectedQuestionIds)) {
