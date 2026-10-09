@@ -18,7 +18,6 @@ export const metadata: Metadata = {
   description:
     "Персональный тренажёр математики для подготовки к ЕНТ ТиПО. ТжКБ ҰБТ математикасына арналған дербес жаттықтырушы.",
   keywords: ["ЕНТ", "ҰБТ", "математика", "подготовка", "ТиПО", "ТжКБ", "қазақстан"],
-  manifest: "/manifest.json",
   icons: { icon: "/icon.svg?v=synaq", apple: "/icon-192.png?v=synaq" },
 };
 

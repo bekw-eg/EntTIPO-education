@@ -1,3 +1,4 @@
+import { retiredServiceResponse } from "@/lib/retiredService";
 import { NextRequest } from "next/server";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -7,7 +8,7 @@ import { offlineError } from "@/lib/offline/http";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
-export async function POST(request: NextRequest) {
+async function archivedPOST(request: NextRequest) {
   const userId = getCurrentUserId(request);
   if (!userId) return unauthorizedResponse(request);
   try {
@@ -19,3 +20,5 @@ export async function POST(request: NextRequest) {
       assets, bytes: Buffer.byteLength(JSON.stringify(pack.content)), assetBytes: assets.files.reduce((sum: number, file: { bytes: number }) => sum + file.bytes, 0) });
   } catch (error) { return offlineError(error); }
 }
+
+export async function POST() { return retiredServiceResponse(); }

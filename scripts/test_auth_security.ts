@@ -87,8 +87,8 @@ async function main() {
   assert.ok(fetched.every((request) => request.cache === "no-store"));
   offline = true;
   await assert.rejects(requestWorker("/api/user"), /offline/);
-  assert.equal(await (await requestWorker("/", "navigate")).text(), "offline");
-  assert.deepEqual(matched, ["/offline.html"]);
+  assert.match(await (await requestWorker("/", "navigate")).text(), /Нет подключения/);
+  assert.deepEqual(matched, []);
   console.log("PASS: service worker never caches or restores personal API, HTML or RSC data");
 
   const storage: Record<string, any> = {

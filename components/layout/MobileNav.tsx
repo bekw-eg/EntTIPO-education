@@ -31,7 +31,6 @@ export function MobileNav() {
               className={cn("flex min-h-12 items-center gap-3 rounded-md px-3 text-sm hover:bg-muted", isCurrentRoute(pathname, item.href) && "bg-primary/10 text-primary")}>
               <item.icon aria-hidden="true" className="h-5 w-5 shrink-0" />{item.name}
             </Link>)}
-            <a href="/offline-practice.html" className="mt-2 flex min-h-12 items-center gap-3 border-t px-3 text-sm"><Download aria-hidden="true" className="h-5 w-5" />{copy.offline}</a>
           </nav>
         </DialogContent>
       </Dialog>

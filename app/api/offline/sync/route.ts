@@ -1,3 +1,4 @@
+import { retiredServiceResponse } from "@/lib/retiredService";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { syncMetaSchema } from "@/lib/offline/server";
@@ -7,7 +8,7 @@ import { offlineError } from "@/lib/offline/http";
 import { PracticeError } from "@/lib/practiceStorage";
 
 export const dynamic = "force-dynamic";
-export async function POST(request: NextRequest) {
+async function archivedPOST(request: NextRequest) {
   const userId = getCurrentUserId(request);
   if (!userId) return unauthorizedResponse(request);
   try {
@@ -20,3 +21,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ submissionId: data.submissionId, revision: result.offlineRevision, result });
   } catch (error) { return offlineError(error); }
 }
+
+export async function POST() { return retiredServiceResponse(); }

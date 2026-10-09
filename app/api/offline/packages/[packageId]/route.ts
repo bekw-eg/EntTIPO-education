@@ -1,3 +1,4 @@
+import { retiredServiceResponse } from "@/lib/retiredService";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId, unauthorizedResponse } from "@/lib/user";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +8,7 @@ import { currentContent, packageChoiceSnapshots } from "@/lib/offline/server";
 import type { OfflineContent, OfflineLanguage } from "@/lib/offline/types";
 import { offlineError } from "@/lib/offline/http";
 
-export async function GET(request: NextRequest, context: { params: Promise<{ packageId: string }> }) {
+async function archivedGET(request: NextRequest, context: { params: Promise<{ packageId: string }> }) {
   const userId = getCurrentUserId(request);
   if (!userId) return unauthorizedResponse(request);
   try {
@@ -25,3 +26,5 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pac
     return NextResponse.json(state);
   } catch (error) { return offlineError(error); }
 }
+
+export async function GET() { return retiredServiceResponse(); }
