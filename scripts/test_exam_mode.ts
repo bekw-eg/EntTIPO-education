@@ -89,9 +89,9 @@ async function main() {
   assert.equal((await api(`/api/attempts?sessionId=${practiceId}`, a.cookie)).status, 403);
   assert.equal((await api(`/api/sessions/${practiceId}`, a.cookie)).status, 403);
   assert.equal((await api(`/api/sessions/${practiceId}/next-question`, a.cookie)).status, 403);
-  assert.equal((await api(`/api/sessions/${practiceId}/hint`, a.cookie, "POST", { questionId: practiceQuestion.id })).status, 403);
+  assert.equal((await api(`/api/sessions/${practiceId}/hint`, a.cookie, "POST", { questionId: practiceQuestion.id })).status, 410);
   for (const body of [{ action: "hint", questionId: firstQuestion.id }, { action: "chat", userMessage: firstQuestion.questionText }, { action: "analyze_error", attemptId: oldAttempt.data.attemptId }]) {
-    assert.equal((await api("/api/ai/tutor", a.cookie, "POST", body)).status, 403);
+    assert.equal((await api("/api/ai/tutor", a.cookie, "POST", body)).status, 410);
   }
   assert.equal((await api("/api/mistakes", a.cookie)).status, 403);
   assert.equal((await api("/api/skills", a.cookie)).status, 403);

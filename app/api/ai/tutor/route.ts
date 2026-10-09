@@ -1,3 +1,4 @@
+import { retiredServiceResponse } from "@/lib/retiredService";
 import { localizedJson } from "@/lib/i18n/http";
 import { NextRequest } from "next/server";
 import { parseChoice } from "@/lib/practiceChoice";
@@ -34,7 +35,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: NextRequest) {
+async function archivedPOST(request: NextRequest) {
   let lang: 'ru' | 'kk' | 'en' = 'ru';
   try {
     const userId = getCurrentUserId(request);
@@ -441,3 +442,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function POST(_request: Request) { return retiredServiceResponse(); }

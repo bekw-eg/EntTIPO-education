@@ -1,3 +1,4 @@
+import { retiredServiceResponse } from "@/lib/retiredService";
 import { localizedJson } from "@/lib/i18n/http";
 import { NextRequest } from "next/server";
 import { z } from "zod";
@@ -6,7 +7,7 @@ import { PracticeError, recordHintUsage } from "@/lib/practiceStorage";
 
 const hintRequestSchema = z.object({ questionId: z.string().min(1) });
 
-export async function POST(request: NextRequest, context: { params: Promise<{ sessionId: string }> }) {
+async function archivedPOST(request: NextRequest, context: { params: Promise<{ sessionId: string }> }) {
   const userId = getCurrentUserId(request);
   if (!userId) return unauthorizedResponse(request);
   try {
@@ -21,3 +22,5 @@ export async function POST(request: NextRequest, context: { params: Promise<{ se
     return localizedJson(request, { error: "Could not record hint usage" }, { status: 500 });
   }
 }
+
+export async function POST() { return retiredServiceResponse(); }
