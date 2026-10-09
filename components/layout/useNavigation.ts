@@ -2,6 +2,7 @@
 import { LayoutDashboard, BookOpen, Library, RotateCcw, BarChart3, GraduationCap, Compass, ClipboardCheck, ListChecks } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { roadText } from "@/lib/i18n/learning-road";
+import { isRetiredPage } from "@/lib/publicFeatures";
 
 export function useNavigation() {
   const { t, locale } = useLanguage();
@@ -16,7 +17,7 @@ export function useNavigation() {
     { name: t.nav.statistics, href: "/statistics", icon: BarChart3 },
     { name: locale === "en" ? "Geometry" : "Геометрия", href: "/geometry", icon: Compass },
     { name: locale === "kk" ? "Емтиханды қамту" : locale === "en" ? "Exam coverage" : "Покрытие экзамена", href: "/exam-coverage", icon: ListChecks },
-  ];
+  ].filter(item => !isRetiredPage(item.href));
 }
 export function isCurrentRoute(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/");

@@ -8,7 +8,7 @@ import QuestionCard from "@/components/practice/QuestionCard";
 import ResultAnalysis from "@/components/practice/ResultAnalysis";
 import SessionSummary from "@/components/practice/SessionSummary";
 import { PracticeHistory } from "@/components/practice/PracticeHistory";
-import Link from "next/link";
+import Link from "@/components/layout/PublicLink";
 import { roadText } from "@/lib/i18n/learning-road";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "@/components/providers/AccountProvider";

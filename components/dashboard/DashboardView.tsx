@@ -15,9 +15,6 @@ import { TopicProgressBar } from "@/components/dashboard/TopicProgressBar";
 import { DashboardStats } from "@/types";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { contentText } from '@/lib/i18n/content';
-import { DailyLearningPlanCard } from "./DailyLearningPlanCard";
-import { PreparationView } from "@/components/learning-road/PreparationView";
-import { preparationText } from "@/lib/i18n/preparation";
 
 interface DashboardViewProps {
   initialData: DashboardStats;
@@ -57,8 +54,7 @@ export function DashboardView({ initialData: data }: DashboardViewProps) {
       />
 
       <div className="page-content">
-        <PreparationView compact />
-        <details className="border-b py-4" onToggle={event => setDailyOpen(event.currentTarget.open)}><summary className="cursor-pointer text-sm font-medium">{preparationText[locale].daily}</summary>{dailyOpen && <DailyLearningPlanCard />}</details>
+
         {/* Stats Grid */}
         <div className="metric-row">
           <StatsCard

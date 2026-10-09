@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/layout/PublicLink";
 import { preparationText } from "@/lib/i18n/preparation";
 import { Header } from "@/components/layout/Header";
 import { PageLoading } from "@/components/ui/page-state";

@@ -7,7 +7,7 @@ import { uiText, errorText } from "@/lib/i18n/messages";
 import { useLanguage } from "@/lib/i18n/LanguageContext";
 import { preparationText } from "@/lib/i18n/preparation";
 
-import Link from "next/link";
+import Link from "@/components/layout/PublicLink";
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MathText } from "@/components/ui/MathText";
@@ -130,11 +130,7 @@ export default function ExamPage({ params }: { params: Promise<{ examId: string 
       {pending && <Button variant="ghost" disabled={busy} onClick={() => void run(reload)}>{uiText("Загрузить серверную версию и отбросить несохранённое изменение", locale)}</Button>}
     </div>}
     {!snapshot ? <PageLoading /> : result ? <>
-      {result.preparation && <section className="space-y-3 rounded-lg border p-4" data-testid="preparation-result">
-        <h2 className="font-semibold">{result.preparation.passed ? prep.passed : prep.repair}</h2>
-        {result.preparation.next === "reinforcement" && <p>{prep.stages.reinforcement}</p>}
-        <Button asChild><Link href="/learning-road">{prep.open}</Link></Button>
-      </section>}
+
       <p>{result.completionReason === "timeout" ? uiText("Время истекло.", locale) : uiText("Экзамен завершён.", locale)} {uiText(" Пропущено: ", locale)}{result.skipped} · {snapshot.roadNodeId ? prep.policy : `${uiText("Профиль ", locale)}${snapshot.profile.id}@${snapshot.profile.version}`} · {snapshot.language === 'kk' ? 'Қазақ тілі' : uiText('Русский', locale)}.</p>
       <p className="text-sm text-muted-foreground">{result.masteryPolicy}</p>
       {result.previouslyExposedCount > 0 && <p className="text-sm">{uiText("Ранее встречались ", locale)}{result.previouslyExposedCount} {uiText(" заданий. Они учитываются в баллах блока, но не дают независимого подтверждения навыков.", locale)}</p>}
@@ -146,8 +142,6 @@ export default function ExamPage({ params }: { params: Promise<{ examId: string 
       </section>
       <section className="space-y-3 rounded-lg border p-4"><h2 className="text-xl font-semibold">{uiText("Пробелы и дальнейшие действия", locale)}</h2>
         {result.gaps.length ? result.gaps.map((g) => <div key={g.questionId} className="border-b pb-3"><p className="font-medium">{g.title} · {g.reason === "skipped" ? uiText("Нет ответа", locale) : uiText("Неверный ответ", locale)}</p><p className="my-2 text-sm">{g.action}</p><div className="flex flex-wrap gap-4 text-primary underline"><Link href={g.ruleHref}>{uiText("Повторить правило", locale)}</Link><Link href={g.practiceHref}>{uiText("Тренировка темы", locale)}</Link></div></div>) : <p>{uiText("В этом блоке ошибок нет. Продолжайте подготовку на новых заданиях.", locale)}</p>}
-        <p className="text-sm">{uiText("План дня учитывает отвеченные задания и ошибки экзамена. Если сегодняшняя работа уже начата, новые результаты применяются к следующему плану. Нехватка практики или независимых проверочных задач отображается в плане.", locale)}</p>
-        <Button asChild><Link href="/">{uiText("Открыть персональный план подготовки", locale)}</Link></Button>
       </section>
       <section className="space-y-3"><h2 className="text-xl font-semibold">{uiText("Ответы и разбор", locale)}</h2>{result.questions.map((item, i) => <details key={item.id} className="rounded-lg border p-4">
         <summary className="cursor-pointer font-medium">{i + 1}. {item.title} — {item.points}/{item.maxPoints}{item.skipped ? uiText(" · пропуск", locale) : ""}</summary>

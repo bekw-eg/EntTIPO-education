@@ -4,7 +4,7 @@ import { MathText } from "@/components/ui/MathText";
 import { choiceStem } from "@/lib/choiceDisplay";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/layout/PublicLink";
 import type { Skill } from "@prisma/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
